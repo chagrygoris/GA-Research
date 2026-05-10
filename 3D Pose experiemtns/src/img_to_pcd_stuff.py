@@ -65,7 +65,7 @@ class PointCloudProcessor:
         x = x.detach().cpu().numpy()
         v, u = np.indices((224, 224))
         points = np.stack((v, u, x), axis=-1).reshape(-1, 3)
-
+        draw_clouds(points, colors=colors)
 
     def visualize_matplotlib(self, pcd: o3d.geometry.PointCloud, sample_size: int = 10000):
         points = np.asarray(pcd.points)
