@@ -668,6 +668,87 @@ class MLPBaseline(nn.Module):
         return x
 
 
+class ViTMultiLayerPoseBaseline(nn.Module):
+    def __init__(
+        self,
+        model_name: str = "google/vit-base-patch16-224-in21k",
+        layers: tuple = (-1, -3, -6, -9),
+        freeze_vit: bool = True,
+    ):
+        super().__init__()
+        from transformers import ViTModel
+
+        self.model_name = model_name
+        self.layers = tuple(layers)
+        self.freeze_vit = bool(freeze_vit)
+
+        if len(self.layers) == 0:
+            raise ValueError("layers must contain at least one hidden-state index")
+
+        self.vit = ViTModel.from_pretrained(
+            self.model_name,
+            output_hidden_states=True,
+        )
+
+        if self.freeze_vit:
+            for parameter in self.vit.parameters():
+                parameter.requires_grad = False
+
+        hidden_size = int(self.vit.config.hidden_size)
+        token_mlp_input_dim = hidden_size * len(self.layers)
+
+        self.token_mlp = nn.Sequential(
+            nn.Linear(token_mlp_input_dim, 1024),
+            nn.GELU(),
+            nn.Dropout(0.1),
+            nn.Linear(1024, 512),
+            nn.GELU(),
+        )
+        self.pose_head = nn.Sequential(
+            nn.Linear(512, 256),
+            nn.GELU(),
+            nn.Dropout(0.1),
+            nn.Linear(256, 256),
+            nn.GELU(),
+            nn.Linear(256, 9),
+        )
+
+    def _hidden_state_to_feature_map(self, hidden_state: torch.Tensor) -> torch.Tensor:
+        tokens = hidden_state[:, 1:]
+        batch_size, n_tokens, hidden_size = tokens.shape
+        spatial_size = int(n_tokens ** 0.5)
+
+        if spatial_size * spatial_size != n_tokens:
+            raise RuntimeError(
+                f"Expected square patch token count after CLS removal, got {n_tokens}"
+            )
+
+        return tokens.transpose(1, 2).reshape(
+            batch_size, hidden_size, spatial_size, spatial_size
+        )
+
+    def _extract_hidden_states(self, x: torch.Tensor):
+        if self.freeze_vit:
+            with torch.no_grad():
+                return self.vit(x, output_hidden_states=True).hidden_states
+        return self.vit(x, output_hidden_states=True).hidden_states
+
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        hidden_states = self._extract_hidden_states(x)
+        feature_maps = [
+            self._hidden_state_to_feature_map(hidden_states[layer])
+            for layer in self.layers
+        ]
+
+        feature_map = torch.cat(feature_maps, dim=1)
+        flattened_spatial = feature_map.flatten(2)
+        patch_features = flattened_spatial.transpose(1, 2)
+        patch_embeddings = self.token_mlp(patch_features)
+        global_embedding = patch_embeddings.mean(dim=1)
+        out = self.pose_head(global_embedding)
+        return out.view(-1, 3, 3)
+
+
 class I2S_Backbone(nn.Module):
     def __init__(
         self,

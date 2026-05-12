@@ -16,12 +16,17 @@ def create_argparser():
     parser.add_argument("--platform",type=str,choices=["kaggle","colab"],default="kaggle")
 
     parser.add_argument("--model", type=str, default="tralalero",
-                        choices=["tralalero", "mlp", "i2s", "ga_i2s", "i2s_resnet"])
+                        choices=["tralalero", "mlp", "vit_baseline", "i2s", "ga_i2s", "i2s_resnet"])
     parser.add_argument("--loss", type=str, default="mse",
                         choices=["mse", "geodesic", "prob", "rotor", "mv_rotor"])
     parser.add_argument("--encoder", type=str, default="resnet",
                         choices=["resnet", "ga", "ga_canonical"])
     parser.add_argument("--algebra_dim", type=int, default=3)
+
+    # ViT baseline
+    parser.add_argument("--vit_model_name", type=str, default="google/vit-base-patch16-224-in21k")
+    parser.add_argument("--vit_layers", type=int, nargs="+", default=[-1, -3, -6, -9])
+    parser.add_argument("--freeze_vit", action=argparse.BooleanOptionalAction, default=True)
 
     # I2S
     parser.add_argument("--lmax", type=int, default=6)

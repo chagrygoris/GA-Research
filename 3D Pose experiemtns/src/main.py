@@ -6,7 +6,7 @@ from clifford.algebra.cliffordalgebra import CliffordAlgebra
 
 from src.config import create_argparser
 from src.dataset import create_dataloaders
-from src.model import TralaleroCompetitor, MLPBaseline, I2S, GA_I2S, I2S_Backbone, I2S_ResNet
+from src.model import TralaleroCompetitor, MLPBaseline, ViTMultiLayerPoseBaseline, I2S, GA_I2S, I2S_Backbone, I2S_ResNet
 from src.train_utils import (
     train,
     form_checkpoint,
@@ -80,6 +80,12 @@ def instantiate(config):
         )
     elif config.model == "mlp":
         model = MLPBaseline(encoder_type=config.encoder)
+    elif config.model == "vit_baseline":
+        model = ViTMultiLayerPoseBaseline(
+            model_name=config.vit_model_name,
+            layers=tuple(config.vit_layers),
+            freeze_vit=config.freeze_vit,
+        )
     elif config.model == "i2s":
         model = I2S(
             algebra=algebra,
