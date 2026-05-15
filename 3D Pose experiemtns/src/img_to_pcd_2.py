@@ -40,7 +40,7 @@ class I2P(nn.Module):
         hs = self.hs_mlp(hs)
 
         depth = out.predicted_depth
-
+        depth = torch.zeros(depth.shape, device=depth.device)
         u, v = torch.meshgrid(
             torch.linspace(-1, 1, h, device=x.device),
             torch.linspace(-1, 1, w, device=x.device),
