@@ -9,9 +9,9 @@ import plotly.graph_objects as go
 
 
 from clifford.models.modules.linear import MVLinear
-from clifford.models.modules.gp import SteerableGeometricProductLayer
-from clifford.models.modules.mvlayernorm import MVLayerNorm
-from clifford.models.modules.mvsilu import MVSiLU
+# from clifford.models.modules.gp import SteerableGeometricProductLayer
+# from clifford.models.modules.mvlayernorm import MVLayerNorm
+# from clifford.models.modules.mvsilu import MVSiLU
 from clifford.algebra.cliffordalgebra import CliffordAlgebra
 
 
@@ -41,13 +41,21 @@ def draw_clouds(points, colors=None, size=1):
 
 
 class PointCloudProcessor:
-    def __init__(self, model_size: str = "base", device: Optional[str] = None):
+    def __init__(self, 
+        model_size: str = "base", 
+        device: Optional[str] = None, 
+        freeze : bool = True
+    ):
         self.device = device or ('cuda' if torch.cuda.is_available() else 'cpu')
         model_name = f"depth-anything/Depth-Anything-V2-{model_size.capitalize()}-hf"
         self.pipe = pipeline(task="depth-estimation", model=model_name, device=self.device)
         self.model = self.pipe.model
         self.image_processor = self.pipe.image_processor
-        self.model.eval()
+        self.freeze = freeze
+        if freeze:
+            self.model.eval()
+        else:
+            self.model.train()
 
 
     def __call__(self, x : torch.tensor):
@@ -55,7 +63,12 @@ class PointCloudProcessor:
         Arguments:
             x : torch.Tensor of size (B, C, H, W)
         '''
-        return self.model(x).predicted_depth.detach()
+        if self.freeze:
+            with torch.no_grad():
+                out = self.model(x)
+                return out.predicted_depth, out.hidden_states
+        out = self.model(x)
+        return out.predicted_depth, out.hidden_states
 
     def visualize_plotly(self, x : torch.Tensor, raw_img=True):
         '''Draw an interactive 3D point cloud of given object'''
@@ -91,74 +104,46 @@ class PointCloudProcessor:
 class I2P(nn.Module):
     def __init__(self, device : torch.device = torch.device("mps"), batch_size : Optional[int] = None):
         super().__init__()
-        self.n_pixels = 224
-        self.depth_anything_model = PointCloudProcessor(device=device, model_size="small")
+        self.backbone = PointCloudProcessor(device=device, model_size="small")
         self.device = device
-        self.algebra = CliffordAlgebra((1, 1, 1))
-        self.projection = MVLinear(self.algebra, in_features=224 * 224, out_features=512)
-        self.tralalero = TralaleroTralala(self.algebra, in_features=512, out_features=1, hidden_dim=[256, 128, 64])
-        self.head = nn.Linear(8, 9)
-        self.batch_size = batch_size
-        self.batched_point_clouds = None
-        self._create_batched_clouds()
-        hidden_dim = 256
-        self.encoder = nn.Sequential(
+        self.pointnet = nn.ModuleList([
             nn.Linear(3, 64),
-            nn.ReLU(inplace=True),
             nn.Linear(64, 128),
-            nn.ReLU(inplace=True),
-            nn.Linear(128, hidden_dim),
-            nn.ReLU(inplace=True),
-        )
-        self.head = nn.Sequential(
-            nn.Linear(hidden_dim, hidden_dim),
-            nn.ReLU(inplace=True),
-            nn.Linear(hidden_dim, 9),
-        )
+            nn.Linear(128, 256)
+        ])
+        self.n_points = 1024
+        self.relu = nn.ReLU()
 
-
-    def _create_batched_clouds(self):
-        if self.batch_size is None:
-            return
-        N = self.n_pixels
-        v_coords, u_coords = np.indices((N, N))
-        v_coords, u_coords = torch.tensor(v_coords).unsqueeze(2).to(self.device), torch.tensor(u_coords).unsqueeze(2).to(self.device)
-        u_coords, v_coords = u_coords.to(torch.float32), v_coords.to(torch.float32)
-        u_coords -= u_coords.mean()
-        u_coords /= u_coords.std()
-        v_coords -= v_coords.mean()
-        v_coords /= v_coords.std()
-        depth_map = torch.zeros((N, N, 1)).to(self.device)
-        point_cloud = torch.cat((v_coords, u_coords, depth_map), dim=-1)
-        self.batched_point_clouds = torch.cat([point_cloud.unsqueeze(0) for _ in range(self.batch_size)], dim=0)
-
-
-    def forward(self, x, cls_info : Optional[torch.Tensor] = None):
+    def forward(self, x):
         '''
         Args:
             x : torch.Tensor of size (B, C, H, W)
         '''
-        batch_size = x.size(0)
-        if batch_size != self.batch_size:
-            self.batch_size = batch_size
-            self._create_batched_clouds()
-        x = self.depth_anything_model(x)
-        x = torch.cat([
-            self.batched_point_clouds[:, :, :, :2],
-            x.squeeze(1).unsqueeze(-1)
-        ], dim=-1)
-        x = x.reshape(batch_size, -1, 3)
-        # x = self.algebra.embed_grade(x, 1)
-        # x = self.projection(x)
-        # x = self.tralalero(x)
-        # x = x.squeeze(1)
-        # x = self.head(x)
-        # out = x.reshape(batch_size, 3, 3)
-        feat = self.encoder(x)
-        feat = feat.max(dim=1).values
-        R = self.head(feat).view(-1, 3, 3)
-        out = R
-        return out
+        b, _, h, w = x.shape
+        depth, feat = self.backbone(x)
+        u, v = torch.meshgrid(
+            torch.linspace(-1, 1, h, device=x.device),
+            torch.linspace(-1, 1, w, device=x.device),
+            indexing="ij",
+        )
+        grid = torch.stack((v, u), dim=-1).unsqueeze(0).expand(b, -1, -1, -1)
+        pts = torch.cat((grid, depth.unsqueeze(-1)), dim=-1).reshape(b, -1, 3)
+        feat = feat.reshape(b, -1, feat.shape[-1])
+        pts = torch.cat((pts, feat), dim=-1)
+
+        if pts.shape[1] > self.n_points:
+            idx = torch.randperm(pts.shape[1], device=x.device)[:self.n_points]
+            pts = pts[:, idx]
+
+        z = self.enc(pts).max(dim=1).values
+        R = self.head(z).view(-1, 3, 3)
+        U, _, Vh = torch.linalg.svd(R)
+        R = U @ Vh
+        mask = torch.det(R) < 0
+        if mask.any():
+            U[mask, :, -1] *= -1
+            R = U @ Vh
+        return R
 
 
 class DummyNet(nn.Module):
@@ -223,7 +208,7 @@ class PoseNet(nn.Module):
         return R
 
 
-def draw_clouds(points, colors=None, size=1):
+def draw_clouds(points, colors=None, size=1):  # noqa: F811
     if colors is not None:
         fig = go.Figure(data=[go.Scatter3d(
             x=points[:, 0], y=points[:, 1], z=points[:, 2],
