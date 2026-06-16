@@ -6,6 +6,7 @@ def create_argparser():
     parser = argparse.ArgumentParser()
     parser.add_argument("--n_epochs", type=int, default=10)
     parser.add_argument("--batch_size", type=int, default=32)
+    parser.add_argument("--dataset", type=str, required=False, default="pascal")
     parser.add_argument("--path_to_datasets", type=str, required=True)
     parser.add_argument("--path_to_checkpoint",type=str,default=None)
     parser.add_argument("--run_name", type=str, default=None)
@@ -14,9 +15,11 @@ def create_argparser():
     parser.add_argument("--wandb_group", type=str, default=None)
     parser.add_argument("--sanity_check", action="store_true")
     parser.add_argument("--platform",type=str,choices=["kaggle","colab"],default="kaggle")
+    parser.add_argument("--save_checkpoint", type=bool, default=True)
+    parser.add_argument("--multiprocessing", type=bool, default=False)
 
     parser.add_argument("--model", type=str, default="tralalero",
-                        choices=["tralalero", "mlp", "vit_baseline", "i2s", "ga_i2s", "i2s_resnet"])
+                        choices=["tralalero", "mlp", "vit_baseline", "i2s", "ga_i2s", "image2pcd", "dummynet", "i2s_resnet"])
     parser.add_argument("--loss", type=str, default="mse",
                         choices=["mse", "geodesic", "prob", "rotor", "mv_rotor"])
     parser.add_argument("--encoder", type=str, default="resnet",

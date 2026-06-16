@@ -6,6 +6,10 @@ from clifford.algebra.cliffordalgebra import CliffordAlgebra
 
 from src.config import create_argparser
 from src.dataset import create_dataloaders
+from src.model import TralaleroCompetitor, MLPBaseline, I2S, GA_I2S
+# from src.img_to_pcd_stuff import I2P, DummyNet
+from src.img_to_pcd_2 import I2P
+from src.train_utils import train, form_checkpoint, get_available_device,load_checkpoint
 from src.model import TralaleroCompetitor, MLPBaseline, ViTMultiLayerPoseBaseline, I2S, GA_I2S, I2S_Backbone, I2S_ResNet
 from src.train_utils import (
     train,
@@ -128,6 +132,13 @@ def instantiate(config):
             encoder_type=config.encoder,
             ga_pool_hw=tuple(config.ga_pool_hw),
         )
+    elif config.model == "image2pcd":
+        model = I2P(
+            # batch_size=config.batch_size,
+            device = get_available_device()
+        )
+    elif config.model == "dummynet":
+        model = DummyNet()
     elif config.model == "i2s_resnet":
         output_mode = config.i2s_resnet_output_mode
         if output_mode == "auto":
@@ -202,6 +213,9 @@ def instantiate(config):
         criterion = multivector_rotor_loss
     else:
         raise ValueError(f"Unknown loss: {config.loss}")
+    
+    print(config)
+    run = wandb_create_run(config.run_name)
 
     run = wandb_create_run(
         config.run_name,
@@ -237,8 +251,9 @@ def main():
     torch.cuda.empty_cache()
     train(model, train_loader, val_loader, optimizer, scheduler, criterion, run, config)
 
-    checkpoint_path = form_checkpoint(model, optimizer, scheduler, config)
-    wandb_log_artifact(run, checkpoint_path, artifact_type="checkpoint")
+    if config.save_checkpoint and not config.sanity_check:
+        checkpoint_path = form_checkpoint(model, optimizer, scheduler, config)
+        wandb_log_artifact(run, checkpoint_path, artifact_type="checkpoint")
     wandb_finish_run(run)
 
 

@@ -4,6 +4,14 @@ from tqdm import tqdm
 from pathlib import Path
 from src.evaluation_metrics import calculate_evaluation_metrics
 import numpy as np
+import matplotlib.pyplot as plt
+
+
+def show_torch_img(img : torch.Tensor):
+    if len(img.shape) == 4:
+        img = img.squeeze(0)
+    img = img.cpu().permute(1, 2, 0).numpy()
+    plt.imshow(img)
 
 def rotation_matrix_loss(pred, target, alpha=0.1, beta=0.01):
     mse = torch.mean((pred - target) ** 2)
@@ -273,7 +281,7 @@ def train(model, train_loader, val_loader, optimizer, scheduler, criterion, run,
             })
         scheduler.step()
         print(
-            f"Training on {config.device} epoch {i + 1} / {config.n_epochs}. "
-            f"Train loss {train_loss}, val loss {val_loss}"
+            f"Training on {config.device} epoch {i + 1} / {config.n_epochs}. \n"
+            f"Train loss {train_loss}, val loss {val_loss}\n"
             f"Median rotation error {mre}"
         )
