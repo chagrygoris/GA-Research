@@ -7,7 +7,7 @@ from clifford.algebra.cliffordalgebra import CliffordAlgebra
 from src.config import create_argparser
 from src.dataset import create_dataloaders
 from src.model import TralaleroCompetitor, MLPBaseline, I2S, GA_I2S
-# from src.img_to_pcd_stuff import I2P, DummyNet
+from src.img_to_pcd_stuff import DummyNet
 from src.img_to_pcd_2 import I2P
 from src.train_utils import train, form_checkpoint, get_available_device,load_checkpoint
 from src.model import TralaleroCompetitor, MLPBaseline, ViTMultiLayerPoseBaseline, I2S, GA_I2S, I2S_Backbone, I2S_ResNet
@@ -16,7 +16,6 @@ from src.train_utils import (
     form_checkpoint,
     get_available_device,
     load_checkpoint,
-    maybe_wrap_model_for_multi_gpu,
     rotation_matrix_loss,
     geodesic_rotation_matrix_loss,
     rotor_loss,

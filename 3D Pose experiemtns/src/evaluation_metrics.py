@@ -109,14 +109,14 @@ def calculate_evaluation_metrics(model, loader, config):
         if "cls" in batch:
             clas = batch["cls"].to(device)
         
-        if clas is not None and _supports_class_argument(unwrapped_model.forward):
+        if clas is not None and _supports_class_argument(model.forward):
             outputs = model(img, clas)
         else:
             outputs = model(img)
 
-        if config.loss == "prob" and hasattr(unwrapped_model, "so3_rotmats_cache"):
+        if config.loss == "prob" and hasattr(model, "so3_rotmats_cache"):
             idx = torch.argmax(outputs, dim=-1)
-            pred_rotmat = unwrapped_model.so3_rotmats_cache[idx]
+            pred_rotmat = model.so3_rotmats_cache[idx]
         elif config.loss == "rotor":
             pred_rotmat = unit_quaternion_to_matrix(outputs)
         elif config.loss == "mv_rotor":

@@ -152,10 +152,6 @@ class InMemoryDataset(Dataset):
             write_pos = 0
             for imgs, rots in tqdm(loader, desc="Loading data into RAM"):
                 bsz = imgs.shape[0]
-        write_pos = 0
-
-        for imgs, rots in tqdm(loader, desc="Loading data into RAM"):
-            bsz = imgs.shape[0]
 
                 if store_uint8:
                     if imgs.dtype != torch.uint8:
@@ -165,17 +161,9 @@ class InMemoryDataset(Dataset):
                     self.imgs[write_pos:write_pos + bsz].copy_(imgs_u8)
                 else:
                     self.imgs[write_pos:write_pos + bsz].copy_(imgs.to(torch.float32))
-            if self.store_uint8:
-                if imgs.dtype != torch.uint8:
-                    imgs = (imgs.clamp(0, 1) * 255.0).to(torch.uint8)
-                self.imgs[write_pos:write_pos + bsz].copy_(imgs)
-            else:
-                self.imgs[write_pos:write_pos + bsz].copy_(imgs.to(torch.float32))
 
                 self.targets[write_pos:write_pos + bsz].copy_(rots.to(torch.float32))
                 write_pos += bsz
-            self.targets[write_pos:write_pos + bsz].copy_(rots.to(torch.float32))
-            write_pos += bsz
 
         if cache_path is not None:
             cache_path.parent.mkdir(parents=True, exist_ok=True)

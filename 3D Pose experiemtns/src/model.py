@@ -7,10 +7,23 @@ from clifford.models.modules.gp import SteerableGeometricProductLayer
 from clifford.models.modules.mvsilu import MVSiLU
 from clifford.models.modules.fcgp import FullyConnectedSteerableGeometricProductLayer
 from clifford.models.modules.linear import MVLinear
+from clifford.models.modules.mvlayernorm import MVLayerNorm
 from src.image_encoders import build_encoder
 from image2sphere.so3_utils import so3_healpix_grid, flat_wigner, nearest_rotmat
 from e3nn import o3
 from typing import List,Union
+
+
+def _move_unregistered_tensors_to_device(module: nn.Module, device: torch.device):
+    for submodule in module.modules():
+        registered_params = set(dict(submodule.named_parameters(recurse=False)).keys())
+        registered_buffers = set(dict(submodule.named_buffers(recurse=False)).keys())
+
+        for attr_name, attr_value in list(submodule.__dict__.items()):
+            if attr_name in registered_params or attr_name in registered_buffers:
+                continue
+            if isinstance(attr_value, torch.Tensor) and attr_value.device != device:
+                setattr(submodule, attr_name, attr_value.to(device))
 
 
 def _unit_quaternion_to_matrix(q: torch.Tensor) -> torch.Tensor:
