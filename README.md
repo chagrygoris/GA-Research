@@ -5,10 +5,6 @@ SO(3) rotation from a single RGB image). The codebase explores several model fam
 standard CNN/ViT baselines and **geometric-algebra (GA) / Clifford-group-equivariant** networks, plus
 the **Image2Sphere (I2S)** family of SO(3)-distribution heads.
 
-> ⚠️ This README was generated to document the project layout and how to run experiments. Some
-> sections describe model variants the maintainer understands best — feel free to correct or expand
-> any descriptions that aren't quite right.
-
 ---
 
 ## What's in here
