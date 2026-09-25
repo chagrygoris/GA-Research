@@ -13,6 +13,15 @@ Two things live here:
    Clifford-group-equivariant network. Working, tested, and **not yet competitive** — see
    [Status](#status-of-the-clifford-model).
 
+## Documentation
+
+| | |
+|---|---|
+| [docs/metrics.md](docs/metrics.md) | Why NMSE is negative, which normalisation is in use, and what NMSE does not tell you |
+| [docs/reference-model.md](docs/reference-model.md) | The MATLAB model line by line, the port's exact reorganisations, conditioning, porting assumptions |
+| [docs/clifford-model.md](docs/clifford-model.md) | The geometric-algebra formulation, the equivariance argument, current status and next steps |
+| [docs/data.md](docs/data.md) | What is in the two `.mat` files, and the splits |
+
 ---
 
 ## The data
@@ -29,8 +38,13 @@ Two things live here:
 For each band the file carries `x*` (input envelope), `d*` (the band-limited nonlinear
 residual to be fitted) and `eRef*` (the residual of the vendor's own model, for reference).
 "No-model NMSE" is what you score by predicting zero; the vendor reference is the target to
-beat. All NMSE figures are `10*log10(sum|e|^2 / sum|xRef|^2)` — power relative to the
-*carrier*, so they are negative and lower is better.
+beat.
+
+> **Reading the numbers.** All NMSE figures are `10*log10(sum|e|^2 / sum|xRef|^2)` — residual
+> power relative to the *carrier*. They are negative, and **lower is better**: `-24.7 dB` beats
+> `-14.3 dB`. Most of the literature normalises by the desired signal instead, which shifts
+> every figure by the no-model floor. [docs/metrics.md](docs/metrics.md) has the conversion and
+> the reasons NMSE alone is not enough for a PA.
 
 `DOV2.mat` is the single-band capture used by `NonLinearProblemSimple.m`. There the two
 "dimensions" of the nonlinearity are half-sample fractional delays of one carrier, not
@@ -96,24 +110,14 @@ not the polynomial order, is doing most of the work.
 
 **The normal equations are badly conditioned, and it costs real dB out of sample.** `U'U` has
 condition number ~1e21 at D = 2 and ~4e21 at D = 3, with numerical rank 1168 of 1215 and 3269
-of 3375 — `pinv` is discarding a few dozen directions. The prediction stays stable (that is
-what the pseudo-inverse is for), but the coefficient vector is only defined up to the
-numerical null space, which is why matching MATLAB's `pinv` tolerance rule is necessary to
-reproduce the coefficients at all.
+of 3375. The prediction stays stable — that is what the pseudo-inverse is for — but the
+coefficient vector is only defined up to the numerical null space, which is why reproducing
+MATLAB's coefficients requires matching its `pinv` tolerance rule rather than NumPy's.
 
-At D = 3 the difference shows up in generalisation. Sweeping the regularisation on the same
-Gram matrix:
-
-| solver | train | val | \|\|c\|\| |
-|---|---|---|---|
-| `pinv`, rcond 1e-15 | -24.988 dB | -23.556 dB | 1.1e3 |
-| `pinv`, MATLAB rule | -24.981 dB | -23.847 dB | 2.0e1 |
-| `ridge`, alpha 1e-6 | -24.906 dB | **-24.473 dB** | 7.9e0 |
-
-The pseudo-inverse buys 0.08 dB in-sample and gives back 0.6 dB out of sample, with a
-coefficient vector two orders of magnitude larger. `rfpa.solvers.ridge_solve` applies
-scale-free Tikhonov shrinkage to the same Gram matrix and defaults to `alpha = 1e-6`; held-out
-NMSE is flat to ~0.1 dB over `alpha` in 1e-7..1e-4, so the default is not delicate.
+At D = 3 this costs 0.6 dB of held-out NMSE: `pinv` buys 0.08 dB in-sample and gives it back
+with interest out of sample, with a coefficient vector two orders of magnitude larger in
+norm. Prefer `--solver ridge` there. Full numbers and the reasoning in
+[docs/reference-model.md](docs/reference-model.md#conditioning-and-the-solver).
 
 Note that going from two carriers to three buys only 0.33 dB out of sample (-24.14 → -24.47)
 for 2.8x the coefficients — consistent with band C being nearly irrelevant to band A.
@@ -140,6 +144,9 @@ sandwich `v -> R v R~` on `v = Re(z) e_1 + Im(z) e_2`. Two facts then do real wo
   product, gating by grade norms) are equivariant under that rotor action by construction.
 - In `Cl(2,0)` the even subalgebra commutes with every rotor, so the even part of a
   multivector is **invariant** under the rotation — and it is isomorphic to `C`.
+
+[docs/clifford-model.md](docs/clifford-model.md) derives both and gives the per-layer
+equivariance argument.
 
 So the even part of the network's output is precisely "a complex gain that does not change
 when you rotate the constellation": the AM/AM + AM/PM characteristic, obtained as a symmetry
@@ -219,18 +226,17 @@ rf-pa-clifford/
 
 ### Assumptions about the MATLAB code
 
-The archive does not ship `delay.m`, `nmse.m` or `progress.m` — they live on the author's
-MATLAB path. The versions in `matlab/` are ours:
+Four things in this port are inferred rather than supplied, and any of them could be wrong:
 
-- `delay(x, n)` is a **circular** shift (`circshift(x, [0 n])`). The alternative (zero-padded)
-  differs on at most 10 of 221000 samples, below 1e-4 dB of NMSE.
-- `nmse(ref, err)` is `10*log10(sum|err|^2 / sum|ref|^2)`. The vendor reference residual
-  `eRefA` scores -33.45 dB under this definition, which is a plausible figure for a PA model
-  and corroborates it.
-- `progress` is cosmetic and is a no-op.
+- **`delay.m`, `nmse.m`, `progress.m`** are not in the archive — they live on the original
+  author's MATLAB path. The versions in `matlab/` are ours. `delay` as a circular shift is the
+  least certain and the most worth confirming.
+- **`DEFAULT_PART_MODEL` row 5**, the third band's delays. `GeoData_TB` is tri-band but the
+  archive only ships a 2-dimensional structure, so any `D = 3` result depends on our choice.
+  Rows 1–4 are exactly as supplied.
 
-`DEFAULT_PART_MODEL` row 5 (the third band's delays) is also ours: GeoData_TB is tri-band but
-the archive only ships a 2-dimensional structure. Rows 1–4 are exactly as supplied.
+[docs/reference-model.md](docs/reference-model.md#helpers-the-archive-does-not-ship) states
+each assumption and what it would cost if wrong.
 
 ---
 

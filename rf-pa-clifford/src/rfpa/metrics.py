@@ -17,11 +17,11 @@ def welch_psd(x: np.ndarray, nfft: int = 2048, fs: float = 1.0):
     are untouched.
     """
     x = np.asarray(x).ravel()
+    if len(x) < nfft:
+        raise ValueError(f"signal of length {len(x)} is shorter than nfft={nfft}")
     win = np.hanning(nfft)
     step = nfft // 2
-    segs = [x[i : i + nfft] * win for i in range(0, max(len(x) - nfft, 0) + 1, step)]
-    if not segs:
-        raise ValueError(f"signal of length {len(x)} is shorter than nfft={nfft}")
+    segs = [x[i : i + nfft] * win for i in range(0, len(x) - nfft + 1, step)]
     psd = np.mean([np.abs(np.fft.fftshift(np.fft.fft(s))) ** 2 for s in segs], axis=0)
     psd /= np.sum(win**2) * fs
     f = np.fft.fftshift(np.fft.fftfreq(nfft, 1.0 / fs))
