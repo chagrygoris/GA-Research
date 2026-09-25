@@ -144,12 +144,16 @@ class MemoryPolynomialPA(nn.Module):
                 u = int(self.delays[2 + p, m])
                 mag = torch.roll(x[p], l + u, dims=0).abs()
                 feats.append(chebyshev_features(self._cheb_arg(mag), self.n_funcs[p]).to(self.coef.dtype))
-            # envelope = sum_n coef[m, n_1..n_D] * prod_p T_{n_p}
-            env = self.coef[m]
-            for p in range(self.part_model.dim):
-                env = torch.tensordot(env, feats[p], dims=([0], [0])) if p == 0 else env * feats[p]
-                if p > 0:
-                    env = env.sum(dim=0)
+            # envelope = sum_n coef[m, n_1..n_D] * prod_p T_{n_p}, contracting one
+            # dimension at a time.  feats[p] is (n_funcs[p], N) and must line up
+            # with axis 0 and the trailing sample axis of env, so it is reshaped
+            # with explicit singleton axes -- plain broadcasting would silently
+            # align it with the *last* basis axis instead, which is correct only
+            # when D <= 2.
+            env = torch.tensordot(self.coef[m], feats[0], dims=([0], [0]))
+            for p in range(1, self.part_model.dim):
+                shape = (feats[p].shape[0],) + (1,) * (env.ndim - 2) + (feats[p].shape[1],)
+                env = (env * feats[p].reshape(shape)).sum(dim=0)
             g = g + torch.roll(x[0], s, dims=0) * env
         return band_limit(g, self.bl)
 
