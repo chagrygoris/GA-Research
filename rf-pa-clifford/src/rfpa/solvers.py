@@ -44,10 +44,14 @@ def matlab_pinv_solve(rx: np.ndarray, ry: np.ndarray, tol: float = 0.0) -> np.nd
     return np.linalg.pinv(rx, rcond=rcond, hermitian=True) @ ry
 
 
-def ridge_solve(rx: np.ndarray, ry: np.ndarray, alpha: float = 1e-8) -> np.ndarray:
+def ridge_solve(rx: np.ndarray, ry: np.ndarray, alpha: float = 1e-6) -> np.ndarray:
     """``(RX + alpha * tr(RX)/n * I)^-1 RY`` -- Tikhonov on the normal equations.
 
     ``alpha`` is relative to the mean diagonal of ``RX`` so it is scale-free.
+    The default was chosen on the D = 3 GeoData_TB fit, where held-out NMSE is
+    flat to ~0.1 dB over ``alpha`` in 1e-7..1e-4 and best at 1e-6; the
+    unregularised pseudo-inverse is 0.9 dB worse out of sample there and
+    produces a coefficient vector two orders of magnitude larger in norm.
     """
     n = rx.shape[0]
     shift = alpha * float(np.real(np.trace(rx))) / n

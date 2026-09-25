@@ -60,6 +60,7 @@ Coefficients are identified by least squares on the normal equations, `pinv(U'U)
 | A | A       |  135 | -14.341 dB | -14.297 | -14.517 |
 | A | **A, B** | **1215** | **-24.121 dB** | -24.123 | -24.139 |
 | A | A, C    | 1215 | -14.433 dB | -14.462 | -14.314 |
+| A | A, B, C (order 8,4,4, ridge) | 3375 | -24.813 dB | -24.906 | -24.473 |
 | B | B, A    | 1215 | -23.236 dB | -23.513 | -22.259 |
 | C | C, A    | 1215 | -23.071 dB | -23.112 | -22.957 |
 | C | C, B    | 1215 | -22.581 dB | -22.668 | -22.291 |
@@ -93,14 +94,29 @@ model:
 Order 2 with 135 coefficients is within 1.9 dB of order 8 with 1215. The delay structure,
 not the polynomial order, is doing most of the work.
 
-**The normal equations are badly conditioned, and at D = 3 they break.** `U'U` has condition
-number ~1e21 and numerical rank 1168 of 1215 — `pinv` is discarding 47 directions. The
-prediction is stable (that is what the pseudo-inverse is for) but the coefficient vector is
-only defined up to the numerical null space, which is why matching MATLAB's `pinv` tolerance
-rule is necessary to reproduce the coefficients at all. At D = 3 (3375 coefficients) the
-`matlab_pinv` path **diverges outright** — +33.7 dB, worse than no model. Use
-`--solver ridge` there; `rfpa.solvers.ridge_solve` applies scale-free Tikhonov shrinkage to
-the same Gram matrix.
+**The normal equations are badly conditioned, and it costs real dB out of sample.** `U'U` has
+condition number ~1e21 at D = 2 and ~4e21 at D = 3, with numerical rank 1168 of 1215 and 3269
+of 3375 — `pinv` is discarding a few dozen directions. The prediction stays stable (that is
+what the pseudo-inverse is for), but the coefficient vector is only defined up to the
+numerical null space, which is why matching MATLAB's `pinv` tolerance rule is necessary to
+reproduce the coefficients at all.
+
+At D = 3 the difference shows up in generalisation. Sweeping the regularisation on the same
+Gram matrix:
+
+| solver | train | val | \|\|c\|\| |
+|---|---|---|---|
+| `pinv`, rcond 1e-15 | -24.988 dB | -23.556 dB | 1.1e3 |
+| `pinv`, MATLAB rule | -24.981 dB | -23.847 dB | 2.0e1 |
+| `ridge`, alpha 1e-6 | -24.906 dB | **-24.473 dB** | 7.9e0 |
+
+The pseudo-inverse buys 0.08 dB in-sample and gives back 0.6 dB out of sample, with a
+coefficient vector two orders of magnitude larger. `rfpa.solvers.ridge_solve` applies
+scale-free Tikhonov shrinkage to the same Gram matrix and defaults to `alpha = 1e-6`; held-out
+NMSE is flat to ~0.1 dB over `alpha` in 1e-7..1e-4, so the default is not delicate.
+
+Note that going from two carriers to three buys only 0.33 dB out of sample (-24.14 → -24.47)
+for 2.8x the coefficients — consistent with band C being nearly irrelevant to band A.
 
 ---
 
@@ -197,7 +213,7 @@ rf-pa-clifford/
 │   ├── reproduce_matlab.py
 │   └── train_clifford.py
 ├── matlab/                # the original .m files, plus delay/nmse/progress (see below)
-├── tests/                 # 33 tests: MATLAB parity, algebra, equivariance
+├── tests/                 # 36 tests: MATLAB parity, algebra, equivariance
 └── data/                  # not in git; put the .mat files here
 ```
 
@@ -223,14 +239,14 @@ the archive only ships a 2-dimensional structure. Rows 1–4 are exactly as supp
 ```bash
 cd rf-pa-clifford
 pip install -e ".[dev]"
-pytest                                        # 33 tests, ~5 s
+pytest                                        # 36 tests, ~4 s
 
 # Reproduce the reference result
 python scripts/reproduce_matlab.py --band A --bands AB --n-basis 8,8 --holdout --rank
 python scripts/reproduce_matlab.py --sweep --holdout --out results/matlab_sweep.json
 
-# Three-band model (needs the ridge solver, see above)
-python scripts/reproduce_matlab.py --band A --bands ABC --n-basis 8,4,4 --solver ridge
+# Three-band model (prefer the ridge solver, see above)
+python scripts/reproduce_matlab.py --band A --bands ABC --n-basis 8,4,4 --solver ridge --holdout
 
 # Clifford model
 python scripts/train_clifford.py --bands AB --steps 3000 --baseline --device auto

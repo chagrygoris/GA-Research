@@ -89,6 +89,29 @@ def test_summed_then_filtered_equals_reference_column_form():
     np.testing.assert_allclose(y_torch, y_columns, atol=1e-10, rtol=0)
 
 
+@pytest.mark.parametrize("dim,n_basis", [(1, [3]), (2, [3, 2]), (3, [3, 2, 4])])
+def test_torch_forward_matches_regressor_path_in_every_dimension(dim, n_basis):
+    """Guards the tensor contraction in the forward pass.
+
+    Contracting the coefficient tensor one basis axis at a time only lines up
+    under plain broadcasting when D <= 2; at D = 3 it silently contracts the
+    wrong axis.  This check runs each supported dimension against the explicit
+    column-by-column regressor construction.
+    """
+    x = _toy_signals(dim=dim, n=3000)
+    pm = PartModel.default(dim)
+    model = MemoryPolynomialPA(pm, n_basis, BL_DEFAULT, quantise=True)
+    rng = np.random.default_rng(11)
+    flat = rng.normal(size=model.n_coef) + 1j * rng.normal(size=model.n_coef)
+    model.load_flat_coef(flat)
+
+    feats = ChebyshevLUTFeatures(x, pm, n_basis, BL_DEFAULT)
+    _, y_columns = feats.predict(flat)
+    with torch.no_grad():
+        y_torch = model(torch.as_tensor(x)).numpy()
+    np.testing.assert_allclose(y_torch, y_columns, atol=1e-10, rtol=0)
+
+
 def test_flat_coefficient_round_trip_uses_matlab_ordering():
     pm = PartModel.default(2)
     model = MemoryPolynomialPA(pm, [3, 4], BL_DEFAULT)
