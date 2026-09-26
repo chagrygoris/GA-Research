@@ -15,12 +15,13 @@ Two things live here:
 
 ## Install
 
-Python 3.11–3.14. From `rf-pa-clifford/`:
+Needs **Python 3.11–3.14** and **pip >= 21.3**. From `rf-pa-clifford/`:
 
 ```bash
-python -m venv .venv && source .venv/bin/activate   # or conda, uv, whatever you use
+python3.11 -m venv .venv && source .venv/bin/activate   # any of 3.11-3.14; conda/uv fine too
+python -m pip install --upgrade pip                     # see troubleshooting below
 pip install -e ".[dev]"
-pytest                                              # 42 tests, ~5 s, no data needed
+pytest                                                  # 42 tests, ~5 s, no data needed
 ```
 
 Runtime dependencies are just `numpy`, `scipy` and `torch`; `[dev]` adds `pytest`. Two more
@@ -49,6 +50,43 @@ python scripts/reproduce_matlab.py --band A --bands AB --n-basis 8,8 --holdout
 
 Octave is needed only to re-run the cross-check against the original `.m` files; see
 [docs/reference-model.md](docs/reference-model.md#verification-against-the-original-code).
+
+### Troubleshooting the install
+
+Check both versions before anything else — most install failures here are one of these two:
+
+```bash
+python -c "import sys; print(sys.version)"
+pip --version
+```
+
+**`File "setup.py" or "setup.cfg" not found. Directory cannot be installed in editable mode`**
+Your pip predates PEP 660, which is what lets a `pyproject.toml`-only project be installed
+with `-e`. That landed in pip 21.3 (October 2021). Fix with
+`python -m pip install --upgrade pip`.
+
+**`Requires-Python >=3.11,<3.15`, or the above on macOS**
+pip 21.2.4 in particular is what macOS bundles with its system Python 3.9.6, which is below
+this project's floor — so upgrading pip there just exposes the Python version as the next
+error. The venv has to be built on a newer interpreter, not the system one:
+
+```bash
+brew install python@3.11              # or pyenv install 3.11, or use uv
+rm -rf .venv
+python3.11 -m venv .venv && source .venv/bin/activate
+pip install -e ".[dev]"
+```
+
+`uv venv --python 3.11 && uv pip install -e ".[dev]"` does the same thing and brings its own
+modern resolver, if you would rather not touch the system Python at all.
+
+**Not wanting to install at all.** Nothing here needs the package on the path — everything
+runs from source with `numpy`, `scipy` and `torch` present:
+
+```bash
+PYTHONPATH=src python scripts/reproduce_matlab.py --band A --bands AB --n-basis 8,8
+PYTHONPATH=src python -m pytest tests/
+```
 
 ---
 
