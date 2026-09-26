@@ -17,7 +17,7 @@ def _ga_to_canonical_mv(mv_grid, mv_dim):
 
 class TralaleroCompetitor(nn.Module):
     def __init__(self, algebra, encoder_type: str = "resnet", ga_pool_hw: tuple = (28, 28),
-                 pretrained_backbone: bool = False):
+                 pretrained_backbone: bool = False, hidden_dim=32):
         super().__init__()
         self.algebra = algebra
         self._use_ga_backbone = encoder_type in {"ga", "ga_canonical"}
@@ -40,7 +40,7 @@ class TralaleroCompetitor(nn.Module):
             enc_channels = getattr(self.backbone, "output_shape", None)[0]
             self.projective_matrix = nn.Linear(enc_channels, self._n_mv * self._mv_dim)
 
-        self.ga_head = TralaleroTralala(algebra, in_features=self._n_mv)
+        self.ga_head = TralaleroTralala(algebra, in_features=self._n_mv, hidden_dim=hidden_dim)
 
     def forward(self, x):
         if self._use_ga_backbone:

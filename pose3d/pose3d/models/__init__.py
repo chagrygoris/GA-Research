@@ -98,6 +98,7 @@ def _tralalero(cfg: Config, algebra) -> nn.Module:
         encoder_type=cfg.model.encoder,
         ga_pool_hw=tuple(cfg.i2s.ga_pool_hw),
         pretrained_backbone=cfg.features.pretrained_backbone,
+        hidden_dim=cfg.model.hidden_dim,
     )
 
 
