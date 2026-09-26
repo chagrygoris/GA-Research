@@ -11,7 +11,7 @@ Experiment workflow (see the root README and the idea board in pose3d/README.md)
   `Features` below (or, for numeric options, its value becomes the default).
 * A change that is not proven yet lands with its flag False, so `main` stays the
   reference recipe and the experiment stays one `--flag` away.
-* A change that turned out worse is not added; it is written up in reports/.
+* A change that turned out worse is not added; it is written up in a report.
 
 Every field below is also a command-line flag of the same name (`--use_warp`,
 `--no-medoid_eval`, `--n_cond_mv 32`, ...). Sections only group them; flag names are

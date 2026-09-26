@@ -14,7 +14,7 @@ of every experiment; experiments in progress live on branches until they are pro
 | Path | What it is |
 |---|---|
 | `README.md` | the **idea board**: a table of experiment ideas. Anyone adds an idea, a developer claims it, and the row is updated with the result. |
-| `reports/` | one Typst (`.typ`) report per finished experiment, written from `reports/_template.typ`. |
+| `reports/` | one Typst (`.typ`) report per finished experiment. |
 | `references/` | articles, code and websites worth reading, one line each. |
 | `config.py` (in the package) | the reference recipe and the feature flags. |
 

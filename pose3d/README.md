@@ -9,9 +9,8 @@ cd pose3d && poetry install
 poetry run python -m pose3d --path_to_datasets /path/to/data --run_name my-run
 ```
 
-Install, flags, models and code layout: [`USAGE.md`](USAGE.md).
-What has been tried so far: [`reports/2026-09-history.typ`](reports/2026-09-history.typ).
-Reading material: [`references/`](references/README.md).
+Setup and how to run: [`USAGE.md`](USAGE.md). Results: [`reports/`](reports/). Reading material:
+[`references/`](references/README.md).
 
 ## Idea board
 
@@ -23,8 +22,8 @@ request as your work.
 2. **Claim.** Put your name under *Developer* and set the status to `in progress`. Work on a branch
    named `idea-<ID>-<short-name>` off `main` and write it in *Branch*. One idea, one flag: the
    default must keep reproducing the reference run (see the root README).
-3. **Report.** When you have results, copy `reports/_template.typ` to
-   `reports/YYYY-MM-<slug>.typ`, write it up, link it under *Report* and set the final status.
+3. **Report.** When you have results, add a Typst report to `reports/`, link it under *Report* and
+   set the final status.
 
 | Status | Meaning | What happens on `main` |
 |---|---|---|
