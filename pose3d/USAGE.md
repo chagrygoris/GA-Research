@@ -12,6 +12,18 @@ poetry install
 `clifford` and `image2sphere` are forks installed from git (see `pyproject.toml`). The Pascal3D+
 dataset is read through `image2sphere.pascal_dataset.Pascal3D`.
 
+Poetry is not required where torch is already installed (Kaggle): install only what is missing and
+run `python -m pose3d` from `pose3d/`, no install of the package itself.
+
+```bash
+pip install e3nn==0.5.9 healpy==1.19.0 \
+  git+https://github.com/chagrygoris/image2sphere.git \
+  git+https://github.com/chagrygoris/clifford-group-equivariant-neural-networks.git
+```
+
+On Kaggle, pass a constraints file pinning the preinstalled packages (`-c constraints.txt`, as in the
+runner notebook) so `pip` does not replace torch.
+
 ## Run
 
 Run from the `pose3d/` folder. The defaults are the reference recipe:
@@ -39,12 +51,12 @@ poetry run python -m pose3d.evaluate --artifact <entity/project/name.pth:vN> --p
 
 ## Multi-GPU
 
-`--ddp` trains on every visible GPU (torch DistributedDataParallel). The run relaunches itself under
-`torchrun` with one process per GPU, so the command is the same as for one GPU; with one GPU or CPU
-the flag changes nothing. `--num_gpus N` limits the count.
+Training uses every visible GPU by default (torch DistributedDataParallel, `--ddp`). The run relaunches
+itself under `torchrun` with one process per GPU, so the command is the same as for one GPU; with one GPU
+or CPU it changes nothing. `--num_gpus N` limits the count and `--no-ddp` turns it off.
 
 ```bash
-poetry run python -m pose3d --path_to_datasets ... --ddp
+poetry run python -m pose3d --path_to_datasets ... --no-ddp
 ```
 
 `--batch_size` is the **global** batch: each GPU gets `batch_size // n_gpus`, so the recipe is the
@@ -54,8 +66,18 @@ options: `--sync_bn`, `--nccl_p2p` (off by default, Kaggle's T4 x2 can hang with
 (each rank adds its rank). With the RAM cache the tensors are built once before the ranks start.
 W&B, the checkpoint and the printed log come from rank 0 only.
 
+## Pascal3D tensor cache
+
+`--ram_memory` (on by default) decodes every image once per run (~34 min on Kaggle). The tensors can be
+saved and reloaded instead: `--ram_cache_save_dir DIR` writes `pascal_train.pt` / `pascal_val.pt` after a
+normal build, `--ram_cache_dir DIR` loads them (Pascal3D is not even constructed). By default
+(`--pre_cache`) the run looks for the Kaggle dataset `syfry5suvzovvakmuj/pascal3d-ram-cache` and uses it
+when it is mounted; `--no-pre_cache` disables that. The cache holds one un-augmented pass, so it is
+skipped with `--use_warp`, `--use_synth`, `--raw_cache` or `--fisher_prior`.
+
 ## Kaggle
 
 `notebooks/clifford-runner.ipynb` is the runner. Cell 0 holds `BRANCH`, `RUN_NAME` and the flags that
-differ from the defaults; the other cells clone the branch, install with Poetry and run
-`python -m pose3d`.
+differ from the defaults; the other cells clone the branch, install what Kaggle lacks (no Poetry) and run
+`python -m pose3d`. Attach the datasets `syfry5suvzovvakmuj/pascal3d` and
+`syfry5suvzovvakmuj/pascal3d-ram-cache`.

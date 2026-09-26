@@ -3,7 +3,8 @@
 The defaults reproduce the best documented Clifford Flow run (W&B `k5sblpo8`,
 10.25 deg median rotation error on Pascal3D+): `--model=clifford_flow`, pretrained
 ResNet-50, `n_cond_mv=64`, `n_time_samples=8`, `hidden_dim=32`, 100 epochs,
-`lr=1e-4`, 32-sample medoid evaluation.
+`lr=1e-4`, 32-sample medoid evaluation. DDP over every visible GPU and the pre-built Pascal3D
+tensors are on by default too; they speed a run up and leave the recipe's hyperparameters alone.
 
 Experiment workflow (see the root README and the idea board in pose3d/README.md):
 
@@ -22,6 +23,7 @@ from __future__ import annotations
 
 import argparse
 import dataclasses
+import pathlib
 from dataclasses import dataclass, field
 from typing import Any, List, Literal, Optional, Tuple, Union, get_args, get_origin, get_type_hints
 
@@ -110,12 +112,20 @@ class Features:
     # Score the final model with TrainConfig.eval_samples draws and take the geodesic
     # medoid instead of a single draw (32 samples is what the reported numbers use).
     medoid_eval: bool = True
+    # Data-parallel training over every visible GPU (torch DistributedDataParallel; the run
+    # relaunches itself under torchrun). With one GPU or CPU it changes nothing. batch_size stays
+    # the global batch; BatchNorm statistics are per GPU unless --sync_bn. On Kaggle T4 x2 an
+    # epoch took roughly 1.5-1.6x less than on one T4 (compared across runs). --no-ddp turns it off.
+    ddp: bool = True
+    # Reuse the pre-built Pascal3D tensors instead of decoding every image each session
+    # (~34 min): when the Kaggle dataset `syfry5suvzovvakmuj/pascal3d-ram-cache` is mounted,
+    # --ram_cache_dir is picked automatically (PRE_CACHE_DIRS). The tensors come from the same
+    # InMemoryDataset build a normal run does (not bit-compared with a fresh build). With
+    # nothing mounted, or with use_warp / use_synth / raw_cache / fisher_prior, the run builds
+    # them as before. --no-pre_cache turns it off.
+    pre_cache: bool = True
 
     # ---- experimental (False) ---------------------------------------------------
-    # Data-parallel training over every visible GPU (torch DistributedDataParallel; the run
-    # relaunches itself under torchrun). With one GPU or CPU it changes nothing. Untested
-    # until the first Kaggle run on the `ddp` branch; becomes True once it matches the baseline.
-    ddp: bool = False
     # Pascal3D's own augmentation (flip / up-direction jitter / bbox jitter). Run
     # `lyqxhz1p` reached 9.71 deg with it but its exact recipe is unconfirmed.
     use_warp: bool = False
@@ -398,6 +408,32 @@ def _section_classes() -> dict:
     return {name: hints[name] for name in SECTIONS}
 
 
+# Where Kaggle mounts the pre-built Pascal3D tensors (pascal_train.pt / pascal_val.pt) of the dataset
+# `syfry5suvzovvakmuj/pascal3d-ram-cache`; the first directory holding both files is used.
+PRE_CACHE_DIRS = (
+    "/kaggle/input/pascal3d-ram-cache",
+    "/kaggle/input/datasets/syfry5suvzovvakmuj/pascal3d-ram-cache",
+)
+
+
+def _auto_pre_cache(cfg: Config) -> None:
+    """Point --ram_cache_dir at the mounted pre-built tensors (Features.pre_cache)."""
+    f, d = cfg.features, cfg.data
+    if d.ram_cache_dir or not f.pre_cache:
+        return
+    # The tensors are one un-augmented pass over the images with no class labels, so they only
+    # stand in for a normal build when nothing per-access is asked of the data.
+    if (cfg.run.dataset != "pascal" or cfg.run.sanity_check or not f.ram_memory or f.use_warp
+            or f.use_synth or f.raw_cache or f.fisher_prior or d.cache_draws != 1):
+        return
+    for directory in PRE_CACHE_DIRS:
+        path = pathlib.Path(directory)
+        if (path / "pascal_train.pt").exists() and (path / "pascal_val.pt").exists():
+            d.ram_cache_dir = directory
+            print(f"pre_cache: using the pre-built Pascal3D tensors in {directory}")
+            return
+
+
 def parse_args(argv: Optional[List[str]] = None) -> Config:
     """Parse command-line flags into a Config."""
     parser = create_argparser()
@@ -411,4 +447,5 @@ def parse_args(argv: Optional[List[str]] = None) -> Config:
                 value = tuple(value)
             values[fld.name] = value
         setattr(cfg, name, cls(**values))
+    _auto_pre_cache(cfg)
     return cfg
