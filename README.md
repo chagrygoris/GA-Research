@@ -5,6 +5,7 @@ Geometric-algebra (Clifford) research experiments, one folder per experiment fam
 | Folder | Experiment | Status |
 |---|---|---|
 | [`pose3d/`](pose3d/) | Image-conditioned 3D pose (SO(3)) estimation: Clifford Flow vs Image2Sphere, IPDF, matrix Fisher | active |
+| [`dpd/`](dpd/) | dpd | new |
 
 Each experiment folder is a self-contained Poetry project. `main` always holds the reference recipe
 of every experiment; experiments in progress live on branches until they are proven.
@@ -15,7 +16,7 @@ of every experiment; experiments in progress live on branches until they are pro
 |---|---|
 | `README.md` | the **idea board**: a table of experiment ideas. Anyone adds an idea, a developer claims it, and the row is updated with the result. |
 | `reports/` | one Typst (`.typ`) report per finished experiment. |
-| `references/` | articles, code and websites worth reading, one line each. |
+| `awesome-reference/` | articles, code and websites worth reading, one line each. |
 | `config.py` (in the package) | the reference recipe and the feature flags. |
 
 ## Working on `main`
@@ -30,5 +31,5 @@ of every experiment; experiments in progress live on branches until they are pro
 ## Adding an experiment family
 
 Create a sibling folder next to `pose3d/` with its own `pyproject.toml`, an idea-board `README.md`,
-`reports/` (with a copy of the template) and `references/`, and a `config.py` whose defaults are that
+`reports/` and `awesome-reference/`, and a `config.py` whose defaults are that
 experiment's reference recipe. Add a row to the table above.
