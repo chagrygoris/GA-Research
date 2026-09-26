@@ -7,6 +7,7 @@ import torch
 from image2sphere.so3_utils import rotation_error
 from tqdm import tqdm
 
+from pose3d.engine.distributed import gather_errors, is_main
 from pose3d.geometry.quaternion import project_multivector_to_rotor, unit_quaternion_to_matrix
 
 
@@ -80,14 +81,15 @@ def calculate_evaluation_metrics(model, loader, cfg, n_samples: int = 1):
     """Rotation error (degrees) of every sample in `loader`.
 
     Models exposing `predict` are evaluated through it (with `n_samples` draws when it
-    accepts them); the rest go through `forward` plus `decode_output`.
+    accepts them); the rest go through `forward` plus `decode_output`. Under DDP the loader holds
+    this rank's shard and the errors of all ranks are joined, so every rank must call it.
     """
     device = cfg.device
     err = []
 
     model.eval()
     model.to(device)
-    for batch in tqdm(loader, desc="Evaluating Model"):
+    for batch in tqdm(loader, desc="Evaluating Model", disable=not is_main()):
         img = batch["img"].to(device)
 
         clas = None
@@ -109,4 +111,4 @@ def calculate_evaluation_metrics(model, loader, cfg, n_samples: int = 1):
 
         gt_rotmat = batch['rot'].to(device)
         err.append(rotation_error_with_projection(pred_rotmat, gt_rotmat))
-    return np.hstack(err)
+    return gather_errors(np.hstack(err))

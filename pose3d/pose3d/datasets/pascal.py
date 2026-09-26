@@ -1,11 +1,14 @@
 """Pascal3D+ data loading (image2sphere's Pascal3D) with the RAM-cache and augmentation options."""
 
+import gc
 import pathlib
+import tempfile
 import time
 
 import numpy as np
 from image2sphere.pascal_dataset import Pascal3D
-from torch.utils.data import DataLoader, Dataset
+from torch.utils.data import DataLoader, Dataset, Subset
+from torch.utils.data.distributed import DistributedSampler
 
 from pose3d.datasets.cache import InMemoryDataset, RawImageCache
 
@@ -130,6 +133,38 @@ def _val_dataset(cfg):
     return ds
 
 
+def prepare_ram_cache(cfg):
+    """Build the RAM-cache tensors once, in the process that launches the DDP ranks.
+
+    Returns the directory holding `pascal_{train,val}.pt` for the ranks to load (their
+    --ram_cache_dir), or None when they should build their own (no RAM cache, the raw cache,
+    a sanity check or another dataset).
+    """
+    f, d = cfg.features, cfg.data
+    if cfg.run.dataset != "pascal" or cfg.run.sanity_check or not f.ram_memory or f.raw_cache:
+        return None
+    if all(_cache_file(d.ram_cache_dir, s) is not None and _cache_file(d.ram_cache_dir, s).exists()
+           for s in ("train", "val")):
+        return d.ram_cache_dir
+
+    cache_dir = tempfile.mkdtemp(prefix="pose3d_ram_cache_")
+    d.ram_cache_dir, d.ram_cache_save_dir = None, cache_dir   # rebuild both, save both
+    print(f"Building the RAM cache once for all ranks in {cache_dir}")
+    train, val = _train_dataset(cfg), _val_dataset(cfg)
+    del train, val
+    gc.collect()
+    return cache_dir
+
+
+def _num_workers(cfg):
+    if cfg.data.num_workers is not None:
+        return cfg.data.num_workers
+    f = cfg.features
+    # The raw cache moves the warp into the workers, so it wants the full count.
+    base = 2 if (f.ram_memory and not f.raw_cache) else 4
+    return max(1, base // cfg.world_size)
+
+
 def create_dataloaders(cfg):
     if cfg.run.dataset == "dummynet":
         from pose3d.datasets.modelnet import DummyPointCloudDataset
@@ -141,13 +176,24 @@ def create_dataloaders(cfg):
     else:
         train_dataset = val_dataset = PascalSanityCheckDataset(cfg)
 
-    # The raw cache moves the warp into the workers, so it wants the full count.
-    f = cfg.features
-    num_workers = 2 if (f.ram_memory and not f.raw_cache) else 4
+    num_workers = _num_workers(cfg)
     persistent_workers = num_workers > 0
-    batch_size = cfg.train.batch_size
-    train_loader = DataLoader(train_dataset, batch_size=batch_size, num_workers=num_workers,
-                              pin_memory=True, shuffle=True, persistent_workers=persistent_workers)
+    batch_size = cfg.per_gpu_batch_size   # train.batch_size is the global batch
+
+    if cfg.world_size > 1:
+        # Every rank gets the same number of samples (drop_last), so DDP never waits on a rank
+        # that ran out of batches; the shuffle is reseeded per epoch through set_epoch. The
+        # validation set is split into disjoint strided shards and re-joined by the metrics.
+        sampler = DistributedSampler(train_dataset, num_replicas=cfg.world_size, rank=cfg.rank,
+                                     shuffle=True, seed=cfg.run.seed or 0, drop_last=True)
+        val_dataset = Subset(val_dataset, range(cfg.rank, len(val_dataset), cfg.world_size))
+        train_loader = DataLoader(train_dataset, batch_size=batch_size, num_workers=num_workers,
+                                  pin_memory=True, sampler=sampler,
+                                  persistent_workers=persistent_workers)
+    else:
+        train_loader = DataLoader(train_dataset, batch_size=batch_size, num_workers=num_workers,
+                                  pin_memory=True, shuffle=True,
+                                  persistent_workers=persistent_workers)
     val_loader = DataLoader(val_dataset, batch_size=batch_size, num_workers=num_workers,
                             pin_memory=True, shuffle=False, persistent_workers=persistent_workers)
     return train_loader, val_loader

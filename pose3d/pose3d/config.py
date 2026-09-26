@@ -66,14 +66,23 @@ class RunConfig:
     wandb_project: str = "3D Pose Estimation"
     wandb_entity: str = "clifforders"
     wandb_group: Optional[str] = None
+    # Base seed for the run. None: torch's default. Under --ddp every rank adds its rank,
+    # so the flow's (t, r0) noise differs between GPUs.
+    seed: Optional[int] = None
 
 
 @dataclass
 class TrainConfig:
     n_epochs: int = 100
     warmup_epochs: int = 5
+    # GLOBAL batch: under --ddp each GPU sees batch_size // world_size, so the same value is
+    # the same recipe on 1, 2 or 4 GPUs.
     batch_size: int = 32
     lr: float = 1e-4
+    # Rescale lr by (batch_size / lr_reference_batch): "linear" or "sqrt". "none" keeps lr
+    # as given. Only needed when batch_size is raised to use more GPUs.
+    lr_scaling: Literal["none", "linear", "sqrt"] = "none"
+    lr_reference_batch: int = 32
     # mse: plain MSE on the matrix; mse_ortho: MSE + orthogonality penalty (teammates' default).
     loss: LossName = "mse"
     label_smoothing: float = 0.0   # only for loss=prob
@@ -103,6 +112,10 @@ class Features:
     medoid_eval: bool = True
 
     # ---- experimental (False) ---------------------------------------------------
+    # Data-parallel training over every visible GPU (torch DistributedDataParallel; the run
+    # relaunches itself under torchrun). With one GPU or CPU it changes nothing. Untested
+    # until the first Kaggle run on the `ddp` branch; becomes True once it matches the baseline.
+    ddp: bool = False
     # Pascal3D's own augmentation (flip / up-direction jitter / bbox jitter). Run
     # `lyqxhz1p` reached 9.71 deg with it but its exact recipe is unconfirmed.
     use_warp: bool = False
@@ -126,9 +139,22 @@ class DataConfig:
     multiprocessing: bool = False   # spawn workers while filling the RAM cache
     max_synth: int = 0              # cap on the synthetic pool with use_synth (0 keeps all)
     cache_draws: int = 1            # augmented passes cached with ram_memory + use_warp
+    # DataLoader workers per process. None: 2 (4 with raw_cache) split across GPUs, at least 1.
+    num_workers: Optional[int] = None
     # Reuse the tensors ram_memory builds instead of decoding every image each session.
     ram_cache_dir: Optional[str] = None        # read pascal_{train,val}.pt from here
     ram_cache_save_dir: Optional[str] = None   # write them here after a normal build
+
+
+@dataclass
+class DistConfig:
+    """Options for Features.ddp."""
+
+    num_gpus: Optional[int] = None   # None: every visible GPU
+    sync_bn: bool = False            # SyncBatchNorm instead of per-GPU BatchNorm statistics
+    ddp_find_unused: bool = False    # only for models with parameters that get no gradient
+    # NCCL peer-to-peer copies; off by default because Kaggle's T4 x2 can hang with it on.
+    nccl_p2p: bool = False
 
 
 @dataclass
@@ -252,7 +278,7 @@ class I2SConvConfig:
 
 
 SECTIONS = (
-    "run", "train", "features", "data", "model", "flow",
+    "run", "train", "features", "data", "distributed", "model", "flow",
     "i2s", "ipdf", "pointcloud", "vit", "i2s_backbone", "i2s_conv",
 )
 
@@ -263,6 +289,7 @@ class Config:
     train: TrainConfig = field(default_factory=TrainConfig)
     features: Features = field(default_factory=Features)
     data: DataConfig = field(default_factory=DataConfig)
+    distributed: DistConfig = field(default_factory=DistConfig)
     model: ModelConfig = field(default_factory=ModelConfig)
     flow: FlowConfig = field(default_factory=FlowConfig)
     i2s: I2SConfig = field(default_factory=I2SConfig)
@@ -274,10 +301,27 @@ class Config:
 
     # Set at runtime, not a flag.
     device: Any = None
+    rank: int = 0
+    world_size: int = 1
 
     @property
     def eval_samples(self) -> int:
         return self.train.eval_samples if self.features.medoid_eval else 1
+
+    @property
+    def per_gpu_batch_size(self) -> int:
+        return self.train.batch_size // self.world_size
+
+    @property
+    def effective_lr(self) -> float:
+        """train.lr rescaled by the batch size when lr_scaling asks for it."""
+        t = self.train
+        ratio = t.batch_size / t.lr_reference_batch
+        if t.lr_scaling == "linear":
+            return t.lr * ratio
+        if t.lr_scaling == "sqrt":
+            return t.lr * ratio ** 0.5
+        return t.lr
 
     @property
     def n_time_samples(self) -> int:
