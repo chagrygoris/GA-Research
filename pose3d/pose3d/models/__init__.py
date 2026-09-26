@@ -254,7 +254,7 @@ def _image2pcd_ipdf(cfg: Config, algebra) -> nn.Module:
 
 
 def _dummynet(cfg: Config, algebra) -> nn.Module:
-    from pose3d.pointcloud import DummyNet
+    from pose3d.models.dummynet import DummyNet
 
     return DummyNet()
 

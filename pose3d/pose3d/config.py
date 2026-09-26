@@ -5,13 +5,13 @@ The defaults reproduce the best documented Clifford Flow run (W&B `k5sblpo8`,
 ResNet-50, `n_cond_mv=64`, `n_time_samples=8`, `hidden_dim=32`, 100 epochs,
 `lr=1e-4`, 32-sample medoid evaluation.
 
-Experiment workflow (see docs/experiment-workflow.md):
+Experiment workflow (see the root README and the idea board in pose3d/README.md):
 
 * A change that is proven better on Pascal3D+ is adopted with its flag set to True in
   `Features` below (or, for numeric options, its value becomes the default).
 * A change that is not proven yet lands with its flag False, so `main` stays the
   reference recipe and the experiment stays one `--flag` away.
-* A change that turned out worse is not added; it is recorded in EXPERIMENTS.md.
+* A change that turned out worse is not added; it is written up in reports/.
 
 Every field below is also a command-line flag of the same name (`--use_warp`,
 `--no-medoid_eval`, `--n_cond_mv 32`, ...). Sections only group them; flag names are

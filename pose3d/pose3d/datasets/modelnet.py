@@ -12,7 +12,7 @@ from pose3d.engine.metrics import project_to_orthogonal_manifold
 class DummyPointCloudDataset(Dataset):
     def __init__(self, cfg=None, path: str = None, size: int = 42, num_points=2048):
         super().__init__()
-        from pose3d.pointcloud import MeshProcessor
+        from pose3d.utils.pointcloud import MeshProcessor
 
         path = cfg.run.path_to_datasets if cfg else path
         self.size = size
