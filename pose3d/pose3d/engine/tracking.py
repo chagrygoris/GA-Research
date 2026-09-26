@@ -1,16 +1,21 @@
-import wandb
+"""Weights & Biases helpers. Every function is a no-op when there is no run."""
+
 from pathlib import Path
 
+import wandb
 
-def wandb_create_run(run_name, project="3D Pose Estimation", entity="clifforders", group=None):
-    if not run_name:
-        print(f"W&B run won't be created, since run name is {run_name}")
+
+def wandb_create_run(cfg):
+    if not cfg.run.run_name:
+        print(f"W&B run won't be created, since run name is {cfg.run.run_name}")
         return None
     print("Creating W&B run")
     run = wandb.init(
-        project="3D Pose Estimation",
-        entity="clifforders",
-        name=run_name
+        project=cfg.run.wandb_project,
+        entity=cfg.run.wandb_entity,
+        group=cfg.run.wandb_group,
+        name=cfg.run.run_name,
+        config=cfg.to_dict(),
     )
     print("Created W&B run with name {} at {}".format(run.name, run.project_url))
     return run
@@ -21,12 +26,12 @@ def wandb_finish_run(run):
         run.finish()
 
 
-def wandb_log_code(run, code_dir : Path):
+def wandb_log_code(run, code_dir: Path):
     if run is not None:
         run.log_code(code_dir.__str__())
 
 
-def wandb_log_artifact(run, path_to_artifact : Path, artifact_type="artifact"):
+def wandb_log_artifact(run, path_to_artifact: Path, artifact_type="artifact"):
     if run is None:
         return
     artifact = wandb.Artifact(name=path_to_artifact.name, type=artifact_type)

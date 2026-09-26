@@ -1,14 +1,14 @@
 [tool.poetry]
-name = "3d-pose-estimation-exps"
+name = "pose3d"
+description = "Image-conditioned 3D pose (SO(3)) estimation with geometric-algebra models"
 version = "0.1.0"
-packages = [{ include = "src" }]
+packages = [{ include = "pose3d" }]
 
 [tool.poetry.dependencies]
 python = ">=3.11,<3.15"
 
 torch = "2.9.0"
 torchvision = "0.24.0"
-transformers = "4.57.1"
 tqdm = "4.67.1"
 pandas = "2.2.2"
 scikit-learn = "1.6.1"
@@ -31,3 +31,8 @@ transformers = "^4.38.0"
 [build-system]
 requires = ["poetry-core"]
 build-backend = "poetry.core.masonry.api"
+
+[dependency-groups]
+dev = [
+    "kaggle (>=2.2.4,<3.0.0)"
+]

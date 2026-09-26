@@ -3,7 +3,7 @@ import unittest
 import torch
 from clifford.algebra.cliffordalgebra import CliffordAlgebra
 
-from src.model import SimpleFullGeometricProductPoseHead
+from pose3d.models.vit_baseline import SimpleFullGeometricProductPoseHead
 
 
 class ViTGARotorReadoutSmokeTest(unittest.TestCase):
