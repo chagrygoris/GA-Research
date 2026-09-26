@@ -6,7 +6,7 @@ import torch
 from clifford.algebra.cliffordalgebra import CliffordAlgebra
 
 from pose3d.config import Config, parse_args
-from pose3d.data import create_dataloaders
+from pose3d.datasets import create_dataloaders
 from pose3d.engine.checkpoint import form_checkpoint, get_available_device, load_checkpoint
 from pose3d.engine.losses import build_criterion
 from pose3d.engine.metrics import calculate_evaluation_metrics

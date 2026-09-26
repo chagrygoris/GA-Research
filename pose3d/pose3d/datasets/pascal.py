@@ -1,0 +1,153 @@
+"""Pascal3D+ data loading (image2sphere's Pascal3D) with the RAM-cache and augmentation options."""
+
+import pathlib
+import time
+
+import numpy as np
+from image2sphere.pascal_dataset import Pascal3D
+from torch.utils.data import DataLoader, Dataset
+
+from pose3d.datasets.cache import InMemoryDataset, RawImageCache
+
+
+class PascalSanityCheckDataset(Dataset):
+    """The first `batch_size` training samples; used by --sanity_check."""
+
+    def __init__(self, cfg):
+        self.base_dataset = Pascal3D(datasets_dir=cfg.run.path_to_datasets, train="train")
+        self.size = cfg.train.batch_size
+
+    def __len__(self):
+        return self.size
+
+    def __getitem__(self, i):
+        if i < self.size:
+            return self.base_dataset[i]
+        raise ValueError("List Index out of Range")
+
+
+def _cache_file(directory, split):
+    return pathlib.Path(directory) / f"pascal_{split}.pt" if directory else None
+
+
+def _num_builder(cfg):
+    return 4 if cfg.run.platform == "kaggle" else 2
+
+
+def _load_cached(split, cfg):
+    """The cached tensors for `split` if --ram_cache_dir has them (Pascal3D is not even
+    constructed, which skips parsing every annotation .mat), else None."""
+    cached = _cache_file(cfg.data.ram_cache_dir, split)
+    if cached is None or not cached.exists():
+        return None
+    t0 = time.time()
+    ds = InMemoryDataset.load(cached, include_cls=cfg.features.fisher_prior)
+    print(f"[timing] {split}: loaded {len(ds)} samples from cache {cached} in {time.time() - t0:.1f}s")
+    return ds
+
+
+def _save_cache(ds, split, cfg):
+    target = _cache_file(cfg.data.ram_cache_save_dir, split)
+    if target is not None:
+        t0 = time.time()
+        ds.save(target)
+        print(f"[timing] {split}: saved cache to {target} in {time.time() - t0:.1f}s")
+
+
+def _bound_synthetic_pool(train, max_synth):
+    if len(train.synth_dataset.files) == 0:
+        raise FileNotFoundError(
+            "--use_synth found no RenderForCNN images under "
+            "<path_to_datasets>/syn_images_cropped_bkg_overlaid/<synset>/*/*.png"
+        )
+    available = len(train.synth_dataset.files)
+    if 0 < max_synth < available:
+        # Bound the pool before the cache sees it. Each epoch only draws
+        # 3 * len(real) synthetic samples, so a capped pool still gives
+        # every draw a fresh image.
+        rng = np.random.default_rng(0)
+        keep = sorted(rng.choice(available, size=max_synth, replace=False))
+        train.synth_dataset.files = [train.synth_dataset.files[i] for i in keep]
+    print(f"Synthetic pool: {len(train.synth_dataset.files)} of {available} renders, "
+          f"{3 * len(train.real_dataset)} drawn per epoch")
+
+
+def _train_dataset(cfg):
+    f, d = cfg.features, cfg.data
+    if f.ram_memory and not f.raw_cache:
+        cached = _load_cached("train", cfg)
+        if cached is not None:
+            if f.use_warp or f.use_synth:
+                print("WARNING: the cached train tensors freeze one draw of the augmentation "
+                      "(the cache key does not encode use_warp/use_synth).")
+            return cached
+
+    train = Pascal3D(cfg.run.path_to_datasets, train=True,
+                     use_warp=f.use_warp, use_synth=f.use_synth)
+    if f.use_synth:
+        _bound_synthetic_pool(train, d.max_synth)
+
+    if not f.ram_memory:
+        return train
+
+    num_builder = _num_builder(cfg)
+    if f.raw_cache:
+        # Cache the file reads and let Pascal3D augment on every access, so
+        # augmentation is unlimited rather than a fixed pool of draws.
+        cache = RawImageCache.for_dataset(train, workers=2 * num_builder).install()
+        print(f"Raw cache: {cache.nbytes / 2**30:.2f} GiB held in RAM, augmentation runs per access")
+        return train
+
+    if f.use_warp and d.cache_draws == 1:
+        print("WARNING: --ram_memory caches one draw per image, which freezes the "
+              "augmentation --use_warp just enabled. Pass --cache_draws > 1 or --raw_cache.")
+    t0 = time.time()
+    ds = InMemoryDataset(train, build_workers=num_builder,
+                         use_multiprocessing=d.multiprocessing,
+                         n_draws=d.cache_draws, include_cls=f.fisher_prior)
+    print(f"[timing] train: built {len(ds)} samples from Pascal3D in {time.time() - t0:.1f}s")
+    _save_cache(ds, "train", cfg)
+    return ds
+
+
+def _val_dataset(cfg):
+    f = cfg.features
+    if f.ram_memory:
+        cached = _load_cached("val", cfg)
+        if cached is not None:
+            return cached
+
+    # Pascal3D asserts use_warp/use_synth are off for the test split.
+    val = Pascal3D(cfg.run.path_to_datasets, train=False)
+    if not f.ram_memory:
+        return val
+
+    # Validation stays deterministic: one draw, no augmentation.
+    t0 = time.time()
+    ds = InMemoryDataset(val, build_workers=_num_builder(cfg), include_cls=f.fisher_prior)
+    print(f"[timing] val: built {len(ds)} samples from Pascal3D in {time.time() - t0:.1f}s")
+    _save_cache(ds, "val", cfg)
+    return ds
+
+
+def create_dataloaders(cfg):
+    if cfg.run.dataset == "dummynet":
+        from pose3d.datasets.modelnet import DummyPointCloudDataset
+        train_dataset = DummyPointCloudDataset(cfg, size=1000)
+        val_dataset = DummyPointCloudDataset(cfg, size=100)
+    elif not cfg.run.sanity_check:
+        train_dataset = _train_dataset(cfg)
+        val_dataset = _val_dataset(cfg)
+    else:
+        train_dataset = val_dataset = PascalSanityCheckDataset(cfg)
+
+    # The raw cache moves the warp into the workers, so it wants the full count.
+    f = cfg.features
+    num_workers = 2 if (f.ram_memory and not f.raw_cache) else 4
+    persistent_workers = num_workers > 0
+    batch_size = cfg.train.batch_size
+    train_loader = DataLoader(train_dataset, batch_size=batch_size, num_workers=num_workers,
+                              pin_memory=True, shuffle=True, persistent_workers=persistent_workers)
+    val_loader = DataLoader(val_dataset, batch_size=batch_size, num_workers=num_workers,
+                            pin_memory=True, shuffle=False, persistent_workers=persistent_workers)
+    return train_loader, val_loader

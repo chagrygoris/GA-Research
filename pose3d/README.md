@@ -106,7 +106,7 @@ pose3d/
     train.py                entry point (python -m pose3d)
     evaluate.py             re-score a checkpoint with multi-sample prediction
     geometry/               rotor <-> matrix, flow-matching maps on Spin(3), quaternion helpers
-    data/                   Pascal3D loading, RAM / raw-file caches, ModelNet10 stub
+    datasets/               Pascal3D loading, RAM / raw-file caches, ModelNet10 stub
     engine/                 trainer, losses, metrics, checkpoints, W&B
     models/                 clifford_flow.py (main) + baselines and other model families;
                             __init__.py is the registry (build_model)
