@@ -13,6 +13,45 @@ Two things live here:
    Clifford-group-equivariant network. Working, tested, and **not yet competitive** — see
    [Status](#status-of-the-clifford-model).
 
+## Install
+
+Python 3.11–3.14. From `rf-pa-clifford/`:
+
+```bash
+python -m venv .venv && source .venv/bin/activate   # or conda, uv, whatever you use
+pip install -e ".[dev]"
+pytest                                              # 42 tests, ~5 s, no data needed
+```
+
+Runtime dependencies are just `numpy`, `scipy` and `torch`; `[dev]` adds `pytest`. Two more
+extras are optional and nothing requires them: `[logging]` for Weights & Biases
+(`--wandb`), `[plots]` for matplotlib. Install several with `pip install -e ".[dev,logging]"`.
+
+Note this project uses plain setuptools, not Poetry — unlike `3D Pose experiemtns/` in the
+same repo. There is no shared environment between the two.
+
+**The data is not in git.** The repo's `.gitignore` excludes `data/` and there is no LFS, so
+the two `.mat` files have to be placed by hand:
+
+```
+rf-pa-clifford/data/GeoData_TB.mat     # 23 MB — every result below uses this
+rf-pa-clifford/data/DOV2.mat           # 15 MB — only for rfpa.data.preprocess_dov2
+```
+
+Or pass `--data /path/to/GeoData_TB.mat`. The test suite generates its own signals, so
+`pytest` passing confirms the port is intact before you have the data.
+
+Then the one command that reproduces the headline number (~30 s, prints `-24.121 dB`):
+
+```bash
+python scripts/reproduce_matlab.py --band A --bands AB --n-basis 8,8 --holdout
+```
+
+Octave is needed only to re-run the cross-check against the original `.m` files; see
+[docs/reference-model.md](docs/reference-model.md#verification-against-the-original-code).
+
+---
+
 ## Documentation
 
 | | |
@@ -220,7 +259,7 @@ rf-pa-clifford/
 │   ├── reproduce_matlab.py
 │   └── train_clifford.py
 ├── matlab/                # the original .m files, plus delay/nmse/progress (see below)
-├── tests/                 # 36 tests: MATLAB parity, algebra, equivariance
+├── tests/                 # 42 tests: MATLAB parity, algebra, equivariance, metrics
 └── data/                  # not in git; put the .mat files here
 ```
 
@@ -243,10 +282,6 @@ each assumption and what it would cost if wrong.
 ## Usage
 
 ```bash
-cd rf-pa-clifford
-pip install -e ".[dev]"
-pytest                                        # 36 tests, ~4 s
-
 # Reproduce the reference result
 python scripts/reproduce_matlab.py --band A --bands AB --n-basis 8,8 --holdout --rank
 python scripts/reproduce_matlab.py --sweep --holdout --out results/matlab_sweep.json
