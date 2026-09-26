@@ -49,13 +49,20 @@ NMSE_vs_d  =  NMSE_vs_x  -  NMSE_no_model
 So the A+B fit is "-24.1 dB" in this project's convention and "-13.2 dB" in the other one.
 Neither is wrong; quote the second if you are comparing against a paper.
 
-`rfpa.metrics.summarise` returns both. `improvement_db` is the conversion term:
+`rfpa.metrics.summarise` returns both:
 
 ```python
 {'nmse_model_db': -24.121,      # carrier-referred, what MATLAB prints
  'nmse_no_model_db': -10.892,   # the floor
  'nmse_reference_db': -33.451,  # the vendor's model, when eRef is available
- 'improvement_db': 13.229}      # subtract from nmse_model_db for the other convention
+ 'improvement_db': 13.229}      # = nmse_no_model_db - nmse_model_db
+```
+
+`improvement_db` is how far the model moved off the floor, so the desired-referred figure is
+just its negation:
+
+```
+NMSE_vs_d  =  nmse_model_db - nmse_no_model_db  =  -improvement_db  =  -13.229 dB
 ```
 
 ## A trap worth knowing about

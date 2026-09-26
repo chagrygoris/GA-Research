@@ -25,8 +25,9 @@ pytest                                                  # 42 tests, ~5 s, no dat
 ```
 
 Runtime dependencies are just `numpy`, `scipy` and `torch`; `[dev]` adds `pytest`. Two more
-extras are optional and nothing requires them: `[logging]` for Weights & Biases
-(`--wandb`), `[plots]` for matplotlib. Install several with `pip install -e ".[dev,logging]"`.
+extras are optional and nothing requires them: `[logging]` for Weights & Biases (`--wandb`),
+`[plots]` for matplotlib, `[notebooks]` for the tour below. Install several with
+`pip install -e ".[dev,notebooks]"`.
 
 Note this project uses plain setuptools, not Poetry — unlike `3D Pose experiemtns/` in the
 same repo. There is no shared environment between the two.
@@ -98,6 +99,7 @@ PYTHONPATH=src python -m pytest tests/
 | [docs/reference-model.md](docs/reference-model.md) | The MATLAB model line by line, the port's exact reorganisations, conditioning, porting assumptions |
 | [docs/clifford-model.md](docs/clifford-model.md) | The geometric-algebra formulation, the equivariance argument, current status and next steps |
 | [docs/data.md](docs/data.md) | What is in the two `.mat` files, and the splits |
+| [notebooks/01_explore.ipynb](notebooks/01_explore.ipynb) | **Start here** — a runnable tour of the data, metrics, reference model and Clifford model, with outputs already in the file |
 
 ---
 
