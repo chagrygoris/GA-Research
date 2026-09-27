@@ -148,7 +148,12 @@ def test_run_once_dry_run_updates_state_without_wandb():
     acct = _account()
     kernel = KernelRun(ref="a/rtx-run", status="running", machine_shape="NvidiaRtxPro6000")
     router = _FakeRouter([_status(acct, [kernel])])
-    router.kernel_logs = lambda account, ref: SYNC_LOG   # type: ignore
+    calls = []
+
+    def _fake_kernel_logs(account, ref, follow=False, follow_seconds=30.0):
+        calls.append(follow)
+        return SYNC_LOG
+    router.kernel_logs = _fake_kernel_logs   # type: ignore
 
     with tempfile.TemporaryDirectory() as tmp:
         state = MonitorState(os.path.join(tmp, "state.json"))
@@ -157,6 +162,9 @@ def test_run_once_dry_run_updates_state_without_wandb():
         row = state.get("a/rtx-run")
         assert row.last_step == 1
         assert row.finished is True
+        # a still-RUNNING kernel must be followed, or plain `kernels logs` returns nothing
+        # (see kernel_logs' docstring) and this would never sync anything mid-run.
+        assert calls == [True]
 
         # a second pass with the same log: everything already synced, nothing new
         synced_again = run_once(router, state, DryRunSink(), verbose=False)

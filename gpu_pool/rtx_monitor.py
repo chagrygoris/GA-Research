@@ -224,7 +224,10 @@ def run_once(
         run_state = state.get(kernel.ref)
         if run_state.finished:
             continue
-        log_text = router.kernel_logs(account, kernel.ref)
+        # Plain `kaggle kernels logs` returns nothing until the kernel finishes (see
+        # kernel_logs' docstring), which would make this only ever fire once, at the very
+        # end, defeating the point of polling a still-running kernel -- so follow it instead.
+        log_text = router.kernel_logs(account, kernel.ref, follow=(kernel.status == "running"))
         payloads = new_points(parse_sync_lines(log_text), run_state.last_step)
         if not payloads:
             continue
