@@ -59,7 +59,7 @@ class WandbLogger(Logger):
     entity; the same defaults are used here for continuity.
     """
 
-    def __init__(self, project: str = "rf-pa-clifford", entity: str | None = "clifforders", config: dict | None = None, **kwargs):
+    def __init__(self, project: str = "dpd", entity: str | None = "clifforders", config: dict | None = None, **kwargs):
         super().__init__(verbose=True)
         import wandb
 

@@ -20,15 +20,15 @@ import time
 import numpy as np
 import torch
 
-sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[1] / "src"))
+sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[1]))
 
-from rfpa.data import BL_DEFAULT, Split, load_geodata_tb  # noqa: E402
-from rfpa.features import PartModel  # noqa: E402
-from rfpa.metrics import summarise  # noqa: E402
-from rfpa.models import MemoryPolynomialPA  # noqa: E402
-from rfpa.solvers import effective_rank  # noqa: E402
+from dpd.data import BL_DEFAULT, Split, load_geodata_tb  # noqa: E402
+from dpd.features import PartModel  # noqa: E402
+from dpd.metrics import summarise  # noqa: E402
+from dpd.models import MemoryPolynomialPA  # noqa: E402
+from dpd.solvers import effective_rank  # noqa: E402
 
-DATA = pathlib.Path(__file__).resolve().parents[1] / "data" / "GeoData_TB.mat"
+from dpd.config import GEODATA as DATA  # noqa: E402  -- the reference recipe
 
 
 def run_one(geo, band: str, bands: str, n_basis, solver: str, holdout: bool, rank: bool, **solver_kwargs):
@@ -60,7 +60,7 @@ def run_one(geo, band: str, bands: str, n_basis, solver: str, holdout: bool, ran
     }
     if holdout:
         split = Split.contiguous(ref.n)
-        from rfpa.matlab import nmse_db
+        from dpd.matlab import nmse_db
 
         row["nmse_train_db"] = nmse_db(ref.x[split.train], (ref.d - y)[split.train])
         row["nmse_val_db"] = nmse_db(ref.x[split.val], (ref.d - y)[split.val])

@@ -63,7 +63,7 @@ inside the table.
 
 The knot arithmetic at the top of `gen_spl.m` only determines the row count for the
 Chebyshev branch — the spline branches (`Sp_ord` 0..5) use it properly, but branch 6 ignores
-the knots. `rfpa.matlab.gen_spl_chebyshev` implements branch 6 only.
+the knots. `dpd.matlab.gen_spl_chebyshev` implements branch 6 only.
 
 `MemoryPolynomialPA(quantise=True)` reproduces the lookup exactly. `quantise=False`
 evaluates the Chebyshev argument continuously, which makes the model differentiable with
@@ -111,7 +111,7 @@ This is why matching MATLAB's `pinv` tolerance rule matters. MATLAB uses
 `tol = max(size(A)) * eps(norm(A))`, i.e. `rcond = max(m, n) * eps ~= 2.7e-13` for a
 1215x1215 matrix. NumPy defaults to `rcond = 1e-15`, ~270x smaller, which keeps 15 more
 near-null directions and yields a minimum-norm solution 13x larger. Same prediction,
-different coefficients. `rfpa.solvers.matlab_pinv_solve` implements MATLAB's rule.
+different coefficients. `dpd.solvers.matlab_pinv_solve` implements MATLAB's rule.
 
 At `D = 3` the difference shows up in generalisation:
 

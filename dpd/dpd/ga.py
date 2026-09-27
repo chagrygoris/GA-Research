@@ -1,4 +1,4 @@
-"""A small, self-contained Clifford algebra and a set of equivariant layers.
+r"""A small, self-contained Clifford algebra and a set of equivariant layers.
 
 Self-contained on purpose: the sibling pose-estimation project in this repo
 depends on an external ``clifford`` package pulled from git, and the PA

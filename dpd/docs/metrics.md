@@ -49,7 +49,7 @@ NMSE_vs_d  =  NMSE_vs_x  -  NMSE_no_model
 So the A+B fit is "-24.1 dB" in this project's convention and "-13.2 dB" in the other one.
 Neither is wrong; quote the second if you are comparing against a paper.
 
-`rfpa.metrics.summarise` returns both:
+`dpd.metrics.summarise` returns both:
 
 ```python
 {'nmse_model_db': -24.121,      # carrier-referred, what MATLAB prints
@@ -74,7 +74,7 @@ does `xRef = x(1,:)` above the normalisation loop.
 
 Normalising divides band A by its peak of 0.4669, so using the normalised row as the NMSE
 reference inflates the reference power by `(1/0.4669)^2` and shifts every figure by 6.6 dB.
-This is easy to do by accident, and it is why `rfpa.training.train` takes `x_ref` as a
+This is easy to do by accident, and it is why `dpd.training.train` takes `x_ref` as a
 separate argument rather than reading it off `x[0]`.
 
 ## NMSE is not sufficient on its own
@@ -97,10 +97,10 @@ residual is *more* adjacent-band-dominated than the distortion it started from â
 removes 13 dB of total error power but preferentially removes the in-band part.
 
 That is a real limitation of fitting to NMSE alone, and it is visible only spectrally. Use
-`rfpa.metrics.welch_psd` and `acpr_db` alongside the NMSE figure:
+`dpd.metrics.welch_psd` and `acpr_db` alongside the NMSE figure:
 
 ```python
-from rfpa.metrics import welch_psd, acpr_db
+from dpd.metrics import welch_psd, acpr_db
 
 f, psd_db = welch_psd(residual, nfft=2048, fs=geo.fs_hz)
 acpr = acpr_db(residual, occupied=75e6, offset=90e6, nfft=2048, fs=geo.fs_hz)

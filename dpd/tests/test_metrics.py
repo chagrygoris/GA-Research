@@ -5,7 +5,7 @@ from __future__ import annotations
 import numpy as np
 import pytest
 
-from rfpa.metrics import acpr_db, nmse_db, summarise, welch_psd
+from dpd.metrics import acpr_db, nmse_db, summarise, welch_psd
 
 
 def test_nmse_is_negative_when_the_error_is_below_the_reference():

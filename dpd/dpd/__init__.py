@@ -2,9 +2,9 @@
 
 Two model families over the same data and metrics:
 
-* :mod:`rfpa.models` -- the supplied MATLAB reference (Chebyshev memory
+* :mod:`dpd.models` -- the supplied MATLAB reference (Chebyshev memory
   polynomial), ported exactly and wrapped as a ``torch.nn.Module``.
-* :mod:`rfpa.clifford_model` -- geometric-algebra models, where the baseband
+* :mod:`dpd.clifford_model` -- geometric-algebra models, where the baseband
   phase equivariance of a PA is a structural property of the network rather
   than something hand-coded into an ``|x|^n x`` basis.
 """

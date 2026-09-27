@@ -1,30 +1,39 @@
-# RF PA Behavioural Modelling with Clifford Algebras
+# dpd -- setup and running
 
 A PyTorch interface for the supplied MATLAB PA behavioural model, a verified port of it,
-and a first geometric-algebra model built on the same data, metrics and splits.
+and a first geometric-algebra model built on the same data, metrics and splits. The idea
+board and current scores are in [`README.md`](README.md).
 
 Two things live here:
 
 1. **A faithful port of the reference model** (`SimpleNonLinearModel_ML.m`) — a Chebyshev
    memory polynomial identified by least squares. Verified against the original `.m` code
    running in Octave: same NMSE to 4e-3 dB, same coefficients to 0.5%.
-2. **A Clifford-equivariant model** (`rfpa.clifford_model`) that keeps the outer structure
+2. **A Clifford-equivariant model** (`dpd.clifford_model`) that keeps the outer structure
    of the reference model but replaces its hand-designed envelope basis with a
    Clifford-group-equivariant network. Working, tested, and **not yet competitive** — see
    [Status](#status-of-the-clifford-model).
 
 ## Install
 
-Needs **Python 3.11–3.14** and **pip >= 21.3**. From `rf-pa-clifford/`:
+Needs **Python 3.11–3.14**. Like every experiment folder here this is a self-contained Poetry
+project, but it installs with plain pip just as well. From `dpd/`:
 
 ```bash
-python3.11 -m venv .venv && source .venv/bin/activate   # any of 3.11-3.14; conda/uv fine too
-python -m pip install --upgrade pip                     # see troubleshooting below
-pip install -e ".[dev]"
-pytest                                                  # 42 tests, ~5 s, no data needed
+poetry install --extras dev          # or: poetry install --all-extras
+poetry run pytest                    # 42 tests, ~5 s, no data needed
 ```
 
-Runtime dependencies are just `numpy`, `scipy` and `torch`; `[dev]` adds `pytest`. Two more
+or, with pip (needs **pip >= 21.3**, see troubleshooting below):
+
+```bash
+python3.11 -m venv .venv && source .venv/bin/activate   # any of 3.11-3.14
+python -m pip install --upgrade pip
+pip install -e ".[dev]"
+pytest
+```
+
+Runtime dependencies are just `numpy`, `scipy` and `torch`; `[dev]` adds `pytest`. Three more
 extras are optional and nothing requires them: `[logging]` for Weights & Biases (`--wandb`),
 `[plots]` for matplotlib, `[notebooks]` for the tour below. Install several with
 `pip install -e ".[dev,notebooks]"`.
@@ -36,8 +45,8 @@ same repo. There is no shared environment between the two.
 the two `.mat` files have to be placed by hand:
 
 ```
-rf-pa-clifford/data/GeoData_TB.mat     # 23 MB — every result below uses this
-rf-pa-clifford/data/DOV2.mat           # 15 MB — only for rfpa.data.preprocess_dov2
+dpd/data/GeoData_TB.mat     # 23 MB — every result below uses this
+dpd/data/DOV2.mat           # 15 MB — only for dpd.data.preprocess_dov2
 ```
 
 Or pass `--data /path/to/GeoData_TB.mat`. The test suite generates its own signals, so
@@ -127,10 +136,10 @@ beat.
 
 `DOV2.mat` is the single-band capture used by `NonLinearProblemSimple.m`. There the two
 "dimensions" of the nonlinearity are half-sample fractional delays of one carrier, not
-different carriers; `rfpa.data.preprocess_dov2` reproduces that front end.
+different carriers; `dpd.data.preprocess_dov2` reproduces that front end.
 
 **The data files are not in git** (the repo's `.gitignore` excludes `data/`, and there is no
-LFS). Put `GeoData_TB.mat` and `DOV2.mat` in `rf-pa-clifford/data/`, or pass `--data`.
+LFS). Put `GeoData_TB.mat` and `DOV2.mat` in `dpd/data/`, or pass `--data`.
 
 ---
 
@@ -219,7 +228,7 @@ to that shape.
 In `Cl(2,0)` the I/Q plane is a genuine vector space, and that phase rotation is a rotor
 sandwich `v -> R v R~` on `v = Re(z) e_1 + Im(z) e_2`. Two facts then do real work:
 
-- The layers in `rfpa.ga` (channel mixing with grade-wise scalar weights, the geometric
+- The layers in `dpd.ga` (channel mixing with grade-wise scalar weights, the geometric
   product, gating by grade norms) are equivariant under that rotor action by construction.
 - In `Cl(2,0)` the even subalgebra commutes with every rotor, so the even part of a
   multivector is **invariant** under the rotation — and it is isomorphic to `C`.
@@ -284,8 +293,9 @@ The infrastructure to test all three is in place; none of it has been run.
 ## Layout
 
 ```
-rf-pa-clifford/
-├── src/rfpa/
+dpd/
+├── dpd/                   # the package
+│   ├── config.py          # the reference recipe and the feature flags
 │   ├── matlab.py          # MATLAB-equivalent primitives (delay, conv 'same', fir1, gen_spl, nmse)
 │   ├── data.py            # GeoData_TB / DOV2 loaders, the DOV2 front end, train/val split
 │   ├── features.py        # part model + streaming Chebyshev regressor construction
@@ -295,11 +305,13 @@ rf-pa-clifford/
 │   ├── clifford_model.py  # CliffordPAModel
 │   ├── training.py        # windowed SGD, NMSE loss, optional W&B logger, device selection
 │   └── metrics.py         # NMSE, Welch PSD, ACPR
-├── scripts/
-│   ├── reproduce_matlab.py
-│   └── train_clifford.py
+├── docs/                  # the write-ups linked above
+├── notebooks/             # 01_explore.ipynb -- the tour
+├── scripts/               # reproduce_matlab.py, train_clifford.py
 ├── matlab/                # the original .m files, plus delay/nmse/progress (see below)
 ├── tests/                 # 42 tests: MATLAB parity, algebra, equivariance, metrics
+├── reports/               # one Typst report per finished experiment
+├── awesome-reference/     # reading material
 └── data/                  # not in git; put the .mat files here
 ```
 
@@ -337,8 +349,8 @@ python scripts/train_clifford.py --bands AB --steps 3000 --wandb   # optional W&
 Python:
 
 ```python
-from rfpa import load_geodata_tb, MemoryPolynomialPA, PartModel, summarise
-from rfpa.data import BL_DEFAULT
+from dpd import load_geodata_tb, MemoryPolynomialPA, PartModel, summarise
+from dpd.data import BL_DEFAULT
 import torch
 
 geo = load_geodata_tb("data/GeoData_TB.mat")
@@ -353,7 +365,7 @@ print(summarise(band.x, band.d, y, band.e_ref))
 ```
 
 The same module is differentiable, so `fit_least_squares` can be followed by gradient
-descent against any objective (`rfpa.training.train`), and `quantise=False` makes it
+descent against any objective (`dpd.training.train`), and `quantise=False` makes it
 differentiable with respect to the envelope as well as the coefficients.
 
 ### Re-running the Octave cross-check

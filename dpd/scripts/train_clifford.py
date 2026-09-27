@@ -20,16 +20,16 @@ import time
 import numpy as np
 import torch
 
-sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[1] / "src"))
+sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[1]))
 
-from rfpa.clifford_model import CliffordPAModel  # noqa: E402
-from rfpa.data import BL_DEFAULT, Split, load_geodata_tb  # noqa: E402
-from rfpa.features import PartModel  # noqa: E402
-from rfpa.matlab import nmse_db  # noqa: E402
-from rfpa.models import MemoryPolynomialPA  # noqa: E402
-from rfpa.training import Logger, TrainConfig, WandbLogger, evaluate, resolve_device, train  # noqa: E402
+from dpd.clifford_model import CliffordPAModel  # noqa: E402
+from dpd.data import BL_DEFAULT, Split, load_geodata_tb  # noqa: E402
+from dpd.features import PartModel  # noqa: E402
+from dpd.matlab import nmse_db  # noqa: E402
+from dpd.models import MemoryPolynomialPA  # noqa: E402
+from dpd.training import Logger, TrainConfig, WandbLogger, evaluate, resolve_device, train  # noqa: E402
 
-DATA = pathlib.Path(__file__).resolve().parents[1] / "data" / "GeoData_TB.mat"
+from dpd.config import GEODATA as DATA  # noqa: E402  -- the reference recipe
 
 
 def main() -> None:
@@ -49,7 +49,7 @@ def main() -> None:
     ap.add_argument("--out", type=pathlib.Path)
     ap.add_argument("--device", default="auto", help="auto | cpu | cuda")
     ap.add_argument("--wandb", action="store_true", help="log to Weights & Biases")
-    ap.add_argument("--wandb-project", default="rf-pa-clifford")
+    ap.add_argument("--wandb-project", default="dpd")
     ap.add_argument("--wandb-entity", default="clifforders")
     args = ap.parse_args()
 

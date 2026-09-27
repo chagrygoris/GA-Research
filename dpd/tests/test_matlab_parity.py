@@ -6,10 +6,10 @@ import numpy as np
 import pytest
 import torch
 
-from rfpa.data import BL_DEFAULT
-from rfpa.features import ChebyshevLUTFeatures, PartModel
-from rfpa.matlab import chebyshev_func, fir1, gen_spl_chebyshev, lin2tensor, nmse_db, tensor_order_table
-from rfpa.models import MemoryPolynomialPA, chebyshev_features
+from dpd.data import BL_DEFAULT
+from dpd.features import ChebyshevLUTFeatures, PartModel
+from dpd.matlab import chebyshev_func, fir1, gen_spl_chebyshev, lin2tensor, nmse_db, tensor_order_table
+from dpd.models import MemoryPolynomialPA, chebyshev_features
 
 
 def test_chebyshev_matches_closed_form():

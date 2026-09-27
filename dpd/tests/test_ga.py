@@ -6,9 +6,9 @@ import numpy as np
 import pytest
 import torch
 
-from rfpa.clifford_model import CliffordPAModel
-from rfpa.data import BL_DEFAULT
-from rfpa.ga import (
+from dpd.clifford_model import CliffordPAModel
+from dpd.data import BL_DEFAULT
+from dpd.ga import (
     CliffordAlgebra,
     MVBlock,
     MVGeometricProduct,

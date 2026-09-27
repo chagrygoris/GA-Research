@@ -1,7 +1,7 @@
 # Data reference
 
 Neither file is in git — the repo's `.gitignore` excludes `data/`, and there is no LFS.
-Put both in `rf-pa-clifford/data/`, or pass `--data`.
+Put both in `dpd/data/`, or pass `--data`.
 
 ## `GeoData_TB.mat` (23 MB)
 
@@ -33,7 +33,7 @@ modelling: `|x_B|` moves band A from -14.3 dB to -24.1 dB, while `|x_C|` gains 0
 Cross-modulation falls off with carrier separation.
 
 ```python
-from rfpa import load_geodata_tb
+from dpd import load_geodata_tb
 geo = load_geodata_tb("data/GeoData_TB.mat")
 x, scales = geo.normalised_stack("AB")   # (2, 221000), rows scaled to unit peak
 band = geo.bands["A"]
@@ -57,7 +57,7 @@ The single-band capture used by `NonLinearProblemSimple.m`. Raw, not reduced.
 | `PDerr` | `(1, 245760)` complex | |
 | `FB` | `(2, 262144)` complex | |
 
-`rfpa.data.preprocess_dov2` reproduces the front end of `NonLinearProblemSimple.m`: upsample
+`dpd.data.preprocess_dov2` reproduces the front end of `NonLinearProblemSimple.m`: upsample
 by 2 through a 4097-tap half-band filter, form the error `PDdpd - PDout`, take the first
 polyphase branch, band-limit with `BL`, and scale by `2^-15`.
 
@@ -69,7 +69,7 @@ runs on both, but a `D = 2` result means something different in each case.
 
 ## Splits
 
-`rfpa.data.Split.contiguous(n, train_frac=0.8, guard=512)` gives a contiguous 80/20 split with
+`dpd.data.Split.contiguous(n, train_frac=0.8, guard=512)` gives a contiguous 80/20 split with
 a guard gap. The guard matters because memory kernels reach ~10 samples and `BL` another 16;
 512 removes any leakage at negligible cost at `n = 221000`.
 
