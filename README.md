@@ -5,7 +5,7 @@ Geometric-algebra (Clifford) research experiments, one folder per experiment fam
 | Folder | Experiment | Status |
 |---|---|---|
 | [`pose3d/`](pose3d/) | Image-conditioned 3D pose (SO(3)) estimation: Clifford Flow vs Image2Sphere, IPDF, matrix Fisher | active |
-| [`dpd/`](dpd/) | RF power amplifier behavioural modelling: Chebyshev memory polynomial vs a Clifford-equivariant gain | active |
+| [`dpd/`](dpd/) | dpd | new |
 
 Each experiment folder is a self-contained Poetry project. `main` always holds the reference recipe
 of every experiment; experiments in progress live on branches until they are proven.

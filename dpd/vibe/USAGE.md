@@ -1,5 +1,8 @@
 # dpd -- setup and running
 
+> Part of [`vibe/`](.): written by Claude, not by hand. `dpd/README.md` is the
+> human-authored idea board.
+
 A PyTorch interface for the supplied MATLAB PA behavioural model, a verified port of it,
 and a first geometric-algebra model built on the same data, metrics and splits. The idea
 board and current scores are in [`README.md`](README.md).
@@ -59,7 +62,7 @@ python scripts/reproduce_matlab.py --band A --bands AB --n-basis 8,8 --holdout
 ```
 
 Octave is needed only to re-run the cross-check against the original `.m` files; see
-[docs/reference-model.md](docs/reference-model.md#verification-against-the-original-code).
+[`reference-model.md`](reference-model.md#verification-against-the-original-code).
 
 ### Troubleshooting the install
 
@@ -104,11 +107,11 @@ PYTHONPATH=src python -m pytest tests/
 
 | | |
 |---|---|
-| [docs/metrics.md](docs/metrics.md) | Why NMSE is negative, which normalisation is in use, and what NMSE does not tell you |
-| [docs/reference-model.md](docs/reference-model.md) | The MATLAB model line by line, the port's exact reorganisations, conditioning, porting assumptions |
-| [docs/clifford-model.md](docs/clifford-model.md) | The geometric-algebra formulation, the equivariance argument, current status and next steps |
-| [docs/data.md](docs/data.md) | What is in the two `.mat` files, and the splits |
-| [notebooks/01_explore.ipynb](notebooks/01_explore.ipynb) | **Start here** — a runnable tour of the data, metrics, reference model and Clifford model, with outputs already in the file |
+| [`metrics.md`](metrics.md) | Why NMSE is negative, which normalisation is in use, and what NMSE does not tell you |
+| [`reference-model.md`](reference-model.md) | The MATLAB model line by line, the port's exact reorganisations, conditioning, porting assumptions |
+| [`clifford-model.md`](clifford-model.md) | The geometric-algebra formulation, the equivariance argument, current status and next steps |
+| [`data.md`](data.md) | What is in the two `.mat` files, and the splits |
+| [notebooks/01_explore.ipynb](../notebooks/01_explore.ipynb) | **Start here** — a runnable tour of the data, metrics, reference model and Clifford model, with outputs already in the file |
 
 ---
 
@@ -131,7 +134,7 @@ beat.
 > **Reading the numbers.** All NMSE figures are `10*log10(sum|e|^2 / sum|xRef|^2)` — residual
 > power relative to the *carrier*. They are negative, and **lower is better**: `-24.7 dB` beats
 > `-14.3 dB`. Most of the literature normalises by the desired signal instead, which shifts
-> every figure by the no-model floor. [docs/metrics.md](docs/metrics.md) has the conversion and
+> every figure by the no-model floor. [`metrics.md`](metrics.md) has the conversion and
 > the reasons NMSE alone is not enough for a PA.
 
 `DOV2.mat` is the single-band capture used by `NonLinearProblemSimple.m`. There the two
@@ -205,7 +208,7 @@ MATLAB's coefficients requires matching its `pinv` tolerance rule rather than Nu
 At D = 3 this costs 0.6 dB of held-out NMSE: `pinv` buys 0.08 dB in-sample and gives it back
 with interest out of sample, with a coefficient vector two orders of magnitude larger in
 norm. Prefer `--solver ridge` there. Full numbers and the reasoning in
-[docs/reference-model.md](docs/reference-model.md#conditioning-and-the-solver).
+[`reference-model.md`](reference-model.md#conditioning-and-the-solver).
 
 Note that going from two carriers to three buys only 0.33 dB out of sample (-24.14 → -24.47)
 for 2.8x the coefficients — consistent with band C being nearly irrelevant to band A.
@@ -233,7 +236,7 @@ sandwich `v -> R v R~` on `v = Re(z) e_1 + Im(z) e_2`. Two facts then do real wo
 - In `Cl(2,0)` the even subalgebra commutes with every rotor, so the even part of a
   multivector is **invariant** under the rotation — and it is isomorphic to `C`.
 
-[docs/clifford-model.md](docs/clifford-model.md) derives both and gives the per-layer
+[`clifford-model.md`](clifford-model.md) derives both and gives the per-layer
 equivariance argument.
 
 So the even part of the network's output is precisely "a complex gain that does not change
@@ -305,7 +308,7 @@ dpd/
 │   ├── clifford_model.py  # CliffordPAModel
 │   ├── training.py        # windowed SGD, NMSE loss, optional W&B logger, device selection
 │   └── metrics.py         # NMSE, Welch PSD, ACPR
-├── docs/                  # the write-ups linked above
+├── vibe/                  # AI-written write-ups (this file included)
 ├── notebooks/             # 01_explore.ipynb -- the tour
 ├── scripts/               # reproduce_matlab.py, train_clifford.py
 ├── matlab/                # the original .m files, plus delay/nmse/progress (see below)
@@ -326,7 +329,7 @@ Four things in this port are inferred rather than supplied, and any of them coul
   archive only ships a 2-dimensional structure, so any `D = 3` result depends on our choice.
   Rows 1–4 are exactly as supplied.
 
-[docs/reference-model.md](docs/reference-model.md#helpers-the-archive-does-not-ship) states
+[`reference-model.md`](reference-model.md#helpers-the-archive-does-not-ship) states
 each assumption and what it would cost if wrong.
 
 ---

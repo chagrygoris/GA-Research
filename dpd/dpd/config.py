@@ -48,7 +48,7 @@ class ReferenceRecipe:
 
 @dataclasses.dataclass
 class CliffordRecipe:
-    """The geometric-algebra model. Not yet competitive -- see docs/clifford-model.md.
+    """The geometric-algebra model. Not yet competitive -- see vibe/clifford-model.md.
 
     Exactly phase-equivariant by construction, but -12.2 dB against the
     reference's -24.1 dB. The diagnosis is the trunk, not the optimiser: a random

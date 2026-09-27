@@ -9,7 +9,7 @@ from dpd.metrics import acpr_db, nmse_db, summarise, welch_psd
 
 
 def test_nmse_is_negative_when_the_error_is_below_the_reference():
-    """Lower is better, and the sign is not a bug -- see docs/metrics.md."""
+    """Lower is better, and the sign is not a bug -- see vibe/metrics.md."""
     rng = np.random.default_rng(0)
     ref = rng.normal(size=4096) + 1j * rng.normal(size=4096)
     assert nmse_db(ref, ref) == pytest.approx(0.0)
