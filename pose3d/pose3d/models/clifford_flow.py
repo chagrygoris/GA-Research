@@ -6,7 +6,7 @@ multivectors) -> bivector velocity -> MSE in the tangent space. Inference is an
 Euler ODE integration with an optional multi-sample geodesic medoid.
 
 Experimental variants are all off by default and selected in `pose3d.config.Features`
-and `FlowConfig`: `adapter_grid`, `adapter_channels`, `vector_field_hidden_dim`,
+and `FlowConfig`: `adapter_grid`, `adapter_channels`, `conv_adapter`, `vector_field_hidden_dim`,
 `mlp_heads` and `fisher_prior`.
 """
 
@@ -38,7 +38,8 @@ class ImageToMultivectors(nn.Module):
                  encoder_type: str = "resnet50",
                  depth_anything_model: str = DEPTH_ANYTHING_DEFAULT,
                  freeze_backbone: bool = False,
-                 adapter_channels: int = 256):
+                 adapter_channels: int = 256,
+                 conv_adapter: bool = True):
         super().__init__()
         if not is_dense_backbone(encoder_type):
             # The conv adapter is sized from a deep backbone's channel count; the
@@ -58,6 +59,19 @@ class ImageToMultivectors(nn.Module):
         if self.frozen_backbone:
             freeze_encoder(self.backbone)
         backbone_channels = self.backbone.output_shape[0]
+
+        self.use_conv_adapter = bool(conv_adapter)
+        if not self.use_conv_adapter:
+            # No adapter: the globally pooled backbone vector is cut into consecutive
+            # groups of mv_dim channels, one multivector each (2048 -> 256 for ResNet-50/101),
+            # leaving all mixing to the condition head. grid and adapter_channels are unused.
+            if backbone_channels % mv_dim:
+                raise ValueError(f"{backbone_channels} backbone channels do not split into "
+                                 f"{mv_dim}-component multivectors")
+            self.mv_dim = mv_dim
+            self.conv_adapter = nn.AdaptiveAvgPool2d(1)
+            self.n_mv = backbone_channels // mv_dim
+            return
 
         # adapter_channels sizes the first 1x1 conv (backbone_channels -> adapter_channels),
         # by far the biggest matrix in the non-backbone model at the default 256. The
@@ -86,6 +100,8 @@ class ImageToMultivectors(nn.Module):
         else:
             fmap = self.backbone(x)
         adapted = self.conv_adapter(fmap)
+        if not self.use_conv_adapter:
+            return adapted.flatten(1).view(adapted.shape[0], self.n_mv, self.mv_dim)
         return adapted.flatten(2).transpose(1, 2)
 
 
@@ -139,6 +155,7 @@ class CliffordFlow(nn.Module):
                  depth_anything_model: str = DEPTH_ANYTHING_DEFAULT,
                  freeze_backbone: bool = False,
                  vector_field_hidden_dim=None,
+                 conv_adapter: bool = True,
                  mlp_heads: bool = False,
                  fisher_checkpoint: str = None):
         super().__init__()
@@ -171,7 +188,8 @@ class CliffordFlow(nn.Module):
             self.adapter = ImageToMultivectors(
                 algebra, grid=adapter_grid, pretrained_backbone=pretrained_backbone,
                 encoder_type=encoder_type, depth_anything_model=depth_anything_model,
-                freeze_backbone=freeze_backbone, adapter_channels=adapter_channels)
+                freeze_backbone=freeze_backbone, adapter_channels=adapter_channels,
+                conv_adapter=conv_adapter)
             cond_in_features = self.adapter.n_mv
 
         self.condition_head = TralaleroTralala(
