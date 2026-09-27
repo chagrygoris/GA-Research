@@ -139,6 +139,25 @@ def _normalize_status(raw: str) -> str:
     return _STATUS_ALIASES.get(key, token or "unknown")
 
 
+_PROGRESS_LINE = re.compile(r"it/s|%\||^\s*\d+%|^[\s|\u2500-\u259f\u2588]+$")
+
+
+def filter_progress(text: str, keep_last: int = 0) -> List[str]:
+    """Drop progress-bar redraws and duplicate lines, keeping the informative ones.
+
+    A pose training log is almost entirely tqdm output (41k lines -> ~130 real ones), which
+    buries the timings, losses and metrics. ``keep_last`` trims to the most recent N kept lines.
+    """
+    seen, kept = set(), []
+    for raw in (text or "").splitlines():
+        line = raw.strip()
+        if not line or _PROGRESS_LINE.search(line) or line in seen:
+            continue
+        seen.add(line)
+        kept.append(line)
+    return kept[-keep_last:] if keep_last else kept
+
+
 class CliError(RuntimeError):
     """A ``kaggle`` invocation failed. Carries the command's own stderr."""
 
@@ -459,9 +478,18 @@ class PoolRouter:
 
     # -- CLI ---------------------------------------------------------------------------
     def run_cli(
-        self, account: PoolAccount, *args: str, check: bool = True, timeout: Optional[float] = None
+        self,
+        account: PoolAccount,
+        *args: str,
+        check: bool = True,
+        timeout: Optional[float] = None,
+        partial_on_timeout: bool = False,
     ) -> subprocess.CompletedProcess:
-        """Run ``kaggle <args>`` as ``account``, isolated from other accounts' config."""
+        """Run ``kaggle <args>`` as ``account``, isolated from other accounts' config.
+
+        ``partial_on_timeout`` returns whatever was printed before the deadline instead of
+        raising, for streaming commands such as ``kernels logs --follow`` that never exit.
+        """
         with tempfile.TemporaryDirectory(prefix="kaggle-cfg-") as config_dir:
             env = dict(os.environ)
             # Drop any ambient credential so only this account's can apply.
@@ -482,6 +510,14 @@ class PoolRouter:
                     "kaggle CLI not found at %r; pip install kaggle, or set $KAGGLE_CLI" % self.cli
                 ) from exc
             except subprocess.TimeoutExpired as exc:
+                if partial_on_timeout:
+                    def _text(blob: Any) -> str:
+                        if isinstance(blob, bytes):
+                            return blob.decode(errors="replace")
+                        return blob or ""
+                    return subprocess.CompletedProcess(
+                        exc.cmd, 0, _text(exc.output), _text(exc.stderr)
+                    )
                 raise CliError("kaggle %s timed out after %ss" % (args[0], self.timeout)) from exc
         if check and proc.returncode != 0:
             detail = (proc.stderr or proc.stdout or "").strip().splitlines()
@@ -531,38 +567,29 @@ class PoolRouter:
             return "unknown"
         return _normalize_status(text)
 
-    def kernel_logs(self, account: PoolAccount, ref: str, follow_seconds: float = 8.0) -> str:
+    def kernel_logs(
+        self,
+        account: PoolAccount,
+        ref: str,
+        follow: bool = False,
+        follow_seconds: float = 30.0,
+    ) -> str:
         """Execution logs of the latest run.
 
-        Confirmed empirically (2026-09-27, kaggle-cli 2.2.4): plain ``kernels logs <ref>``
-        (no ``-f``) prints nothing for a still-running kernel -- exit 0, empty stdout, no
-        error. Only ``-f/--follow`` actually dumps the buffered log before it starts
-        tailing live, and there is no flag for "everything so far, then stop". So this runs
-        ``-f`` for up to ``follow_seconds`` and keeps whatever arrived in that window: a
-        kernel that has already finished dumps its whole log and exits well within it, and
-        a kernel still running just gets cut off at the deadline, which is exactly a
-        snapshot of "the log so far".
+        Plain ``kaggle kernels logs`` returns **nothing while the kernel is running**, then the
+        whole log once it finishes. ``follow=True`` uses ``--follow``, which streams the live
+        session; that never exits on its own, so it is read for ``follow_seconds`` and stopped,
+        returning what arrived. Pass the result through :func:`filter_progress` to drop
+        progress-bar noise, which dominates a training log.
         """
-        with tempfile.TemporaryDirectory(prefix="kaggle-cfg-") as config_dir:
-            env = dict(os.environ)
-            for stale in ("KAGGLE_API_TOKEN", "KAGGLE_USERNAME", "KAGGLE_KEY"):
-                env.pop(stale, None)
-            env.update(account.env())
-            env["KAGGLE_CONFIG_DIR"] = config_dir
-            try:
-                proc = subprocess.run(
-                    [self.cli, "kernels", "logs", "-f", ref],
-                    env=env, capture_output=True, text=True, timeout=follow_seconds,
-                )
-                return (proc.stdout or proc.stderr or "").strip()
-            except subprocess.TimeoutExpired as exc:
-                out = exc.stdout.decode() if isinstance(exc.stdout, bytes) else (exc.stdout or "")
-                err = exc.stderr.decode() if isinstance(exc.stderr, bytes) else (exc.stderr or "")
-                return (out or err).strip()
-            except FileNotFoundError as exc:
-                raise CliError(
-                    "kaggle CLI not found at %r; pip install kaggle, or set $KAGGLE_CLI" % self.cli
-                ) from exc
+        if follow:
+            proc = self.run_cli(
+                account, "kernels", "logs", "-f", ref,
+                check=False, timeout=follow_seconds, partial_on_timeout=True,
+            )
+        else:
+            proc = self.run_cli(account, "kernels", "logs", ref, check=False)
+        return ((proc.stdout or "") + (proc.stderr or "")).strip()
 
     def kernel_metadata(self, account: PoolAccount, ref: str) -> Dict[str, Any]:
         """``kernel-metadata.json`` of ``owner/slug``, via ``kaggle kernels pull -m``.

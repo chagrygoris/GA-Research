@@ -369,9 +369,15 @@ class LaunchHandle:
         log = self.log()
         return "\n".join(log.strip().splitlines()[-5:]) if log else ""
 
-    def log(self) -> str:
-        """Execution logs. Unlike the old HTTP path, the CLI serves these while it runs."""
-        return self.launcher.router.kernel_logs(self.account, self.ref)
+    def log(self, follow: bool = False, follow_seconds: float = 30.0) -> str:
+        """Execution logs.
+
+        The plain call returns nothing until the run finishes; ``follow=True`` streams the live
+        session for ``follow_seconds``. See PoolRouter.kernel_logs.
+        """
+        return self.launcher.router.kernel_logs(
+            self.account, self.ref, follow=follow, follow_seconds=follow_seconds
+        )
 
     def output_files(self) -> List[Dict[str, Any]]:
         """Files the kernel wrote to /kaggle/working."""

@@ -12,7 +12,15 @@ The current backend is the official Kaggle CLI; see router.py for the commands u
 """
 
 from .launcher import ACCELERATORS, NotebookSpec, PoolLauncher, git_run_spec
-from .router import AccountStatus, CliError, PoolAccount, PoolRouter, Quota, shape_label
+from .router import (
+    AccountStatus,
+    CliError,
+    PoolAccount,
+    PoolRouter,
+    Quota,
+    filter_progress,
+    shape_label,
+)
 
 __all__ = [
     "ACCELERATORS",
@@ -23,6 +31,7 @@ __all__ = [
     "PoolLauncher",
     "PoolRouter",
     "Quota",
+    "filter_progress",
     "git_run_spec",
     "shape_label",
 ]

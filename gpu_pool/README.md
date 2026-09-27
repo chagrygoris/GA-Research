@@ -167,15 +167,28 @@ defaults to `None`, which makes `wandb_create_run` a no-op.
 
 ## Logs
 
-`handle.log()` shells out to `kaggle kernels logs`, which serves output **while the run is going**
-— unlike the old HTTP path, which only had it on completion. A queued kernel has no log yet.
+`kaggle kernels logs` returns **nothing while a kernel is running**, then the whole log once it
+finishes. The live stream is a separate mode:
+
+```python
+handle.log()                      # empty until the run completes
+handle.log(follow=True)           # --follow: streams the live session for 30s, then returns
+router.kernel_logs(acct, ref, follow=True, follow_seconds=60)
+```
+
+A training log is almost entirely progress-bar redraws — one real pose run gave 41,226 lines of
+which 129 carried timings, losses and metrics — so pass it through `filter_progress`:
+
+```python
+from gpu_pool import filter_progress
+for line in filter_progress(handle.log(follow=True), keep_last=10):
+    print(line)
+```
+
 `handle.status()` gives `queued` -> `running` -> `complete` / `error` / `cancelAcknowledged`.
 
-There is no cancel: neither the CLI nor the API exposes one, so `handle.cancel()` raises and points
-at the notebook page instead.
-
-For progress on a multi-hour run, log to W&B from inside the notebook: pass `--run_name` to
-`src.main` and add the `wandb_api_key` secret to the target account.
+There is no cancel: neither the CLI nor the API exposes one, so `handle.cancel()` raises and
+points at the notebook page instead.
 
 ## Tests
 

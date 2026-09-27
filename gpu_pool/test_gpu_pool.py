@@ -22,6 +22,7 @@ from gpu_pool.launcher import (
 )
 from gpu_pool.router import (
     AccountStatus,
+    filter_progress,
     normalize_accelerator,
     requires_competition,
     shape_label,
@@ -415,37 +416,54 @@ def test_cli_json_treats_no_results_as_empty():
         raise AssertionError("expected CliError on unparseable output")
 
 
-def _fake_cli_script(tmp_dir, name, body):
-    path = os.path.join(tmp_dir, name)
-    with open(path, "w") as fh:
-        fh.write("#!/bin/sh\n" + body)
-    os.chmod(path, 0o755)
-    return path
+def test_filter_progress_keeps_only_informative_lines():
+    log = "\n".join([
+        "python 3.12.13",
+        "NVIDIA RTX PRO 6000 Blackwell Server Edition, 97887 MiB",
+        " 62%|#######   | 356/575 [00:23<00:14, 14.97it/s]",
+        " 63%|#######   | 360/575 [00:24<00:14, 14.98it/s]",
+        "   |     ",
+        "[timing] train: loaded 18371 samples from cache pascal_train.pt in 15.1s",
+        "Training on cuda:0 epoch 1 / 100.",
+        "Training on cuda:0 epoch 1 / 100.",          # duplicate, dropped
+        "Median rotation error 12.01 (46s)",
+    ])
+    kept = filter_progress(log)
+    assert kept == [
+        "python 3.12.13",
+        "NVIDIA RTX PRO 6000 Blackwell Server Edition, 97887 MiB",
+        "[timing] train: loaded 18371 samples from cache pascal_train.pt in 15.1s",
+        "Training on cuda:0 epoch 1 / 100.",
+        "Median rotation error 12.01 (46s)",
+    ]
+    assert filter_progress(log, keep_last=2) == kept[-2:]
+    assert filter_progress("") == []
 
 
-def test_kernel_logs_bounds_a_still_running_kernel():
-    """Confirmed 2026-09-27 against real kaggle-cli 2.2.4: plain `kernels logs <ref>` (no -f)
-    returns nothing for a running kernel. kernel_logs() always passes -f and bounds it with
-    follow_seconds, so a kernel that never stops streaming still yields a snapshot instead of
-    hanging or returning empty."""
-    router = _fake_router([("a", 25.0, False)])
-    with tempfile.TemporaryDirectory() as tmp:
-        router.cli = _fake_cli_script(
-            tmp, "fake_kaggle_slow",
-            "echo line1\necho line2\nsleep 5\necho should_not_appear\n",
-        )
-        text = router.kernel_logs(router.accounts[0], "a/ref", follow_seconds=0.5)
-        assert "line1" in text and "line2" in text
-        assert "should_not_appear" not in text
+def test_kernel_logs_follow_uses_the_streaming_flag():
+    router = _fake_router([("a", 1.0, False)])
+    calls = []
 
+    class _Proc:
+        returncode = 0
+        stdout = "live output"
+        stderr = ""
 
-def test_kernel_logs_returns_full_output_of_a_finished_kernel():
-    """-f on an already-finished kernel dumps everything and exits well inside the window."""
-    router = _fake_router([("a", 25.0, False)])
-    with tempfile.TemporaryDirectory() as tmp:
-        router.cli = _fake_cli_script(tmp, "fake_kaggle_fast", "echo done1\necho done2\n")
-        text = router.kernel_logs(router.accounts[0], "a/ref", follow_seconds=5.0)
-        assert text == "done1\ndone2"
+    def fake_run_cli(account, *args, **kw):
+        calls.append((args, kw))
+        return _Proc()
+
+    router.run_cli = fake_run_cli            # type: ignore
+    acct = router.accounts[0]
+
+    router.kernel_logs(acct, "u/s")
+    assert calls[-1][0] == ("kernels", "logs", "u/s")
+    assert "partial_on_timeout" not in calls[-1][1]
+
+    router.kernel_logs(acct, "u/s", follow=True, follow_seconds=12)
+    args, kw = calls[-1]
+    assert args == ("kernels", "logs", "-f", "u/s")
+    assert kw["partial_on_timeout"] is True and kw["timeout"] == 12
 
 
 if __name__ == "__main__":
