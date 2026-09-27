@@ -196,6 +196,10 @@ class FlowConfig:
     # Hidden widths of the vector field alone (None: same as hidden_dim). Paired with a
     # smaller adapter_grid this reallocates parameters; 10.49 deg (unconfirmed).
     vector_field_hidden_dim: Optional[List[int]] = None
+    # --no-conv_adapter drops the ConvAdapter: the globally pooled backbone vector is
+    # reshaped into backbone_channels / 8 multivectors (256 for ResNet) for the condition
+    # head, so adapter_grid / adapter_channels are unused.
+    conv_adapter: bool = True
     # Path to Liu et al.'s Pascal3D+ matrix Fisher checkpoint (state_dict_119.pkl);
     # used only with Features.fisher_prior.
     fisher_checkpoint: Optional[str] = None
