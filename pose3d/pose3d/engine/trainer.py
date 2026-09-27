@@ -10,7 +10,7 @@ from tqdm import tqdm
 from pose3d.engine.distributed import (
     all_reduce_sum, is_main, sync_buffers, wrap_ddp,
 )
-from pose3d.engine.metrics import acc_at, calculate_evaluation_metrics
+from pose3d.engine.metrics import acc_at, calculate_evaluation_metrics, per_class_median
 from pose3d.engine.tracking import log_offline_sync
 
 
@@ -173,13 +173,19 @@ def final_evaluation(model, val_loader, run, cfg):
     if n_samples <= 1:
         return None
 
-    err = calculate_evaluation_metrics(model, val_loader, cfg, n_samples=n_samples)
+    err, cls = calculate_evaluation_metrics(model, val_loader, cfg, n_samples=n_samples,
+                                            return_classes=True)
     metrics = {
         "final_median_rotation_error": float(np.median(err)),
         "final_acc@15": acc_at(err, 15),
         "final_acc@30": acc_at(err, 30),
         "final_eval_samples": n_samples,
     }
+    if cls is not None:
+        # The published Pascal3D+ metric (mean of per-class medians); see per_class_median.
+        mean_cls, medians = per_class_median(err, cls)
+        metrics["final_class_mean_median_error"] = mean_cls
+        metrics.update({f"final_median_error_class{c}": m for c, m in medians.items()})
 
     if is_main():
         print(

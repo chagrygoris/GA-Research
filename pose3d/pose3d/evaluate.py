@@ -1,15 +1,19 @@
 """Re-score a saved CliffordFlow checkpoint with multi-sample prediction.
 
     python -m pose3d.evaluate --artifact <entity/project/name.pth:vN> --path_to_datasets ...
+    python -m pose3d.evaluate --checkpoint <local .pth> --path_to_datasets ...
 
-Downloads the checkpoint from W&B and runs one evaluation pass over the Pascal3D test split
-at several sample counts, so the gain from mode selection (the geodesic medoid) is
-measurable on the same weights. Nothing is trained and no W&B run is created.
+Loads the checkpoint (from W&B, or a local file) and runs one evaluation pass over the
+Pascal3D test split at several sample counts, so the gain from mode selection (the geodesic
+medoid) is measurable on the same weights. Besides the median over all test images it
+reports the per-class medians and their mean, the number the IPDF / Image2Sphere / Rotation
+Laplace tables use. Nothing is trained and no W&B run is created.
 
 Checkpoints written before the nested config store a flat `config` dict; both layouts load.
 """
 
 import argparse
+import json
 from pathlib import Path
 
 import numpy as np
@@ -21,7 +25,7 @@ from torch.utils.data import DataLoader
 
 from pose3d.config import Config
 from pose3d.engine.checkpoint import get_available_device
-from pose3d.engine.metrics import acc_at, calculate_evaluation_metrics
+from pose3d.engine.metrics import acc_at, calculate_evaluation_metrics, per_class_median
 from pose3d.models.clifford_flow import CliffordFlow
 
 
@@ -29,6 +33,10 @@ def create_argparser():
     parser = argparse.ArgumentParser()
     parser.add_argument("--artifact", type=str,
                         default="clifforders/3D Pose Estimation/clifford_flow_pretrained.pth:v1")
+    parser.add_argument("--checkpoint", type=str, default=None,
+                        help="local .pth to score instead of downloading --artifact")
+    parser.add_argument("--output_json", type=str, default=None,
+                        help="also write every number printed here to this file")
     parser.add_argument("--path_to_datasets", type=str, required=True)
     parser.add_argument("--batch_size", type=int, default=32)
     parser.add_argument("--num_workers", type=int, default=4)
@@ -90,7 +98,7 @@ def main():
     args = create_argparser().parse_args()
     torch.manual_seed(args.seed)
 
-    path = download_checkpoint(args.artifact)
+    path = Path(args.checkpoint) if args.checkpoint else download_checkpoint(args.artifact)
     print(f"Checkpoint: {path}")
 
     checkpoint = torch.load(path, map_location="cpu", weights_only=False)
@@ -118,17 +126,38 @@ def main():
     )
     print(f"Test images: {len(val)}")
 
-    rows = []
+    names = getattr(getattr(val, "real_dataset", val), "class_names", None)
+    rows, per_class = [], {}
     for n_samples in args.eval_samples:
-        err = calculate_evaluation_metrics(model, val_loader, cfg, n_samples=n_samples)
-        rows.append((n_samples, float(np.median(err)), float(np.mean(err)),
+        err, cls = calculate_evaluation_metrics(model, val_loader, cfg, n_samples=n_samples,
+                                                return_classes=True)
+        class_mean, medians = per_class_median(err, cls)
+        per_class[n_samples] = medians
+        rows.append((n_samples, float(np.median(err)), class_mean, float(np.mean(err)),
                      acc_at(err, 15), acc_at(err, 30)))
-        print(f"K={n_samples}: median {rows[-1][1]:.3f}")
+        print(f"K={n_samples}: median {rows[-1][1]:.3f}, mean of class medians {class_mean:.3f}")
 
     print()
-    print(f"{'samples':>8} {'median':>9} {'mean':>9} {'acc@15':>8} {'acc@30':>8}")
-    for n_samples, median, mean, a15, a30 in rows:
-        print(f"{n_samples:>8} {median:>9.3f} {mean:>9.3f} {a15:>8.3f} {a30:>8.3f}")
+    print(f"{'samples':>8} {'median':>9} {'cls-mean':>9} {'mean':>9} {'acc@15':>8} {'acc@30':>8}")
+    for n_samples, median, class_mean, mean, a15, a30 in rows:
+        print(f"{n_samples:>8} {median:>9.3f} {class_mean:>9.3f} {mean:>9.3f} {a15:>8.3f} {a30:>8.3f}")
+
+    print()
+    print("Per-class median error:")
+    print(f"{'class':>12}" + "".join(f" {'K=' + str(k):>8}" for k in args.eval_samples))
+    for c in sorted(per_class[args.eval_samples[0]]):
+        label = names[c] if names else str(c)
+        print(f"{label:>12}" + "".join(f" {per_class[k][c]:>8.2f}" for k in args.eval_samples))
+
+    if args.output_json:
+        result = {
+            "checkpoint": str(args.checkpoint or args.artifact),
+            "rows": [dict(zip(("samples", "median", "class_mean_median", "mean", "acc@15", "acc@30"), r))
+                     for r in rows],
+            "per_class": {str(k): {(names[c] if names else str(c)): m for c, m in v.items()}
+                          for k, v in per_class.items()},
+        }
+        Path(args.output_json).write_text(json.dumps(result, indent=1))
 
 
 if __name__ == "__main__":
