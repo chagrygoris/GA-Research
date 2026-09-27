@@ -127,6 +127,9 @@ class MonitorState:
             run_name=row.get("run_name"),
         )
 
+    def refs(self) -> List[str]:
+        return list(self._data)
+
     def set(self, ref: str, state: RunState) -> None:
         self._data[ref] = {
             "wandb_run_id": state.wandb_run_id,
@@ -252,6 +255,31 @@ def run_once(
                 % (kernel.ref, len(payloads), run_state.last_step,
                    " (final)" if run_state.finished else "")
             )
+
+    # A kernel that finished between two polls is no longer active, so the loop above never
+    # reads its last epochs or the final evaluation. Read the full log of every tracked,
+    # unfinished run once it drops out of the active list, then close it either way (a
+    # crashed run has no final line to wait for).
+    active = {kernel.ref for _, kernel in targets}
+    by_user = {status.username.lower(): status for status in router.statuses}
+    for ref in state.refs():
+        run_state = state.get(ref)
+        if ref in active or run_state.finished or not run_state.run_name:
+            continue
+        status = by_user.get(ref.split("/")[0].lower())
+        if status is None or not status.ok:
+            continue  # unknown or unreachable this poll: try again next time
+        parsed = [p for p in parse_sync_lines(router.kernel_logs(status.account, ref, follow=False))
+                  if p["run_name"] == run_state.run_name]
+        payloads = new_points(parsed, run_state.last_step)
+        if payloads:
+            run_state = sink.push(payloads, run_state)
+            synced += 1
+        run_state.finished = True
+        state.set(ref, run_state)
+        if verbose:
+            print("%s: no longer active, synced its last %d point(s), closed"
+                  % (ref, len(payloads)))
     state.save()
     return synced
 
