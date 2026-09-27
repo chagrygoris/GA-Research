@@ -10,6 +10,7 @@ reports the per-class medians and their mean, the number the IPDF / Image2Sphere
 Laplace tables use. Nothing is trained and no W&B run is created.
 
 Checkpoints written before the nested config store a flat `config` dict; both layouts load.
+CliffordFlow and i2s_real (the Image2Sphere baseline) checkpoints are supported.
 """
 
 import argparse
@@ -37,6 +38,9 @@ def create_argparser():
                         help="local .pth to score instead of downloading --artifact")
     parser.add_argument("--output_json", type=str, default=None,
                         help="also write every number printed here to this file")
+    parser.add_argument("--i2s_eval_rec_level", type=int, default=None,
+                        help="i2s_real only: SO(3) HEALPix level of the argmax grid "
+                             "(default: the one it trained with; the paper evaluates on 5)")
     parser.add_argument("--path_to_datasets", type=str, required=True)
     parser.add_argument("--batch_size", type=int, default=32)
     parser.add_argument("--num_workers", type=int, default=4)
@@ -64,8 +68,32 @@ def flatten_saved_config(saved):
     return saved
 
 
-def build_model(checkpoint, device):
+def _build_i2s_real(saved, eval_rec_level=None):
+    from pose3d.models.i2s_real import I2SReal
+
+    # The eval grid is not a weight (non-persistent buffer), so it can be scored on a finer
+    # grid than it was trained with: the paper evaluates on rec level 5 (1.875 deg spacing).
+    return I2SReal(
+        encoder_type=saved.get("encoder", "resnet101"),
+        pretrained_backbone=saved.get("pretrained_backbone", True),
+        lmax=saved.get("lmax", 6),
+        rec_level=saved.get("rec_level", 3),
+        eval_rec_level=eval_rec_level or saved.get("i2s_eval_rec_level", 3),
+        normalize_input=saved.get("i2s_normalize", True),
+    )
+
+
+def build_model(checkpoint, device, eval_rec_level=None):
     saved = flatten_saved_config(checkpoint.get("config", {}))
+    if saved.get("model", saved.get("name")) == "i2s_real":
+        model = _build_i2s_real(saved, eval_rec_level)
+        result = model.load_state_dict(checkpoint["model"], strict=False)
+        if result.missing_keys or result.unexpected_keys:
+            print(f"Missing keys:    {result.missing_keys[:8]}")
+            print(f"Unexpected keys: {result.unexpected_keys[:8]}")
+            raise SystemExit("Checkpoint does not match the I2SReal definition.")
+        return model.to(device), saved
+
     algebra = CliffordAlgebra((1, 1, 1))
 
     model = CliffordFlow(
@@ -103,7 +131,7 @@ def main():
 
     checkpoint = torch.load(path, map_location="cpu", weights_only=False)
     device = get_available_device()
-    model, saved = build_model(checkpoint, device)
+    model, saved = build_model(checkpoint, device, eval_rec_level=args.i2s_eval_rec_level)
 
     print(f"Device: {device}")
     print(f"Trained with: hidden_dim={saved.get('flow_hidden_dim', saved.get('hidden_dim'))}, "
