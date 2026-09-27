@@ -1,10 +1,12 @@
 """Experiment configuration: the single place that decides what a default run is.
 
-The defaults reproduce the best documented Clifford Flow run (W&B `k5sblpo8`,
-10.25 deg median rotation error on Pascal3D+): `--model=clifford_flow`, pretrained
-ResNet-50, `n_cond_mv=64`, `n_time_samples=8`, `hidden_dim=32`, 100 epochs,
+The defaults reproduce the best documented Clifford Flow run (W&B `6te3pvqa`,
+9.46 deg median rotation error on Pascal3D+): `--model=clifford_flow`, pretrained
+ResNet-101, `n_cond_mv=64`, `n_time_samples=8`, `hidden_dim=32`, 100 epochs,
 `lr=1e-4`, 32-sample medoid evaluation. DDP over every visible GPU and the pre-built Pascal3D
 tensors are on by default too; they speed a run up and leave the recipe's hyperparameters alone.
+(The earlier reference recipe, W&B `k5sblpo8` at 10.25 deg, used ResNet-50; `6te3pvqa` is the
+same recipe with the backbone swapped to ResNet-101.)
 
 Experiment workflow (see the root README and the idea board in pose3d/README.md):
 
@@ -170,7 +172,7 @@ class DistConfig:
 @dataclass
 class ModelConfig:
     name: ModelName = field(default="clifford_flow", metadata={"flag": "model"})
-    encoder: EncoderName = "resnet50"   # "resnet" is an alias of resnet50
+    encoder: EncoderName = "resnet101"  # "resnet" is an alias of resnet50; 6te3pvqa (9.46 deg) used resnet101
     hidden_dim: List[int] = field(default_factory=lambda: [32])
     algebra_dim: int = 3                # Cl(algebra_dim); most GA paths need 3
     depth_anything_model: str = "depth-anything/Depth-Anything-V2-Base-hf"
