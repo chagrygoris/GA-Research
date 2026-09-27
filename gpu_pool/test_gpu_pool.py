@@ -415,6 +415,39 @@ def test_cli_json_treats_no_results_as_empty():
         raise AssertionError("expected CliError on unparseable output")
 
 
+def _fake_cli_script(tmp_dir, name, body):
+    path = os.path.join(tmp_dir, name)
+    with open(path, "w") as fh:
+        fh.write("#!/bin/sh\n" + body)
+    os.chmod(path, 0o755)
+    return path
+
+
+def test_kernel_logs_bounds_a_still_running_kernel():
+    """Confirmed 2026-09-27 against real kaggle-cli 2.2.4: plain `kernels logs <ref>` (no -f)
+    returns nothing for a running kernel. kernel_logs() always passes -f and bounds it with
+    follow_seconds, so a kernel that never stops streaming still yields a snapshot instead of
+    hanging or returning empty."""
+    router = _fake_router([("a", 25.0, False)])
+    with tempfile.TemporaryDirectory() as tmp:
+        router.cli = _fake_cli_script(
+            tmp, "fake_kaggle_slow",
+            "echo line1\necho line2\nsleep 5\necho should_not_appear\n",
+        )
+        text = router.kernel_logs(router.accounts[0], "a/ref", follow_seconds=0.5)
+        assert "line1" in text and "line2" in text
+        assert "should_not_appear" not in text
+
+
+def test_kernel_logs_returns_full_output_of_a_finished_kernel():
+    """-f on an already-finished kernel dumps everything and exits well inside the window."""
+    router = _fake_router([("a", 25.0, False)])
+    with tempfile.TemporaryDirectory() as tmp:
+        router.cli = _fake_cli_script(tmp, "fake_kaggle_fast", "echo done1\necho done2\n")
+        text = router.kernel_logs(router.accounts[0], "a/ref", follow_seconds=5.0)
+        assert text == "done1\ndone2"
+
+
 if __name__ == "__main__":
     tests = [(n, f) for n, f in sorted(globals().items()) if n.startswith("test_") and callable(f)]
     failed = 0

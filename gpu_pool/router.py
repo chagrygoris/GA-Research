@@ -531,10 +531,38 @@ class PoolRouter:
             return "unknown"
         return _normalize_status(text)
 
-    def kernel_logs(self, account: PoolAccount, ref: str) -> str:
-        """Execution logs of the latest run (the CLI can fetch these while it runs)."""
-        proc = self.run_cli(account, "kernels", "logs", ref, check=False)
-        return (proc.stdout or proc.stderr or "").strip()
+    def kernel_logs(self, account: PoolAccount, ref: str, follow_seconds: float = 8.0) -> str:
+        """Execution logs of the latest run.
+
+        Confirmed empirically (2026-09-27, kaggle-cli 2.2.4): plain ``kernels logs <ref>``
+        (no ``-f``) prints nothing for a still-running kernel -- exit 0, empty stdout, no
+        error. Only ``-f/--follow`` actually dumps the buffered log before it starts
+        tailing live, and there is no flag for "everything so far, then stop". So this runs
+        ``-f`` for up to ``follow_seconds`` and keeps whatever arrived in that window: a
+        kernel that has already finished dumps its whole log and exits well within it, and
+        a kernel still running just gets cut off at the deadline, which is exactly a
+        snapshot of "the log so far".
+        """
+        with tempfile.TemporaryDirectory(prefix="kaggle-cfg-") as config_dir:
+            env = dict(os.environ)
+            for stale in ("KAGGLE_API_TOKEN", "KAGGLE_USERNAME", "KAGGLE_KEY"):
+                env.pop(stale, None)
+            env.update(account.env())
+            env["KAGGLE_CONFIG_DIR"] = config_dir
+            try:
+                proc = subprocess.run(
+                    [self.cli, "kernels", "logs", "-f", ref],
+                    env=env, capture_output=True, text=True, timeout=follow_seconds,
+                )
+                return (proc.stdout or proc.stderr or "").strip()
+            except subprocess.TimeoutExpired as exc:
+                out = exc.stdout.decode() if isinstance(exc.stdout, bytes) else (exc.stdout or "")
+                err = exc.stderr.decode() if isinstance(exc.stderr, bytes) else (exc.stderr or "")
+                return (out or err).strip()
+            except FileNotFoundError as exc:
+                raise CliError(
+                    "kaggle CLI not found at %r; pip install kaggle, or set $KAGGLE_CLI" % self.cli
+                ) from exc
 
     def kernel_metadata(self, account: PoolAccount, ref: str) -> Dict[str, Any]:
         """``kernel-metadata.json`` of ``owner/slug``, via ``kaggle kernels pull -m``.
