@@ -102,6 +102,7 @@ class RunState:
     wandb_run_id: Optional[str] = None
     last_step: Optional[int] = None
     finished: bool = False
+    run_name: Optional[str] = None
 
 
 class MonitorState:
@@ -123,6 +124,7 @@ class MonitorState:
             wandb_run_id=row.get("wandb_run_id"),
             last_step=row.get("last_step"),
             finished=row.get("finished", False),
+            run_name=row.get("run_name"),
         )
 
     def set(self, ref: str, state: RunState) -> None:
@@ -130,6 +132,7 @@ class MonitorState:
             "wandb_run_id": state.wandb_run_id,
             "last_step": state.last_step,
             "finished": state.finished,
+            "run_name": state.run_name,
         }
 
     def save(self) -> None:
@@ -222,16 +225,25 @@ def run_once(
     synced = 0
     for account, kernel in targets:
         run_state = state.get(kernel.ref)
-        if run_state.finished:
-            continue
         # Plain `kaggle kernels logs` returns nothing until the kernel finishes (see
         # kernel_logs' docstring), which would make this only ever fire once, at the very
         # end, defeating the point of polling a still-running kernel -- so follow it instead.
         log_text = router.kernel_logs(account, kernel.ref, follow=(kernel.status == "running"))
-        payloads = new_points(parse_sync_lines(log_text), run_state.last_step)
+        parsed = parse_sync_lines(log_text)
+        if parsed and run_state.wandb_run_id and (
+                parsed[-1]["run_name"] != run_state.run_name
+                or (run_state.finished and not any(p["final"] for p in parsed))):
+            # A new version of the same notebook: state is keyed by kernel ref, so without
+            # this the new run would be appended to the previous run's W&B id and its first
+            # steps skipped. (Rows written before run_name was stored count as a new run.)
+            run_state = RunState()
+        if run_state.finished:
+            continue
+        payloads = new_points(parsed, run_state.last_step)
         if not payloads:
             continue
         run_state = sink.push(payloads, run_state)
+        run_state.run_name = payloads[0]["run_name"]
         state.set(kernel.ref, run_state)
         synced += 1
         if verbose:
