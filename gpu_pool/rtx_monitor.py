@@ -52,6 +52,18 @@ DEFAULT_STATE_FILE = os.path.expanduser("~/.kaggle-accounts/rtx_monitor_state.js
 # --------------------------------------------------------------------------------------
 # parsing -- pure functions, unit-testable without any credentials or network
 # --------------------------------------------------------------------------------------
+def _plain_log(log_text: str) -> str:
+    """A finished kernel's log arrives as a JSON array of ``{"stream_name", "time", "data"}``
+    records (quotes escaped), a running one as plain text; return plain text either way."""
+    if not log_text.lstrip().startswith("["):
+        return log_text
+    try:
+        records = json.loads(log_text)
+    except ValueError:
+        return log_text
+    return "".join(r.get("data", "") for r in records if isinstance(r, dict))
+
+
 def parse_sync_lines(log_text: str) -> List[Dict[str, Any]]:
     """Every ``WANDB_SYNC``/``WANDB_SYNC_FINAL`` line in ``log_text``, in file order.
 
@@ -60,12 +72,14 @@ def parse_sync_lines(log_text: str) -> List[Dict[str, Any]]:
     absence) don't matter here.
     """
     out = []
-    for kind, blob in _LINE_RE.findall(log_text or ""):
+    for kind, blob in _LINE_RE.findall(_plain_log(log_text or "")):
         try:
             payload = json.loads(blob)
         except ValueError:
             continue
         payload["final"] = kind == "WANDB_SYNC_FINAL" or bool(payload.get("final"))
+        if out and (out[-1].get("step"), out[-1]["final"]) == (payload.get("step"), payload["final"]):
+            continue  # a finished kernel's log repeats each line
         out.append(payload)
     return out
 
