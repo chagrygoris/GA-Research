@@ -11,6 +11,7 @@ from pose3d.engine.distributed import (
     all_reduce_sum, is_main, sync_buffers, wrap_ddp,
 )
 from pose3d.engine.metrics import acc_at, calculate_evaluation_metrics
+from pose3d.engine.tracking import log_offline_sync
 
 
 def grad_norm(model):
@@ -85,7 +86,7 @@ def train_epoch(model, loader, optimizer, criterion, cfg, step=None):
     if step is None:
         step = build_step(model, criterion, cfg)
     step.train()
-    for data in tqdm(loader, disable=not is_main()):
+    for data in tqdm(loader, disable=not is_main() or cfg.run.platform == "kaggle"):
         optimizer.zero_grad(set_to_none=True)
 
         loss = step(data)
@@ -116,7 +117,7 @@ def validate_epoch(model, loader, criterion, cfg):
     n_objects = 0
 
     model.eval()
-    for data in tqdm(loader, disable=not is_main()):
+    for data in tqdm(loader, disable=not is_main() or cfg.run.platform == "kaggle"):
         loss = _compute_loss(model, data, criterion, cfg)
 
         bs = data["img"].shape[0]
@@ -140,15 +141,16 @@ def train(model, train_loader, val_loader, optimizer, scheduler, criterion, run,
         val_loss = validate_epoch(model, val_loader, criterion, cfg)
         mre = np.median(calculate_evaluation_metrics(model, val_loader, cfg)).__float__()
 
+        metrics = {
+            "train_loss": train_loss,
+            "val_loss": val_loss,
+            "median_rotation_error": mre,
+            "learning_rate": scheduler.get_last_lr()[0],
+            "gradient_norm": grad_norm(model),
+            "epoch_time": time.time() - t0,
+        }
         if run is not None:
-            run.log({
-                "train_loss": train_loss,
-                "val_loss": val_loss,
-                "median_rotation_error": mre,
-                "learning_rate": scheduler.get_last_lr()[0],
-                "gradient_norm": grad_norm(model),
-                "epoch_time": time.time() - t0,
-            })
+            run.log(metrics)
         scheduler.step()
         if is_main():
             print(
@@ -156,6 +158,7 @@ def train(model, train_loader, val_loader, optimizer, scheduler, criterion, run,
                 f"Train loss {train_loss}, val loss {val_loss}\n"
                 f"Median rotation error {mre} ({time.time() - t0:.0f}s)"
             )
+            log_offline_sync(run, cfg, step=i, metrics=metrics)
 
     final_evaluation(model, val_loader, run, cfg)
 
@@ -184,6 +187,7 @@ def final_evaluation(model, val_loader, run, cfg):
             f"median rotation error {metrics['final_median_rotation_error']}, "
             f"acc@15 {metrics['final_acc@15']}, acc@30 {metrics['final_acc@30']}"
         )
+        log_offline_sync(run, cfg, step=cfg.train.n_epochs, metrics=metrics, final=True)
     if run is not None:
         run.summary.update(metrics)
     return metrics

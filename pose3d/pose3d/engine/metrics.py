@@ -89,7 +89,7 @@ def calculate_evaluation_metrics(model, loader, cfg, n_samples: int = 1):
 
     model.eval()
     model.to(device)
-    for batch in tqdm(loader, desc="Evaluating Model", disable=not is_main()):
+    for batch in tqdm(loader, desc="Evaluating Model", disable=not is_main() or cfg.run.platform == "kaggle"):
         img = batch["img"].to(device)
 
         clas = None
