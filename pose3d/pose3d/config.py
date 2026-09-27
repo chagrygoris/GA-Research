@@ -1,9 +1,11 @@
 """Experiment configuration: the single place that decides what a default run is.
 
-The defaults reproduce the best documented Clifford Flow run (W&B `6te3pvqa`,
-9.46 deg median rotation error on Pascal3D+): `--model=clifford_flow`, pretrained
-ResNet-101, `n_cond_mv=64`, `n_time_samples=8`, `hidden_dim=32`, 100 epochs,
-`lr=1e-4`, 32-sample medoid evaluation. DDP over every visible GPU and the pre-built Pascal3D
+The defaults reproduce W&B `mnpsfhmd` (9.63 deg median rotation error on Pascal3D+):
+`--model=clifford_flow`, pretrained ResNet-101, no ConvAdapter (the pooled backbone vector
+is reshaped straight into 256 multivectors), both GA heads 88 wide (`flow_hidden_dim=88`),
+`n_cond_mv=64`, `n_time_samples=8`, 100 epochs, `lr=1e-4`, 32-sample medoid evaluation.
+It ties the best run, `6te3pvqa` (9.46 deg, same params budget), without the adapter;
+`--conv_adapter --flow_hidden_dim 32` gives that run back. DDP over every visible GPU and the pre-built Pascal3D
 tensors are on by default too; they speed a run up and leave the recipe's hyperparameters alone.
 (The earlier reference recipe, W&B `k5sblpo8` at 10.25 deg, used ResNet-50; `6te3pvqa` is the
 same recipe with the backbone swapped to ResNet-101.)
@@ -177,6 +179,7 @@ class DistConfig:
 class ModelConfig:
     name: ModelName = field(default="clifford_flow", metadata={"flag": "model"})
     encoder: EncoderName = "resnet101"  # "resnet" is an alias of resnet50; 6te3pvqa (9.46 deg) used resnet101
+    # GA head widths of the other models; CliffordFlow uses FlowConfig.flow_hidden_dim.
     hidden_dim: List[int] = field(default_factory=lambda: [32])
     algebra_dim: int = 3                # Cl(algebra_dim); most GA paths need 3
     depth_anything_model: str = "depth-anything/Depth-Anything-V2-Base-hf"
@@ -188,18 +191,22 @@ class FlowConfig:
 
     n_cond_mv: int = 64        # conditioning multivectors passed to the vector field
     n_time_samples: int = 8    # (t, r0) pairs per image (see Features.time_sample_batching)
+    # Hidden widths of both GA heads (condition head and vector field). 88 refills the
+    # parameter budget freed by dropping the ConvAdapter (1,292,217 non-backbone params).
+    flow_hidden_dim: List[int] = field(default_factory=lambda: [88])
     # ConvAdapter pools to (adapter_grid x adapter_grid) multivectors. 9 -> 10.90 deg,
     # 7 -> 11.95 deg, 11 -> 11.31 deg (n=1 each, before the recipe fix; unconfirmed).
     adapter_grid: int = 16
     # Width of the adapter's first 1x1 conv. 96 -> 10.92 deg (unconfirmed).
     adapter_channels: int = 256
-    # Hidden widths of the vector field alone (None: same as hidden_dim). Paired with a
+    # Hidden widths of the vector field alone (None: same as flow_hidden_dim). Paired with a
     # smaller adapter_grid this reallocates parameters; 10.49 deg (unconfirmed).
     vector_field_hidden_dim: Optional[List[int]] = None
-    # --no-conv_adapter drops the ConvAdapter: the globally pooled backbone vector is
-    # reshaped into backbone_channels / 8 multivectors (256 for ResNet) for the condition
-    # head, so adapter_grid / adapter_channels are unused.
-    conv_adapter: bool = True
+    # Off: no ConvAdapter; the globally pooled backbone vector is reshaped into
+    # backbone_channels / 8 multivectors (256 for ResNet) for the condition head, and
+    # adapter_grid / adapter_channels are unused. 9.63 deg (mnpsfhmd) vs 9.46 with it
+    # (6te3pvqa), n=1 each. --conv_adapter brings the adapter back.
+    conv_adapter: bool = False
     # Path to Liu et al.'s Pascal3D+ matrix Fisher checkpoint (state_dict_119.pkl);
     # used only with Features.fisher_prior.
     fisher_checkpoint: Optional[str] = None

@@ -62,7 +62,8 @@ def build_model(checkpoint, device):
 
     model = CliffordFlow(
         algebra,
-        hidden_dim=saved.get("hidden_dim", [32]),
+        # flow_hidden_dim since the no-conv-adapter default; older checkpoints used hidden_dim.
+        hidden_dim=saved.get("flow_hidden_dim", saved.get("hidden_dim", [32])),
         n_cond_mv=saved.get("n_cond_mv", 4),
         # The pretrained path wraps the backbone in ImageNetNormalized, which
         # renames its state_dict keys, so this has to match how it was trained.
@@ -97,7 +98,7 @@ def main():
     model, saved = build_model(checkpoint, device)
 
     print(f"Device: {device}")
-    print(f"Trained with: hidden_dim={saved.get('hidden_dim')}, "
+    print(f"Trained with: hidden_dim={saved.get('flow_hidden_dim', saved.get('hidden_dim'))}, "
           f"n_cond_mv={saved.get('n_cond_mv')}, "
           f"pretrained_backbone={saved.get('pretrained_backbone')}, "
           f"encoder={saved.get('encoder', 'resnet')}, "
