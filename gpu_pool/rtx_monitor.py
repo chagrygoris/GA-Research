@@ -293,7 +293,10 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
     print("watching the pool every %.0fs (ctrl-C to stop)" % args.interval)
     try:
         while True:
-            run_once(router, state, sink, args.accelerators, verbose=not args.quiet)
+            try:
+                run_once(router, state, sink, args.accelerators, verbose=not args.quiet)
+            except Exception as exc:  # a transient CLI/network failure must not end the watch
+                print("poll failed, retrying next interval: %s: %s" % (type(exc).__name__, exc))
             time.sleep(args.interval)
     except KeyboardInterrupt:
         print("stopped")
