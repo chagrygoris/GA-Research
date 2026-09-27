@@ -61,7 +61,7 @@ class RunConfig:
     """Where the data is, how the run is named and logged."""
 
     path_to_datasets: str = field(default="", metadata={"required": True})
-    dataset: Literal["pascal", "dummynet"] = "pascal"
+    dataset: Literal["pascal", "dummynet", "modelnet10", "symsol"] = "pascal"
     platform: Literal["kaggle", "colab"] = "kaggle"
     run_name: Optional[str] = None
     path_to_checkpoint: Optional[str] = None   # evaluate this checkpoint before training
@@ -156,6 +156,10 @@ class DataConfig:
     # Reuse the tensors ram_memory builds instead of decoding every image each session.
     ram_cache_dir: Optional[str] = None        # read pascal_{train,val}.pt from here
     ram_cache_save_dir: Optional[str] = None   # write them here after a normal build
+    # --dataset symsol: which shape subset (image2sphere.dataset.SymsolDataset class_names).
+    # 1: the standard 5-shape benchmark (tet, cube, icosa, cone, cyl). 2/3/4: the single-shape
+    # near-symmetric variants (sphereX/cylO/tetX).
+    symsol_set: int = 1
 
 
 @dataclass
