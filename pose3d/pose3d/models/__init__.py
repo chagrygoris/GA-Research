@@ -19,7 +19,7 @@ def _clifford_flow(cfg: Config, algebra) -> nn.Module:
         raise ValueError("fisher_prior needs --fisher_checkpoint (Liu et al.'s state_dict_119.pkl)")
     return CliffordFlow(
         algebra,
-        hidden_dim=m.hidden_dim,
+        hidden_dim=fl.flow_hidden_dim,
         n_cond_mv=fl.n_cond_mv,
         pretrained_backbone=f.pretrained_backbone,
         n_time_samples=cfg.n_time_samples,
@@ -29,6 +29,7 @@ def _clifford_flow(cfg: Config, algebra) -> nn.Module:
         depth_anything_model=m.depth_anything_model,
         freeze_backbone=f.freeze_encoder,
         vector_field_hidden_dim=fl.vector_field_hidden_dim,
+        conv_adapter=fl.conv_adapter,
         mlp_heads=f.mlp_heads,
         fisher_checkpoint=fl.fisher_checkpoint if f.fisher_prior else None,
     )

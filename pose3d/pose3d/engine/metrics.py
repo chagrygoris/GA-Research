@@ -37,6 +37,18 @@ def acc_at(err, theta=15):
     return float((err < theta).mean())
 
 
+def per_class_median(err, cls):
+    """(mean of the per-class median errors, {class index: median}).
+
+    The Pascal3D+ tables of IPDF / Image2Sphere / Rotation Laplace report this mean over
+    the 12 classes, not one median over all test images, so hard classes (boat, bicycle)
+    weigh as much as easy ones (bus, car).
+    """
+    err, cls = np.asarray(err), np.asarray(cls).reshape(-1)
+    medians = {int(c): float(np.median(err[cls == c])) for c in np.unique(cls)}
+    return float(np.mean(list(medians.values()))), medians
+
+
 def rotation_error_with_projection(input, target):
     input = project_to_orthogonal_manifold(input)
     target = project_to_orthogonal_manifold(target)
@@ -77,24 +89,28 @@ def decode_output(model, outputs, cfg):
 
 
 @torch.no_grad()
-def calculate_evaluation_metrics(model, loader, cfg, n_samples: int = 1):
+def calculate_evaluation_metrics(model, loader, cfg, n_samples: int = 1, return_classes: bool = False):
     """Rotation error (degrees) of every sample in `loader`.
+
+    With return_classes, returns (errors, class indices) instead, the classes in the same
+    order (None when the loader has no "cls"; the cached training-time loaders don't).
 
     Models exposing `predict` are evaluated through it (with `n_samples` draws when it
     accepts them); the rest go through `forward` plus `decode_output`. Under DDP the loader holds
     this rank's shard and the errors of all ranks are joined, so every rank must call it.
     """
     device = cfg.device
-    err = []
+    err, classes = [], []
 
     model.eval()
     model.to(device)
-    for batch in tqdm(loader, desc="Evaluating Model", disable=not is_main()):
+    for batch in tqdm(loader, desc="Evaluating Model", disable=not is_main() or cfg.run.platform == "kaggle"):
         img = batch["img"].to(device)
 
         clas = None
         if "cls" in batch:
             clas = batch["cls"].to(device)
+            classes.append(batch["cls"].view(-1).cpu().numpy())
 
         if hasattr(model, "predict") and callable(getattr(model, "predict")):
             kwargs = _sampling_kwargs(model.predict, n_samples)
@@ -111,4 +127,8 @@ def calculate_evaluation_metrics(model, loader, cfg, n_samples: int = 1):
 
         gt_rotmat = batch['rot'].to(device)
         err.append(rotation_error_with_projection(pred_rotmat, gt_rotmat))
-    return gather_errors(np.hstack(err))
+    err = gather_errors(np.hstack(err))
+    if not return_classes:
+        return err
+    # gather_errors joins ranks in the same order for both arrays, so they stay paired.
+    return err, (gather_errors(np.hstack(classes)) if classes else None)

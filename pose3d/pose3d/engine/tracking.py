@@ -1,5 +1,7 @@
 """Weights & Biases helpers. Every function is a no-op when there is no run."""
 
+import json
+import os
 from pathlib import Path
 
 import wandb
@@ -46,3 +48,25 @@ def wandb_load_artifact(run, artifact_full_name):
     artifact_dir = artifact.download()
     path = list(Path(artifact_dir).resolve().iterdir())[0]
     return path
+
+
+#: `wandb.log`/`.summary` reach wandb.ai directly on an online run, but a Kaggle kernel with
+#: internet disabled (every RTX / L4 / TPU run so far, see PRE_CACHE_DIRS' neighbour
+#: gpu_pool/README.md "Accelerators") sets WANDB_MODE=offline before `wandb.init`, so those
+#: calls only write local files under /kaggle/working that nothing reads until the kernel
+#: finishes and someone downloads its output. This prints the same numbers as one grep-able
+#: line instead, so `gpu_pool/rtx_monitor.py` can tail `kaggle kernels logs` on a no-internet
+#: run and push the points to wandb itself. A pure no-op on an online run (WANDB_MODE unset):
+#: T4/P100 runs are completely unaffected and keep syncing live exactly as before.
+def log_offline_sync(run, cfg, step: int, metrics: dict, final: bool = False) -> None:
+    if run is None or os.environ.get("WANDB_MODE") != "offline":
+        return
+    payload = {
+        "run_name": cfg.run.run_name,
+        "wandb_project": cfg.run.wandb_project,
+        "wandb_entity": cfg.run.wandb_entity,
+        "step": step,
+        "final": final,
+        "metrics": metrics,
+    }
+    print(("WANDB_SYNC_FINAL " if final else "WANDB_SYNC ") + json.dumps(payload), flush=True)
