@@ -207,6 +207,15 @@ class FlowConfig:
     # adapter_grid / adapter_channels are unused. 9.63 deg (mnpsfhmd) vs 9.46 with it
     # (6te3pvqa), n=1 each. --conv_adapter brings the adapter back.
     conv_adapter: bool = False
+    # Denoiser network of the flow. "clifford": the CGENN-style Clifford MLP (reference recipe).
+    # "gatr": the Geometric Algebra Transformer (Brehmer et al. 2023) over the rotor, time and
+    # condition multivectors as tokens; the condition head stays a Clifford MLP. The gatr_*
+    # options are unused otherwise. Needs the GATr package (see models/gatr_denoiser.py).
+    vector_field: Literal["clifford", "gatr"] = "clifford"
+    gatr_blocks: int = 4
+    gatr_mv_channels: int = 8    # hidden multivector channels per token
+    gatr_s_channels: int = 32    # hidden scalar channels per token
+    gatr_heads: int = 4
     # Path to Liu et al.'s Pascal3D+ matrix Fisher checkpoint (state_dict_119.pkl);
     # used only with Features.fisher_prior.
     fisher_checkpoint: Optional[str] = None

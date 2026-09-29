@@ -49,6 +49,25 @@ Re-score a checkpoint from W&B:
 poetry run python -m pose3d.evaluate --artifact <entity/project/name.pth:vN> --path_to_datasets ...
 ```
 
+## GATr denoiser
+
+`--vector_field gatr` swaps the Clifford MLP vector field of `clifford_flow` for the Geometric
+Algebra Transformer ([reference](https://github.com/Qualcomm-AI-research/geometric-algebra-transformer)).
+The rotor, the time and the `n_cond_mv` condition multivectors are embedded in Cl(3,0,1) and become
+the tokens of one sequence; the velocity is read from the rotor token's rotation bivector. The
+condition head stays a Clifford MLP. Size it with `--gatr_blocks`, `--gatr_mv_channels`,
+`--gatr_s_channels` and `--gatr_heads`. The default is still `--vector_field clifford`.
+
+```bash
+pip install --no-deps einops opt_einsum \
+  git+https://github.com/Qualcomm-AI-research/geometric-algebra-transformer.git
+poetry run python -m pose3d --path_to_datasets ... --vector_field gatr
+```
+
+Install GATr with `--no-deps`: its `setup.py` pins `numpy<1.25` and `xformers`, which would replace
+the preinstalled torch. `xformers` is only needed for attention masks, which the flow never passes,
+so a stub stands in when it is missing.
+
 ## Multi-GPU
 
 Training uses every visible GPU by default (torch DistributedDataParallel, `--ddp`). The run relaunches

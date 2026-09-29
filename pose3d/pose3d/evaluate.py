@@ -110,6 +110,9 @@ def build_model(checkpoint, device, eval_rec_level=None):
         vector_field_hidden_dim=saved.get("vector_field_hidden_dim"),
         conv_adapter=saved.get("conv_adapter", True),
         mlp_heads=saved.get("mlp_heads", False),
+        vector_field=saved.get("vector_field", "clifford"),
+        gatr=dict(num_blocks=saved.get("gatr_blocks", 4), mv_channels=saved.get("gatr_mv_channels", 8),
+                  s_channels=saved.get("gatr_s_channels", 32), num_heads=saved.get("gatr_heads", 4)),
     )
 
     result = model.load_state_dict(checkpoint["model"], strict=False)
