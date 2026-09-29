@@ -158,6 +158,7 @@ class CliffordFlow(nn.Module):
                  conv_adapter: bool = True,
                  mlp_heads: bool = False,
                  vector_field: str = "clifford",
+                 condition_head: str = "clifford",
                  gatr: dict = None,
                  fisher_checkpoint: str = None):
         super().__init__()
@@ -165,8 +166,12 @@ class CliffordFlow(nn.Module):
             raise ValueError("mlp_heads and fisher_prior cannot be combined")
         if vector_field not in ("clifford", "gatr"):
             raise ValueError(f"vector_field must be 'clifford' or 'gatr', got {vector_field!r}")
-        if vector_field == "gatr" and mlp_heads:
-            raise ValueError("vector_field='gatr' and mlp_heads cannot be combined")
+        if condition_head not in ("clifford", "gatr"):
+            raise ValueError(f"condition_head must be 'clifford' or 'gatr', got {condition_head!r}")
+        if "gatr" in (vector_field, condition_head) and mlp_heads:
+            raise ValueError("GATr heads and mlp_heads cannot be combined")
+        if condition_head == "gatr" and fisher_checkpoint:
+            raise ValueError("condition_head='gatr' and fisher_prior cannot be combined")
         self.algebra = algebra
         self.n_cond_mv = n_cond_mv
         self.n_time_samples = max(1, int(n_time_samples))
@@ -198,9 +203,14 @@ class CliffordFlow(nn.Module):
                 conv_adapter=conv_adapter)
             cond_in_features = self.adapter.n_mv
 
-        self.condition_head = TralaleroTralala(
-            algebra, in_features=cond_in_features, hidden_dim=hidden_dim,
-            out_features=self.n_cond_mv)
+        if condition_head == "gatr":
+            from pose3d.models.gatr_denoiser import GATrConditionHead
+            self.condition_head = GATrConditionHead(
+                cond_in_features, self.n_cond_mv, **(gatr or {}))
+        else:
+            self.condition_head = TralaleroTralala(
+                algebra, in_features=cond_in_features, hidden_dim=hidden_dim,
+                out_features=self.n_cond_mv)
         if vector_field == "gatr":
             from pose3d.models.gatr_denoiser import GATrVectorField
             self.vector_field = GATrVectorField(self.n_cond_mv, **(gatr or {}))

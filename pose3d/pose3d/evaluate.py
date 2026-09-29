@@ -111,6 +111,7 @@ def build_model(checkpoint, device, eval_rec_level=None):
         conv_adapter=saved.get("conv_adapter", True),
         mlp_heads=saved.get("mlp_heads", False),
         vector_field=saved.get("vector_field", "clifford"),
+        condition_head=saved.get("condition_head", "clifford"),
         gatr=dict(num_blocks=saved.get("gatr_blocks", 4), mv_channels=saved.get("gatr_mv_channels", 8),
                   s_channels=saved.get("gatr_s_channels", 32), num_heads=saved.get("gatr_heads", 4)),
     )

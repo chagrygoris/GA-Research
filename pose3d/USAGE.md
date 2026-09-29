@@ -55,7 +55,10 @@ poetry run python -m pose3d.evaluate --artifact <entity/project/name.pth:vN> --p
 Algebra Transformer ([reference](https://github.com/Qualcomm-AI-research/geometric-algebra-transformer)).
 The rotor, the time and the `n_cond_mv` condition multivectors are embedded in Cl(3,0,1) and become
 the tokens of one sequence; the velocity is read from the rotor token's rotation bivector. The
-condition head stays a Clifford MLP. Size it with `--gatr_blocks`, `--gatr_mv_channels`,
+condition head stays a Clifford MLP unless `--condition_head gatr`, which runs GATr over the 256
+backbone tokens plus `n_cond_mv` learned query tokens (each token also gets a learned scalar
+embedding, since GATr treats tokens as an unordered set) and reads the condition multivectors from
+the queries. Both share the sizes below. Size them with `--gatr_blocks`, `--gatr_mv_channels`,
 `--gatr_s_channels` and `--gatr_heads`. The default is still `--vector_field clifford`.
 
 ```bash

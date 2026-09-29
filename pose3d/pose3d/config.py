@@ -212,6 +212,10 @@ class FlowConfig:
     # condition multivectors as tokens; the condition head stays a Clifford MLP. The gatr_*
     # options are unused otherwise. Needs the GATr package (see models/gatr_denoiser.py).
     vector_field: Literal["clifford", "gatr"] = "clifford"
+    # Same choice for the condition head (backbone multivectors -> n_cond_mv condition
+    # multivectors): "gatr" runs GATr over the backbone tokens plus n_cond_mv learned queries.
+    # Shares the gatr_* sizes with the vector field. Not with mlp_heads or fisher_prior.
+    condition_head: Literal["clifford", "gatr"] = "clifford"
     gatr_blocks: int = 4
     gatr_mv_channels: int = 8    # hidden multivector channels per token
     gatr_s_channels: int = 32    # hidden scalar channels per token
