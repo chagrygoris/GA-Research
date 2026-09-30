@@ -71,6 +71,20 @@ Install GATr with `--no-deps`: its `setup.py` pins `numpy<1.25` and `xformers`, 
 the preinstalled torch. `xformers` is only needed for attention masks, which the flow never passes,
 so a stub stands in when it is missing.
 
+## Micro and macro metrics
+
+Every reported number has two versions. Micro is pooled over all validation images, so the big
+classes dominate (car, chair). Macro averages over the 12 Pascal3D+ classes, so each counts the
+same: `class_mean_median_error` (the mean of the per-class medians, the number the IPDF /
+Image2Sphere tables report) every epoch, and at the end also `final_class_mean_acc@15` /
+`@30` plus each class's median and accuracies (`final_median_error_class<c>`,
+`final_acc@15_class<c>`, ...), printed as a table.
+
+The pre-built RAM cache holds no class labels, so they are read from the annotations of the
+mounted Pascal3D+ (no image is decoded) and checked against the cache's ground-truth rotations. If
+Pascal3D+ is not mounted, or the check fails, macro metrics are skipped with a message and the
+run goes on. Other loaders pass the labels through as before.
+
 ## Multi-GPU
 
 Training uses every visible GPU by default (torch DistributedDataParallel, `--ddp`). The run relaunches

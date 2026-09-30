@@ -6,7 +6,9 @@ import tempfile
 import time
 
 import numpy as np
+import torch
 from image2sphere.pascal_dataset import Pascal3D
+from scipy.io import loadmat
 from torch.utils.data import DataLoader, Dataset, Subset
 from torch.utils.data.distributed import DistributedSampler
 
@@ -113,11 +115,57 @@ def _train_dataset(cfg):
     return ds
 
 
+def _class_labels(real):
+    """Class index of every sample of a Pascal3DReal, from the annotation files alone."""
+    names = real.class_names
+    return [names.index(loadmat(a)["record"]["objects"][0][0][0][0]["class"][0]) for a in real.annot_paths]
+
+
+def _classes_match_cache(ds, real, classes, atol=1e-3):
+    """Spot-check that `classes` line up with a cache's samples: the first and last sample of
+    every class must have the cached ground-truth rotation of the same index in `real`."""
+    classes = np.asarray(classes)
+    picks = sorted({int(i) for c in np.unique(classes)
+                    for i in (np.flatnonzero(classes == c)[0], np.flatnonzero(classes == c)[-1])})
+    return all(torch.allclose(real[i]["rot"].float(), ds.targets[i].float(), atol=atol) for i in picks)
+
+
+def _attach_eval_classes(ds, cfg, real=None):
+    """Give the validation set per-sample class labels (batch["cls_eval"]) for macro metrics.
+
+    The pre-built RAM caches hold no labels, and rebuilding one is not always possible, so they
+    are read from the annotations of the mounted Pascal3D+ (no image is decoded), and the
+    ground-truth rotations of a few samples per class are compared with the cache to make sure
+    the two orders agree. Without the dataset, or on any mismatch, macro metrics are skipped.
+    """
+    if getattr(ds, "eval_clss", None) is not None or getattr(ds, "clss", None) is not None:
+        return
+    verify = real is None
+    try:
+        if real is None:
+            root = pathlib.Path(cfg.run.path_to_datasets) / "PASCAL3D+_release1.1"
+            if not root.is_dir():
+                print("Per-class metrics skipped: Pascal3D+ is not mounted, the cache has no labels")
+                return
+            real = Pascal3D(cfg.run.path_to_datasets, train=False).real_dataset
+        classes = _class_labels(real)
+        if len(classes) != len(ds):
+            print(f"Per-class metrics skipped: {len(classes)} annotations for {len(ds)} cached samples")
+            return
+        if verify and not _classes_match_cache(ds, real, classes):
+            print("Per-class metrics skipped: the annotations do not line up with the cache")
+            return
+        ds.set_eval_classes(classes)
+    except Exception as e:   # metrics are a report; they must never stop a run
+        print(f"Per-class metrics skipped: {type(e).__name__}: {e}")
+
+
 def _val_dataset(cfg):
     f = cfg.features
     if f.ram_memory:
         cached = _load_cached("val", cfg)
         if cached is not None:
+            _attach_eval_classes(cached, cfg)
             return cached
 
     # Pascal3D asserts use_warp/use_synth are off for the test split.
@@ -130,6 +178,7 @@ def _val_dataset(cfg):
     ds = InMemoryDataset(val, build_workers=_num_builder(cfg), include_cls=f.fisher_prior)
     print(f"[timing] val: built {len(ds)} samples from Pascal3D in {time.time() - t0:.1f}s")
     _save_cache(ds, "val", cfg)
+    _attach_eval_classes(ds, cfg, real=val.real_dataset)
     return ds
 
 

@@ -10,7 +10,7 @@ from tqdm import tqdm
 from pose3d.engine.distributed import (
     all_reduce_sum, is_main, sync_buffers, wrap_ddp,
 )
-from pose3d.engine.metrics import acc_at, calculate_evaluation_metrics, per_class_median
+from pose3d.engine.metrics import acc_at, calculate_evaluation_metrics, macro_metrics
 from pose3d.engine.tracking import log_offline_sync
 
 
@@ -139,7 +139,9 @@ def train(model, train_loader, val_loader, optimizer, scheduler, criterion, run,
         train_loss = train_epoch(model, train_loader, optimizer, criterion, cfg, step=step)
         sync_buffers(model)   # rank 0's BatchNorm statistics, so every shard is scored alike
         val_loss = validate_epoch(model, val_loader, criterion, cfg)
-        mre = np.median(calculate_evaluation_metrics(model, val_loader, cfg)).__float__()
+        err, cls = calculate_evaluation_metrics(model, val_loader, cfg, return_classes=True)
+        mre = np.median(err).__float__()
+        macro = macro_metrics(err, cls) if cls is not None else None
 
         metrics = {
             "train_loss": train_loss,
@@ -149,6 +151,8 @@ def train(model, train_loader, val_loader, optimizer, scheduler, criterion, run,
             "gradient_norm": grad_norm(model),
             "epoch_time": time.time() - t0,
         }
+        if macro is not None:
+            metrics["class_mean_median_error"] = macro["class_mean_median_error"]
         if run is not None:
             run.log(metrics)
         scheduler.step()
@@ -158,9 +162,15 @@ def train(model, train_loader, val_loader, optimizer, scheduler, criterion, run,
                 f"Train loss {train_loss}, val loss {val_loss}\n"
                 f"Median rotation error {mre} ({time.time() - t0:.0f}s)"
             )
+            if macro is not None:
+                print(f"Class-mean median rotation error {macro['class_mean_median_error']}")
             log_offline_sync(run, cfg, step=i, metrics=metrics)
 
     final_evaluation(model, val_loader, run, cfg)
+
+
+PASCAL3D_CLASSES = ('aeroplane', 'bicycle', 'boat', 'bottle', 'bus', 'car', 'chair',
+                    'diningtable', 'motorbike', 'sofa', 'train', 'tvmonitor')
 
 
 def final_evaluation(model, val_loader, run, cfg):
@@ -181,11 +191,17 @@ def final_evaluation(model, val_loader, run, cfg):
         "final_acc@30": acc_at(err, 30),
         "final_eval_samples": n_samples,
     }
-    if cls is not None:
-        # The published Pascal3D+ metric (mean of per-class medians); see per_class_median.
-        mean_cls, medians = per_class_median(err, cls)
-        metrics["final_class_mean_median_error"] = mean_cls
-        metrics.update({f"final_median_error_class{c}": m for c, m in medians.items()})
+    macro = macro_metrics(err, cls) if cls is not None else None
+    if macro is not None:
+        # Macro (class-averaged) counterparts of the pooled numbers above; the median is the
+        # published Pascal3D+ metric (mean of per-class medians), see per_class_median.
+        metrics["final_class_mean_median_error"] = macro["class_mean_median_error"]
+        metrics["final_class_mean_acc@15"] = macro["class_mean_acc@15"]
+        metrics["final_class_mean_acc@30"] = macro["class_mean_acc@30"]
+        for c, m in macro["class_medians"].items():
+            metrics[f"final_median_error_class{c}"] = m
+            metrics[f"final_acc@15_class{c}"] = macro["class_acc@15"][c]
+            metrics[f"final_acc@30_class{c}"] = macro["class_acc@30"][c]
 
     if is_main():
         print(
@@ -193,6 +209,16 @@ def final_evaluation(model, val_loader, run, cfg):
             f"median rotation error {metrics['final_median_rotation_error']}, "
             f"acc@15 {metrics['final_acc@15']}, acc@30 {metrics['final_acc@30']}"
         )
+        if macro is not None:
+            print(
+                f"Class-averaged (macro): mean of per-class medians "
+                f"{macro['class_mean_median_error']}, acc@15 {macro['class_mean_acc@15']}, "
+                f"acc@30 {macro['class_mean_acc@30']}"
+            )
+            print(f"{'class':>12} {'median':>8} {'acc@15':>8} {'acc@30':>8}")
+            for c, m in macro["class_medians"].items():
+                name = PASCAL3D_CLASSES[c] if cfg.run.dataset == "pascal" and c < len(PASCAL3D_CLASSES) else str(c)
+                print(f"{name:>12} {m:>8.2f} {macro['class_acc@15'][c]:>8.3f} {macro['class_acc@30'][c]:>8.3f}")
         log_offline_sync(run, cfg, step=cfg.train.n_epochs, metrics=metrics, final=True)
     if run is not None:
         run.summary.update(metrics)
