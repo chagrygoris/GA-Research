@@ -17,7 +17,7 @@ from pathlib import Path
 import numpy as np
 import torch
 
-from pose3d.engine.flow_viz import (angle_deg, animation, errors, figure_compare, figure_filmstrip, figure_paths,  # noqa: F401
+from pose3d.engine.flow_viz import (angle_deg, animation, errors, figure_compare, figure_filmstrip, figure_frames, figure_paths,  # noqa: F401
                                     pick_images, trajectories)
 from pose3d.evaluate import build_model
 
@@ -73,7 +73,8 @@ def main():
     print("examples (val index, medoid error of", next(iter(models)), "):", list(zip(picks, [round(e, 1) for e in errs])), flush=True)
     for lab, m in models.items():
         e_m = errors(m, imgs[picks], rots[picks])
-        figure_paths(lab, m, imgs, rots, picks, e_m, a.k, a.steps, a.seed, out / f"paths_{lab}.png")
+        figure_frames(lab, m, imgs, rots, picks, e_m, a.k, a.steps, a.seed, out / f"frames_{lab}.png")
+        figure_paths(lab, m, imgs, rots, picks, e_m, a.k, a.steps, a.seed, out / f"chart_{lab}.png")
         figure_filmstrip(lab, m, imgs, rots, picks[1], a.steps, a.seed, out / f"filmstrip_{lab}.png")
         animation(lab, m, imgs, rots, picks[1], a.k, a.steps, a.seed, out / f"flow_{lab}.gif")
         print("done", lab, flush=True)

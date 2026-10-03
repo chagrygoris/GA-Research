@@ -115,7 +115,7 @@ def figure_paths(label, model, imgs, rots, picks, errs, k, steps, seed, out=None
         ax = fig.add_subplot(len(picks), 3, 3 * r + 1); ax.imshow(imgs[i].permute(1, 2, 0).numpy()); ax.axis("off")
         ax.set_title(f"val #{i}: medoid error {e:.1f}°", fontsize=10)
         ax3 = fig.add_subplot(len(picks), 3, 3 * r + 2, projection="3d"); draw_ball(ax3); draw_paths(ax3, vec)
-        ax3.set_title("paths in the rotation ball (true pose = ★)", fontsize=10)
+        ax3.set_title("chart centred on the truth (radius = angle to it)", fontsize=10)
         axd = fig.add_subplot(len(picks), 3, 3 * r + 3)
         t = np.linspace(0, 1, dist.shape[0])
         axd.plot(t, dist, color="tab:blue", alpha=0.25, lw=0.9); axd.plot(t, np.median(dist, axis=1), color="k", lw=2, label="median of samples")
@@ -123,6 +123,57 @@ def figure_paths(label, model, imgs, rots, picks, errs, k, steps, seed, out=None
         axd.grid(alpha=0.3); axd.legend(fontsize=8, loc="upper right")
         axd.set_title(f"{(dist[-1] < 15).sum()}/{k} samples end within 15°", fontsize=10)
     fig.suptitle(f"{label}: flow from noise to pose on SO(3), {k} noise samples, {steps} Euler steps", fontsize=13)
+    fig.tight_layout(rect=(0, 0, 1, 0.97)); return _finish(fig, out)
+
+
+AXIS_COLORS = ("tab:red", "tab:green", "tab:blue")
+
+
+def draw_unit_sphere(ax):
+    u, v = np.mgrid[0:2 * np.pi:36j, 0:np.pi:18j]
+    ax.plot_wireframe(np.cos(u) * np.sin(v), np.sin(u) * np.sin(v), np.cos(v), color="0.82", lw=0.3, alpha=0.6)
+    ax.set_xlim(-1, 1); ax.set_ylim(-1, 1); ax.set_zlim(-1, 1); ax.set_box_aspect((1, 1, 1)); ax.set_axis_off()
+
+
+def draw_frame_paths(ax, path, gt, n_show=6):
+    """A rotation is a frame of three perpendicular unit vectors; their tips (columns of R) always lie on the unit sphere.
+
+    Thin curves: the tips of the x (red), y (green) and z (blue) axes along n_show noise samples, hollow circle = noise, dot = where the
+    flow ends. Stars: the tips of the true frame. This is the absolute motion, not a chart centred on the answer.
+    """
+    draw_unit_sphere(ax)
+    for j in range(min(n_show, path.shape[1])):
+        for a, col in enumerate(AXIS_COLORS):
+            tip = path[:, j, :, a]
+            ax.plot(*tip.T, color=col, lw=1.1, alpha=0.65)
+            ax.scatter(*tip[0], s=14, facecolors="none", edgecolors=col, linewidths=0.8)
+            ax.scatter(*tip[-1], s=16, color=col, edgecolors="k", linewidths=0.3)
+    for a, col in enumerate(AXIS_COLORS):
+        ax.scatter(*gt[:, a], marker="*", s=170, color=col, edgecolors="k", linewidths=0.9, zorder=10)
+
+
+def figure_frames(label, model, imgs, rots, picks, errs, k, steps, seed, out=None, view=(20, 35)):
+    """Per image: photo | one unit sphere per frame axis (x, y, z). Hollow circle = noise start, curve = flow, dot = end, star = truth.
+
+    A rotation is a frame of three perpendicular unit vectors, so each axis tip lives on a sphere and the flow never leaves it.
+    """
+    fig = plt.figure(figsize=(15, 3.8 * len(picks)))
+    cmap = plt.get_cmap("tab10")
+    for r, (i, e) in enumerate(zip(picks, errs)):
+        path = trajectories(model, imgs[i], k, steps, seed)
+        dist = angle_deg(path, rots[i])
+        ax = fig.add_subplot(len(picks), 4, 4 * r + 1); ax.imshow(imgs[i].permute(1, 2, 0).numpy()); ax.axis("off")
+        ax.set_title(f"val #{i}: medoid error {e:.1f}°\n{(dist[-1] < 15).sum()}/{k} samples end within 15°", fontsize=10)
+        for a, name in enumerate("xyz"):
+            a3 = fig.add_subplot(len(picks), 4, 4 * r + 2 + a, projection="3d"); draw_unit_sphere(a3); a3.view_init(*view)
+            for j in range(path.shape[1]):
+                tip = path[:, j, :, a]; col = cmap(j % 10)
+                a3.plot(*tip.T, color=col, lw=1.3, alpha=0.8)
+                a3.scatter(*tip[0], s=22, facecolors="white", edgecolors=col, linewidths=1.0)
+                a3.scatter(*tip[-1], s=18, color=col, edgecolors="k", linewidths=0.3)
+            a3.scatter(*rots[i][:, a], marker="*", s=260, color="gold", edgecolors="k", linewidths=1.0, zorder=10)
+            a3.set_title(f"tip of the {name}-axis on the unit sphere", fontsize=10)
+    fig.suptitle(f"{label}: noise (○) flowing to the true pose (★); every point stays on the sphere", fontsize=13)
     fig.tight_layout(rect=(0, 0, 1, 0.97)); return _finish(fig, out)
 
 
@@ -218,7 +269,7 @@ def wandb_media(model, dataset, n=6, k=16, steps=20, seed=0, final=False):
                            float((sample_err < 15).mean()), str(np.round(Rotation.from_matrix(rots[j]).as_rotvec(), 3).tolist()),
                            str(np.round(Rotation.from_matrix(pred).as_rotvec(), 3).tolist()))
         picks = list(range(len(idx)))
-        fig = figure_paths("flow", model, imgs, rots, picks, medoid_err, k, steps, seed)
+        fig = figure_frames("flow", model, imgs, rots, picks, medoid_err, k, steps, seed)
         media = {"viz/predictions": table, "viz/paths": wandb.Image(fig)}
         plt.close(fig)
         if final:
