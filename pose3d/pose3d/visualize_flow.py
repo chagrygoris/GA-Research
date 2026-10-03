@@ -7,6 +7,9 @@ has found the pose. Opposite points of the ball's surface are the same rotation,
 
     python -m pose3d.visualize_flow --checkpoint a.pth --label GATr --checkpoint b.pth --label MLP \
         --val_cache pascal_val.pt --out viz/
+
+With --wandb the same visualizations are logged to Weights & Biases straight from the checkpoints, without any training: one run per
+checkpoint (job type "visualize"), holding the predictions table, the paths figure, the film strip and the animation.
 """
 import argparse
 from pathlib import Path
@@ -17,6 +20,28 @@ import torch
 from pose3d.engine.flow_viz import (angle_deg, animation, errors, figure_compare, figure_filmstrip, figure_paths,  # noqa: F401
                                     pick_images, trajectories)
 from pose3d.evaluate import build_model
+
+
+PASCAL_VAL_COUNTS = (228, 88, 130, 91, 125, 185, 96, 7, 90, 27, 100, 142)     # test images per class; the validation set is ordered by category
+
+
+def log_to_wandb(models, a):
+    """One W&B run per checkpoint with the final-style visualizations (table, paths, film strip, animation)."""
+    import wandb
+    from pose3d.datasets.cache import InMemoryDataset
+    from pose3d.engine.flow_viz import wandb_media
+
+    ds = InMemoryDataset.load(a.val_cache)
+    if len(ds) == sum(PASCAL_VAL_COUNTS):
+        ds.set_eval_classes(np.repeat(np.arange(12), PASCAL_VAL_COUNTS))        # class names in the table
+    imgs, rots = torch.stack([ds[i]["img"] for i in range(0, len(ds), 14)]), np.stack([ds[i]["rot"].numpy() for i in range(0, len(ds), 14)])
+    for (lab, model), ck in zip(models.items(), a.checkpoint):
+        run = wandb.init(project=a.wandb_project, entity=a.wandb_entity, name=f"{a.wandb_prefix}{lab}", job_type="visualize", group=a.wandb_group,
+                         config=dict(checkpoint=Path(ck).name, label=lab, k=a.k, steps=a.steps, seed=a.seed, images=a.wandb_images))
+        run.summary["viz_pool_median_error_deg"] = float(np.median(errors(model, imgs, rots)))
+        run.log(wandb_media(model, ds, n=a.wandb_images, k=a.k, steps=a.steps, seed=a.seed, final=True))
+        print(f"logged {lab} to {run.url}", flush=True)
+        run.finish()
 
 
 def load(path):
@@ -31,12 +56,18 @@ def main():
     p.add_argument("--val_cache", required=True, help="pascal_val.pt of the Pascal3D RAM cache"); p.add_argument("--out", default="viz")
     p.add_argument("--n_pool", type=int, default=96, help="validation images scored to choose the examples")
     p.add_argument("--quantiles", type=float, nargs="+", default=[0.1, 0.5, 0.8, 0.95], help="error quantiles of the examples (of the first model)")
+    p.add_argument("--wandb", action="store_true", help="log the visualizations to W&B from the checkpoints (no training)")
+    p.add_argument("--wandb_project", default="3D Pose Estimation"); p.add_argument("--wandb_entity", default="clifforders")
+    p.add_argument("--wandb_prefix", default="viz_"); p.add_argument("--wandb_group", default="visualizations"); p.add_argument("--wandb_images", type=int, default=8)
     p.add_argument("--k", type=int, default=24); p.add_argument("--steps", type=int, default=20); p.add_argument("--seed", type=int, default=0)
     a = p.parse_args(); assert len(a.checkpoint) == len(a.label)
     torch.set_num_threads(4); out = Path(a.out); out.mkdir(parents=True, exist_ok=True)
     blob = torch.load(a.val_cache, map_location="cpu", weights_only=True)
     imgs, rots = blob["imgs"].float() / 255, blob["targets"].float().numpy()
     models = {lab: load(ck) for ck, lab in zip(a.checkpoint, a.label)}
+    if a.wandb:
+        log_to_wandb(models, a)
+        return
     first = next(iter(models.values()))
     picks, errs = pick_images(first, imgs, rots, a.n_pool, a.quantiles)
     print("examples (val index, medoid error of", next(iter(models)), "):", list(zip(picks, [round(e, 1) for e in errs])), flush=True)
