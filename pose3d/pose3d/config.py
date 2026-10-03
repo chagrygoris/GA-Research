@@ -72,6 +72,12 @@ class RunConfig:
     wandb_project: str = "3D Pose Estimation"
     wandb_entity: str = "clifforders"
     wandb_group: Optional[str] = None
+    # Log flow-trajectory visualizations to W&B (needs --run_name and a flow model): every viz_every epochs a predictions table
+    # (image, true / predicted rotation, error, share of noise samples within 15 deg) and the paths-in-SO(3) figure for viz_images fixed
+    # validation images, and after the last epoch also a film strip and an animation. See engine/flow_viz.py.
+    log_viz: bool = False
+    viz_every: int = 10          # 0: only after the last epoch
+    viz_images: int = 6
     # Base seed for the run. None: torch's default. Under --ddp every rank adds its rank,
     # so the flow's (t, r0) noise differs between GPUs.
     seed: Optional[int] = None

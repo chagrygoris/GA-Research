@@ -128,6 +128,17 @@ def validate_epoch(model, loader, criterion, cfg):
     return total_loss / max(n_objects, 1)
 
 
+def log_viz(model, val_loader, run, cfg, final=False, commit=False):
+    """Flow-trajectory visualizations to W&B (see engine/flow_viz.py). A failure here is reported and never stops the run."""
+    if run is None or not cfg.run.log_viz or not is_main() or not hasattr(model, "velocity"):
+        return
+    try:
+        from pose3d.engine.flow_viz import wandb_media
+        run.log(wandb_media(model, val_loader.dataset, n=cfg.run.viz_images, final=final), commit=commit)
+    except Exception as e:
+        print(f"Visualization logging skipped: {type(e).__name__}: {e}")
+
+
 def train(model, train_loader, val_loader, optimizer, scheduler, criterion, run, cfg):
     n_epochs = cfg.train.n_epochs
     step = build_step(model, criterion, cfg)
@@ -153,6 +164,8 @@ def train(model, train_loader, val_loader, optimizer, scheduler, criterion, run,
         }
         if macro is not None:
             metrics["class_mean_median_error"] = macro["class_mean_median_error"]
+        if cfg.run.viz_every > 0 and (i + 1) % cfg.run.viz_every == 0:
+            log_viz(model, val_loader, run, cfg, commit=False)   # joins this epoch's step instead of opening one
         if run is not None:
             run.log(metrics)
         scheduler.step()
@@ -167,6 +180,7 @@ def train(model, train_loader, val_loader, optimizer, scheduler, criterion, run,
             log_offline_sync(run, cfg, step=i, metrics=metrics)
 
     final_evaluation(model, val_loader, run, cfg)
+    log_viz(model, val_loader, run, cfg, final=True, commit=True)
 
 
 PASCAL3D_CLASSES = ('aeroplane', 'bicycle', 'boat', 'bottle', 'bus', 'car', 'chair',
