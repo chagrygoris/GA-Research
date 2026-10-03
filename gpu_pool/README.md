@@ -206,8 +206,25 @@ for line in filter_progress(handle.log(follow=True), keep_last=10):
 
 `handle.status()` gives `queued` -> `running` -> `complete` / `error` / `cancelAcknowledged`.
 
-There is no cancel: neither the CLI nor the API exposes one, so `handle.cancel()` raises and
-points at the notebook page instead.
+There is no working cancel, but the reason is narrower than "nobody exposes one", and it is
+worth knowing before a misrouted run:
+
+- The **CLI** has no cancel subcommand. `kaggle kernels` (2.2.4) offers only
+  `list, files, get, init, push, pull, output, status, logs, update, delete, topics`.
+- The **API does** have one. `kagglesdk` exposes
+  `kernels_api_client.cancel_kernel_session(ApiCancelKernelSessionRequest)` ->
+  `POST /api/v1/kernels/cancel-session/{kernel_session_id}`.
+- It needs a *kernel session* id, and nothing readable hands one out. `get_kernel` returns a
+  *kernel* id, `get_kernel_session_status` returns only `status` and `failure_message`, and
+  `list_kernel_session_output` returns files and logs. Calling cancel with the kernel id of a
+  genuinely RUNNING kernel returns **403 Forbidden** and the kernel carries on (measured on a
+  throwaway CPU kernel, so the 403 is not an artefact of a session that had already ended).
+- `kernels delete` *does* succeed on a running kernel and the kernel disappears, but whether
+  the worker is torn down or keeps burning quota until it ends on its own is **unverified**.
+  Do not reach for it as a cancel: if it does not free the session you lose the kernel and its
+  logs and keep paying for it, which is worse than letting the run finish.
+
+So cancel in the browser, on the notebook page. `handle.cancel()` raises and points there.
 
 ## Tests
 

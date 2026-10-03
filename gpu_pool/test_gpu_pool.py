@@ -389,6 +389,17 @@ def test_exclude_premium_reports_when_only_premium_accounts_are_left():
         raise AssertionError("expected pick_account to refuse")
 
 
+def test_preflight_cell_survives_a_cpu_box():
+    """nvidia-smi is missing on CPU and subprocess.run raises rather than returning non-zero,
+    so the unguarded call killed every CPU kernel in the cell meant to protect runs."""
+    spec = git_run_spec(title="t", repo="https://example.com/r.git", command="echo hi",
+                        accelerator="cpu")
+    cell = spec.to_ipynb()["cells"][0]["source"]
+    src = "".join(cell) if isinstance(cell, list) else cell
+    ns = {}
+    exec(compile(src, "<preflight>", "exec"), ns)   # must not raise without nvidia-smi
+
+
 def test_launch_many_honours_exclude_premium():
     """launch_many picks the account itself and passes it as an explicit account=, which
     pick_account honours verbatim -- so a filter missing here overrides, not just ignores."""

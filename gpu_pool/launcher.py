@@ -167,12 +167,18 @@ class NotebookSpec:
     # -- source -----------------------------------------------------------------------
     def _preflight_cell(self) -> str:
         """A first cell that fails loudly instead of 9 hours later."""
+        # nvidia-smi is absent on a CPU box, and subprocess.run raises FileNotFoundError
+        # rather than returning non-zero -- which killed every CPU kernel in the preflight
+        # cell whose whole job is to not kill runs.
         lines = [
             "import subprocess, sys",
             'print("python", sys.version.split()[0])',
-            'print(subprocess.run(["nvidia-smi", "--query-gpu=name,memory.total",'
-            ' "--format=csv,noheader"], capture_output=True, text=True).stdout.strip()'
-            ' or "no GPU visible")',
+            "try:",
+            '    _smi = subprocess.run(["nvidia-smi", "--query-gpu=name,memory.total",'
+            ' "--format=csv,noheader"], capture_output=True, text=True).stdout.strip()',
+            "except FileNotFoundError:",
+            "    _smi = \"\"",
+            'print(_smi or "no GPU visible")',
         ]
         if self.required_secrets:
             lines += [
