@@ -389,6 +389,30 @@ def test_exclude_premium_reports_when_only_premium_accounts_are_left():
         raise AssertionError("expected pick_account to refuse")
 
 
+def test_launch_many_honours_exclude_premium():
+    """launch_many picks the account itself and passes it as an explicit account=, which
+    pick_account honours verbatim -- so a filter missing here overrides, not just ignores."""
+    router = _fake_router([("entered", 30.0, False), ("bare", 10.0, False)])
+    entered, bare = router.statuses
+    for st in (entered, bare):
+        st.competitions_checked = True
+    entered.competitions = ["arc-prize-2026-arc-agi-3"]
+
+    picked = []
+    launcher = PoolLauncher(router)
+    launcher.launch = lambda spec, **kw: picked.append(kw.get("account")) or _Handle(
+        kw.get("account"))
+    spec = git_run_spec(title="t", repo="https://example.com/r.git", command="echo hi",
+                        accelerator="t4")
+    launcher.launch_many([spec], exclude_premium=True)
+    assert picked == ["bare"], picked
+
+
+class _Handle:
+    def __init__(self, username):
+        self.account = type("A", (), {"username": username})()
+
+
 def test_can_use_falls_back_to_history_when_competitions_unknown():
     router = _fake_router([("seen_l4", 25.0, False)])
     status = router.statuses[0]

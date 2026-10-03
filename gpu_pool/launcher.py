@@ -562,16 +562,29 @@ class PoolLauncher:
         return None
 
     def launch_many(self, specs: Sequence[NotebookSpec], **kwargs: Any) -> List[LaunchHandle]:
-        """Spread several runs across the pool, skipping accounts already used here."""
+        """Spread several runs across the pool, skipping accounts already used here.
+
+        Every routing filter `launch` understands has to be repeated here, because the
+        account chosen below is passed on as an explicit `account=`, which `pick_account`
+        honours verbatim -- an filter left out here is not merely ignored, it is overridden.
+        """
         handles, used = [], set()
         for spec in specs:
             target = None
             for status in self.router.available(
-                min_gpu_hours=kwargs.get("min_hours", 1.0), resource=spec.resource
+                min_gpu_hours=kwargs.get("min_hours", 1.0),
+                resource=spec.resource,
+                require_idle=kwargs.get("require_idle", False),
+                exclude_premium=kwargs.get("exclude_premium", False),
             ):
                 if status.username not in used:
                     target = status.username
                     break
+            if target is None:
+                raise RuntimeError(
+                    "no account left for %r after %d launch(es) with these filters"
+                    % (spec.slug, len(used))
+                )
             handle = self.launch(spec, account=target, **kwargs)
             used.add(handle.account.username)
             handles.append(handle)
