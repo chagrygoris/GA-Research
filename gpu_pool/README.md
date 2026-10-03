@@ -164,7 +164,15 @@ notebook use `NotebookSpec(title=..., notebook_path="run.ipynb", accelerator="l4
 | `rtx6000` | `NvidiaRtxPro6000` | Confirmed |
 | `tpu-v3` / `tpu-v5e` | `Tpu1VmV38` / `TpuV5E8` | **Accepted but silently non-TPU** ([#1197](https://github.com/Kaggle/kaggle-cli/issues/1197)) |
 
-There is no value for the editor's "GPU T4 ×2" ([#1196](https://github.com/Kaggle/kaggle-cli/issues/1196)).
+`t4` gives **two** T4s, not one. [#1196](https://github.com/Kaggle/kaggle-cli/issues/1196) is about
+the editor having a separate "GPU T4 ×2" entry with no `machineShape` of its own, which this file
+used to read as "a pushed kernel gets one T4". It does not: `saudic/pga-cond-algebra-validate`
+(pushed with `machineShape: NvidiaTeslaT4`) reported `torch.cuda.device_count() == 2`, two
+`Tesla T4` devices, and `pose3d`'s `--ddp` relaunched itself over both. So a DDP run does not need
+the editor, and `--batch_size` is split across two GPUs on a pushed kernel exactly as it is in the
+editor. `kaggle kernels pull -m` does not round-trip the accelerator (an editor-configured kernel
+can come back as `machine_shape: None, enable_gpu: false`), so check the GPU count from inside a
+run rather than from its metadata.
 
 ## Secrets are per-account and cannot be provisioned via the API
 

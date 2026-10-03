@@ -58,8 +58,9 @@ except ImportError:  # run as a script
 
 #: Friendly alias -> Kaggle ``machineShape`` value. ``None`` means CPU only.
 #: ``t4``/``p100``/``l4``/``rtx6000`` are confirmed working; TPU values are accepted by
-#: the push API but currently provision a non-TPU image (Kaggle/kaggle-cli#1197), and
-#: there is no value for the editor's "GPU T4 x2" (Kaggle/kaggle-cli#1196).
+#: the push API but currently provision a non-TPU image (Kaggle/kaggle-cli#1197).
+#: ``t4`` provisions TWO T4s -- a pushed kernel reports ``torch.cuda.device_count() == 2`` --
+#: so a DDP run does not need the editor; see "Accelerators" in README.md.
 ACCELERATORS: Dict[str, Optional[str]] = {
     "none": None,
     "cpu": None,
