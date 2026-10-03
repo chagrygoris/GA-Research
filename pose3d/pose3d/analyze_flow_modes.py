@@ -44,7 +44,7 @@ def modes_of(finals, thr):
 def summarize(finals, gt, thr, min_mass):
     """Per-image statistics from the (k, 3, 3) final rotations and the true rotation."""
     ms = modes_of(finals, thr)
-    big = [m for m in ms if m["mass"] >= min_mass]
+    big = [m for m in ms if m["mass"] >= min_mass] or ms[:1]       # the dominant group always counts, even when the samples are scattered
     dist = angle_deg(finals[:, None], finals[None])
     mode_err = [float(angle_deg(m["center"], gt)) for m in big]
     return dict(top_mass=ms[0]["mass"], n_modes=len(big), top_err=mode_err[0], best_err=min(mode_err),
@@ -53,13 +53,20 @@ def summarize(finals, gt, thr, min_mass):
                 mode_gap=float(angle_deg(big[0]["center"], big[1]["center"])) if len(big) > 1 else np.nan, modes=big)
 
 
-def run_model(model, imgs, rots, k, steps, seed, thr, min_mass, label):
-    rows = []
-    for i in range(len(imgs)):
-        rows.append(summarize(trajectories(model, imgs[i], k, steps, seed)[-1], rots[i], thr, min_mass))
-        if (i + 1) % 50 == 0:
-            print(f"  {label}: {i + 1}/{len(imgs)}", flush=True)
-    return rows
+def run_model(model, imgs, rots, k, steps, seed, thr, min_mass, label, cache=None):
+    """Per-image summaries; the sampled final rotations are cached in `cache` (an .npy path) so a rerun only redoes the statistics."""
+    if cache is not None and Path(cache).exists() and np.load(cache).shape[:2] == (len(imgs), k):
+        finals = np.load(cache)
+    else:
+        finals = []
+        for i in range(len(imgs)):
+            finals.append(trajectories(model, imgs[i], k, steps, seed)[-1])
+            if (i + 1) % 50 == 0:
+                print(f"  {label}: {i + 1}/{len(imgs)}", flush=True)
+        finals = np.stack(finals)
+        if cache is not None:
+            np.save(cache, finals)
+    return [summarize(finals[i], rots[i], thr, min_mass) for i in range(len(imgs))]
 
 
 def figure_analysis(results, cls, min_mass, out):
@@ -176,7 +183,7 @@ def main():
     models = {lab: load(ck) for ck, lab in zip(a.checkpoint, a.label)}
     results = {}
     for lab, m in models.items():
-        results[lab] = run_model(m, imgs[idx], rots[idx], a.k, a.steps, a.seed, a.mode_deg, a.min_mass, lab)
+        results[lab] = run_model(m, imgs[idx], rots[idx], a.k, a.steps, a.seed, a.mode_deg, a.min_mass, lab, cache=out / f"finals_{lab}.npy")
         r = results[lab]
         print(f"{lab}: {len(r)} images | 2+ modes in {np.mean([x['n_modes'] >= 2 for x in r]):.1%} | dominant-mode mass median {np.median([x['top_mass'] for x in r]):.2f} | "
               f"medoid err median {np.median([x['medoid_err'] for x in r]):.2f} | top-mode wrong (>15) but another mode right: "
