@@ -152,6 +152,47 @@ def draw_frame_paths(ax, path, gt, n_show=6):
         ax.scatter(*gt[:, a], marker="*", s=170, color=col, edgecolors="k", linewidths=0.9, zorder=10)
 
 
+_HOPF_REF = np.array([0.267, 0.535, 0.802])        # arbitrary generic direction: the spin colour is undefined only where the axis points exactly along it
+
+
+def hopf_coords(rot):
+    """Hopf-style coordinates of rotations (..., 3, 3): where the z axis points (a point on the unit sphere) and the spin of the frame
+    around that axis, in degrees [0, 360). Together they identify the rotation uniquely, so one sphere plus one colour shows all of SO(3).
+    """
+    rot = np.asarray(rot, dtype=np.float64)
+    p, x = rot[..., :, 2], rot[..., :, 0]
+    a = _HOPF_REF - (p @ _HOPF_REF)[..., None] * p                                  # reference tangent direction at p
+    a /= np.linalg.norm(a, axis=-1, keepdims=True) + 1e-12
+    b = np.cross(p, a)
+    return p, np.degrees(np.arctan2((x * b).sum(-1), (x * a).sum(-1))) % 360.0
+
+
+def figure_hopf(label, model, imgs, rots, picks, errs, k, steps, seed, out=None, view=(20, 35)):
+    """Per image: photo | ONE sphere. The position is where the z axis points, the colour is the spin around it (cyclic hue, see the bar).
+
+    Hollow circle = noise, curve = the flow, dot = its end, star = the true pose: a path has found the pose when it ends at the star AND has the same colour.
+    """
+    cmap = plt.get_cmap("hsv")
+    fig = plt.figure(figsize=(9.5, 4.2 * len(picks)))
+    for r, (i, e) in enumerate(zip(picks, errs)):
+        path = trajectories(model, imgs[i], k, steps, seed)
+        dist = angle_deg(path, rots[i]); pos, spin = hopf_coords(path); gp, gs = hopf_coords(rots[i])
+        ax = fig.add_subplot(len(picks), 2, 2 * r + 1); ax.imshow(imgs[i].permute(1, 2, 0).numpy()); ax.axis("off")
+        ax.set_title(f"val #{i}: medoid error {e:.1f}°\n{(dist[-1] < 15).sum()}/{k} samples end within 15°", fontsize=10)
+        a3 = fig.add_subplot(len(picks), 2, 2 * r + 2, projection="3d"); draw_unit_sphere(a3); a3.view_init(*view)
+        for j in range(path.shape[1]):
+            pts = pos[:, j]; seg = np.stack([pts[:-1], pts[1:]], 1)
+            a3.add_collection3d(Line3DCollection(seg, colors=cmap(((spin[:-1, j] + spin[1:, j]) / 2) / 360.0), linewidths=2.0))
+            a3.scatter(*pts[0], s=26, c=[cmap(spin[0, j] / 360.0)], edgecolors="white", linewidths=1.2)
+            a3.scatter(*pts[-1], s=30, c=[cmap(spin[-1, j] / 360.0)], edgecolors="k", linewidths=0.8)
+        a3.scatter(*gp, marker="*", s=380, c=[cmap(gs / 360.0)], edgecolors="k", linewidths=1.4, zorder=10)
+        a3.set_title("z-axis direction on the sphere, colour = spin around it", fontsize=10)
+        if r == 0:
+            cb = fig.colorbar(plt.cm.ScalarMappable(norm=plt.Normalize(0, 360), cmap=cmap), ax=a3, shrink=0.55, pad=0.0); cb.set_label("spin (°)")
+    fig.suptitle(f"{label}: noise (○) to the true pose (★); each rotation = a point + a colour", fontsize=12)
+    fig.tight_layout(rect=(0, 0, 1, 0.97)); return _finish(fig, out)
+
+
 def figure_frames(label, model, imgs, rots, picks, errs, k, steps, seed, out=None, view=(20, 35)):
     """Per image: photo | one unit sphere per frame axis (x, y, z). Hollow circle = noise start, curve = flow, dot = end, star = truth.
 
@@ -178,42 +219,40 @@ def figure_frames(label, model, imgs, rots, picks, errs, k, steps, seed, out=Non
 
 
 def interactive_frames(models, imgs, rots, picks, k, steps, seed, out, cls=None, errs=None):
-    """Self-contained plotly HTML: drag to rotate the three unit spheres, hover a curve for its flow time and error; the dropdown picks
-    (model, image). Same encoding as figure_frames: hollow = noise, dot = end (green within 15 deg, red otherwise), star = truth.
+    """Self-contained plotly HTML, Hopf view: ONE unit sphere you can drag; the position is where the z axis points, the colour (cyclic) is the spin
+    around it. Hover a curve for flow time, error and spin. Hollow = noise, dot = end (outline green within 15 deg, red otherwise), diamond = truth.
+    The dropdown picks (model, image).
     """
     import plotly.graph_objects as go
+    import torch.nn.functional as F
     from plotly.subplots import make_subplots
 
-    fig = make_subplots(rows=1, cols=4, column_widths=[0.22, 0.26, 0.26, 0.26], horizontal_spacing=0.01,
-                        specs=[[{"type": "xy"}, {"type": "scene"}, {"type": "scene"}, {"type": "scene"}]],
-                        subplot_titles=("", "x-axis tip", "y-axis tip", "z-axis tip"))
-    u, v = np.mgrid[0:2 * np.pi:40j, 0:np.pi:20j]
-    sphere = (np.cos(u) * np.sin(v), np.sin(u) * np.sin(v), np.cos(v))
-    palette = ["#1f77b4", "#ff7f0e", "#2ca02c", "#d62728", "#9467bd", "#8c564b", "#e377c2", "#7f7f7f", "#bcbd22", "#17becf"]
+    fig = make_subplots(rows=1, cols=2, column_widths=[0.28, 0.72], horizontal_spacing=0.01, specs=[[{"type": "xy"}, {"type": "scene"}]])
+    u, v = np.mgrid[0:2 * np.pi:48j, 0:np.pi:24j]
     groups, labels = [], []
     for ml, model in models.items():
         for n, i in enumerate(picks):
             path = trajectories(model, imgs[i], k, steps, seed)
             dist = angle_deg(path, rots[i]); t = np.linspace(0, 1, path.shape[0]); ok = dist[-1] < 15
+            pos, spin = hopf_coords(path); gp, gs = hopf_coords(rots[i])
+            small = F.interpolate(imgs[i][None].float(), size=(160, 160), mode="bilinear", align_corners=False)[0]
             start = len(fig.data)
-            fig.add_trace(go.Image(z=(imgs[i].permute(1, 2, 0).numpy() * 255).astype(np.uint8), hoverinfo="skip"), row=1, col=1)
-            for a in range(3):
-                col = a + 2
-                fig.add_trace(go.Surface(x=sphere[0], y=sphere[1], z=sphere[2], opacity=0.12, showscale=False, hoverinfo="skip",
-                                         colorscale=[[0, "#aab"], [1, "#aab"]]), row=1, col=col)
-                for j in range(path.shape[1]):
-                    tip = path[:, j, :, a]
-                    fig.add_trace(go.Scatter3d(x=tip[:, 0], y=tip[:, 1], z=tip[:, 2], mode="lines", showlegend=False,
-                                               line=dict(width=5, color=palette[j % 10]), customdata=np.stack([t, dist[:, j]], 1),
-                                               hovertemplate=f"sample {j}<br>t=%{{customdata[0]:.2f}}<br>%{{customdata[1]:.1f}}° from the truth<extra></extra>"), row=1, col=col)
-                fig.add_trace(go.Scatter3d(x=path[0, :, 0, a], y=path[0, :, 1, a], z=path[0, :, 2, a], mode="markers", showlegend=False, hoverinfo="skip",
-                                           marker=dict(size=4, color="white", line=dict(color="gray", width=2))), row=1, col=col)
-                fig.add_trace(go.Scatter3d(x=path[-1, :, 0, a], y=path[-1, :, 1, a], z=path[-1, :, 2, a], mode="markers", showlegend=False,
-                                           marker=dict(size=5, color=np.where(ok, "green", "red"), line=dict(color="black", width=1)), customdata=dist[-1],
-                                           hovertemplate="final: %{customdata:.1f}° from the truth<extra></extra>"), row=1, col=col)
-                g = rots[i][:, a]
-                fig.add_trace(go.Scatter3d(x=[g[0]], y=[g[1]], z=[g[2]], mode="markers", showlegend=False, hovertext="true pose",
-                                           marker=dict(size=10, color="gold", symbol="diamond", line=dict(color="black", width=2))), row=1, col=col)
+            fig.add_trace(go.Image(z=(small.permute(1, 2, 0).numpy() * 255).clip(0, 255).astype(np.uint8), hoverinfo="skip"), row=1, col=1)
+            fig.add_trace(go.Surface(x=np.cos(u) * np.sin(v), y=np.sin(u) * np.sin(v), z=np.cos(v), opacity=0.1, showscale=False, hoverinfo="skip",
+                                     colorscale=[[0, "#aab"], [1, "#aab"]]), row=1, col=2)
+            for j in range(path.shape[1]):
+                fig.add_trace(go.Scatter3d(x=pos[:, j, 0], y=pos[:, j, 1], z=pos[:, j, 2], mode="lines", showlegend=False,
+                                           line=dict(width=6, color=spin[:, j], colorscale="HSV", cmin=0, cmax=360),
+                                           customdata=np.stack([t, dist[:, j], spin[:, j]], 1),
+                                           hovertemplate=f"sample {j}<br>t=%{{customdata[0]:.2f}}<br>%{{customdata[1]:.1f}}° from the truth<br>spin %{{customdata[2]:.0f}}°<extra></extra>"), row=1, col=2)
+            fig.add_trace(go.Scatter3d(x=pos[0, :, 0], y=pos[0, :, 1], z=pos[0, :, 2], mode="markers", showlegend=False, hoverinfo="skip",
+                                       marker=dict(size=5, color=spin[0], colorscale="HSV", cmin=0, cmax=360, line=dict(color="white", width=3))), row=1, col=2)
+            fig.add_trace(go.Scatter3d(x=pos[-1, :, 0], y=pos[-1, :, 1], z=pos[-1, :, 2], mode="markers", showlegend=False,
+                                       marker=dict(size=6, color=spin[-1], colorscale="HSV", cmin=0, cmax=360, line=dict(color=np.where(ok, "green", "red"), width=3)),
+                                       customdata=np.stack([dist[-1], spin[-1]], 1), hovertemplate="final: %{customdata[0]:.1f}° from the truth<br>spin %{customdata[1]:.0f}°<extra></extra>"), row=1, col=2)
+            fig.add_trace(go.Scatter3d(x=[gp[0]], y=[gp[1]], z=[gp[2]], mode="markers", showlegend=False, hovertext=f"true pose (spin {gs:.0f}°)",
+                                       marker=dict(size=11, color=[gs], colorscale="HSV", cmin=0, cmax=360, symbol="diamond", line=dict(color="black", width=3),
+                                                   colorbar=dict(title="spin (°)", len=0.6, x=1.0))), row=1, col=2)
             groups.append((start, len(fig.data)))
             name = f" ({CLASS_NAMES[cls[i]]})" if cls is not None and 0 <= cls[i] < len(CLASS_NAMES) else ""
             err = f", medoid error {errs[n]:.1f}°" if errs is not None else ""
@@ -221,11 +260,11 @@ def interactive_frames(models, imgs, rots, picks, k, steps, seed, out, cls=None,
     for gi, (a0, b0) in enumerate(groups):
         for tr in fig.data[a0:b0]:
             tr.visible = gi == 0
-    buttons = [dict(label=lab, method="update", args=[{"visible": [a0 <= n < b0 for n in range(len(fig.data))]}, {"title": lab}]) for (a0, b0), lab in zip(groups, labels)]
-    scene = dict(xaxis=dict(visible=False, range=[-1, 1]), yaxis=dict(visible=False, range=[-1, 1]), zaxis=dict(visible=False, range=[-1, 1]), aspectmode="cube",
-                 camera=dict(eye=dict(x=1.5, y=1.5, z=0.9)))
+    buttons = [dict(label=lab, method="update", args=[{"visible": [a0 <= n < b0 for n in range(len(fig.data))]}, {"title.text": lab}]) for (a0, b0), lab in zip(groups, labels)]
+    ax = dict(visible=False, range=[-1.05, 1.05])
     fig.update_layout(title=dict(text=labels[0], x=0.0, xanchor="left", y=0.97), updatemenus=[dict(buttons=buttons, direction="down", x=0.0, y=1.0, xanchor="left", yanchor="bottom", pad=dict(b=6), showactive=True)],
-                      scene=scene, scene2=scene, scene3=scene, margin=dict(l=5, r=5, t=130, b=5), height=540)
+                      scene=dict(xaxis=ax, yaxis=ax, zaxis=ax, aspectmode="cube", camera=dict(eye=dict(x=1.5, y=1.5, z=0.9))),
+                      margin=dict(l=5, r=5, t=130, b=5), height=640)
     fig.update_xaxes(visible=False, row=1, col=1); fig.update_yaxes(visible=False, row=1, col=1)
     fig.write_html(out, include_plotlyjs=True, full_html=True)
     return out
@@ -323,7 +362,7 @@ def wandb_media(model, dataset, n=6, k=16, steps=20, seed=0, final=False):
                            float((sample_err < 15).mean()), str(np.round(Rotation.from_matrix(rots[j]).as_rotvec(), 3).tolist()),
                            str(np.round(Rotation.from_matrix(pred).as_rotvec(), 3).tolist()))
         picks = list(range(len(idx)))
-        fig = figure_frames("flow", model, imgs, rots, picks, medoid_err, k, steps, seed)
+        fig = figure_hopf("flow", model, imgs, rots, picks, medoid_err, k, steps, seed)
         media = {"viz/predictions": table, "viz/paths": wandb.Image(fig)}
         plt.close(fig)
         if final:

@@ -76,3 +76,15 @@ def test_log_viz_is_a_noop_without_a_run_or_the_flag(model):
     assert log_viz(model, loader, SimpleNamespace(log=lambda *a, **k: pytest.fail("logged")), cfg) is None
     assert log_viz(object(), loader, SimpleNamespace(log=lambda *a, **k: pytest.fail("logged")),
                    SimpleNamespace(run=SimpleNamespace(log_viz=True, viz_images=2))) is None   # not a flow model
+
+
+def test_hopf_coords_identify_rotation():
+    import numpy as np
+    from scipy.spatial.transform import Rotation as Rot
+    from pose3d.engine.flow_viz import hopf_coords
+
+    R = Rot.random(6, random_state=1).as_matrix()
+    p, phi = hopf_coords(R)
+    assert np.allclose(np.linalg.norm(p, axis=-1), 1)
+    p2, phi2 = hopf_coords(R @ Rot.from_euler("z", 40, degrees=True).as_matrix())      # spin about the body z axis moves only the colour
+    assert np.allclose(p, p2) and np.allclose((phi2 - phi) % 360, 40)

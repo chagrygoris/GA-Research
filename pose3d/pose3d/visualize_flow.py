@@ -17,7 +17,7 @@ from pathlib import Path
 import numpy as np
 import torch
 
-from pose3d.engine.flow_viz import (angle_deg, animation, errors, figure_compare, figure_filmstrip, figure_frames, figure_paths,  # noqa: F401
+from pose3d.engine.flow_viz import (angle_deg, animation, errors, figure_compare, figure_filmstrip, figure_frames, figure_hopf, figure_paths,  # noqa: F401
                                     interactive_frames, pick_images, trajectories)
 from pose3d.evaluate import build_model
 
@@ -31,6 +31,7 @@ def render_files(models, imgs, rots, picks, errs, a, out, cls=None):
     interactive_frames(models, imgs, rots, picks, min(a.k, 12), a.steps, a.seed, out / "interactive.html", cls=cls, errs=list(errs))
     for lab, m in models.items():
         e_m = errors(m, imgs[picks], rots[picks])
+        figure_hopf(lab, m, imgs, rots, picks, e_m, a.k, a.steps, a.seed, out / f"hopf_{lab}.png")
         figure_frames(lab, m, imgs, rots, picks, e_m, a.k, a.steps, a.seed, out / f"frames_{lab}.png")
         figure_paths(lab, m, imgs, rots, picks, e_m, a.k, a.steps, a.seed, out / f"chart_{lab}.png")
         figure_filmstrip(lab, m, imgs, rots, picks[1], a.steps, a.seed, out / f"filmstrip_{lab}.png")
