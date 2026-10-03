@@ -355,6 +355,40 @@ def test_can_use_needs_a_competition_for_premium_gpus():
     assert len(router.available(accelerator="t4")) == 2
 
 
+def test_exclude_premium_keeps_t4_work_off_competition_accounts():
+    """A T4 run should not spend hours only a premium-capable account could use on an RTX."""
+    router = _fake_router([("entered", 30.0, False), ("bare", 10.0, False)])
+    entered, bare = router.statuses
+    for st in (entered, bare):
+        st.competitions_checked = True
+    entered.competitions = ["arc-prize-2026-arc-agi-3"]
+
+    # by quota alone the premium account wins; excluding it leaves the plain one
+    assert [s.name for s in router.available()] == ["entered", "bare"]
+    assert [s.name for s in router.available(exclude_premium=True)] == ["bare"]
+    assert router.best(exclude_premium=True).name == "bare"
+
+    spec = git_run_spec(title="t", repo="https://example.com/r.git", command="echo hi",
+                        accelerator="t4")
+    launcher = PoolLauncher(router)
+    assert launcher.pick_account(spec).username == "entered"
+    assert launcher.pick_account(spec, exclude_premium=True).username == "bare"
+
+
+def test_exclude_premium_reports_when_only_premium_accounts_are_left():
+    router = _fake_router([("entered", 30.0, False)])
+    router.statuses[0].competitions_checked = True
+    router.statuses[0].competitions = ["arc-prize-2026-arc-agi-3"]
+    spec = git_run_spec(title="t", repo="https://example.com/r.git", command="echo hi",
+                        accelerator="t4")
+    try:
+        PoolLauncher(router).pick_account(spec, exclude_premium=True)
+    except RuntimeError as exc:
+        assert "without premium-GPU access" in str(exc)
+    else:
+        raise AssertionError("expected pick_account to refuse")
+
+
 def test_can_use_falls_back_to_history_when_competitions_unknown():
     router = _fake_router([("seen_l4", 25.0, False)])
     status = router.statuses[0]

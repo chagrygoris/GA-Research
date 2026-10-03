@@ -7,7 +7,7 @@ Euler ODE integration with an optional multi-sample geodesic medoid.
 
 Experimental variants are all off by default and selected in `pose3d.config.Features`
 and `FlowConfig`: `adapter_grid`, `adapter_channels`, `conv_adapter`, `vector_field_hidden_dim`,
-`mlp_heads` and `fisher_prior`.
+`mlp_heads`, `cond_algebra` and `fisher_prior`.
 """
 
 import torch
@@ -20,6 +20,7 @@ from pose3d.geometry.flow import (
     relative_log,
     rotor_multiply,
 )
+from pose3d.geometry.pga import CGENN_PGA_METRIC, PGA_MV_DIM, embed_cl3_in_pga
 from pose3d.geometry.rotor import embed_rotor, matrix_to_rotor, random_rotor, rotor_to_matrix
 from pose3d.models import fisher_prior
 from pose3d.models.encoders import (
@@ -159,6 +160,7 @@ class CliffordFlow(nn.Module):
                  mlp_heads: bool = False,
                  vector_field: str = "clifford",
                  condition_head: str = "clifford",
+                 cond_algebra: str = "cl3",
                  gatr: dict = None,
                  fisher_checkpoint: str = None):
         super().__init__()
@@ -172,11 +174,42 @@ class CliffordFlow(nn.Module):
             raise ValueError("GATr heads and mlp_heads cannot be combined")
         if condition_head == "gatr" and fisher_checkpoint:
             raise ValueError("condition_head='gatr' and fisher_prior cannot be combined")
+        if cond_algebra not in ("cl3", "pga"):
+            raise ValueError(f"cond_algebra must be 'cl3' or 'pga', got {cond_algebra!r}")
+        if cond_algebra == "pga":
+            # The ablation is scoped to the Clifford condition head feeding the GATr denoiser.
+            # A Clifford vector field would need the rotor, the velocity read-out and the loss
+            # to move to Cl(3,0,1) as well, which is a different (and much larger) change.
+            if vector_field != "gatr":
+                raise ValueError("cond_algebra='pga' requires --vector_field gatr")
+            if condition_head != "clifford":
+                raise ValueError("cond_algebra='pga' only applies to the Clifford condition "
+                                 "head; got condition_head='gatr'")
+            if mlp_heads or fisher_checkpoint:
+                raise ValueError("cond_algebra='pga' cannot be combined with mlp_heads or "
+                                 "fisher_prior")
+            if int(2**algebra.dim) != 8:
+                raise ValueError("cond_algebra='pga' expects the flow's own algebra to be "
+                                 "Cl(3,0); use --algebra_dim 3")
         self.algebra = algebra
         self.n_cond_mv = n_cond_mv
         self.n_time_samples = max(1, int(n_time_samples))
         self.mlp_heads = mlp_heads
+        self.cond_algebra_name = cond_algebra
         mv_dim = int(2**algebra.dim)
+
+        # The condition head may compute in a different algebra from the rest of the flow: with
+        # --cond_algebra pga it runs in Cl(3,0,1), so the adapter cuts the backbone vector into
+        # 16-blade multivectors and the GATr denoiser takes its 16-blade tokens directly.
+        # Registered only when it is a genuinely different algebra: aliasing `algebra` under a
+        # second attribute would duplicate its buffers in state_dict and break every existing
+        # checkpoint. `cond_algebra` below reads through to `algebra` in the default recipe.
+        if cond_algebra == "pga":
+            from clifford.algebra.cliffordalgebra import CliffordAlgebra
+            self.pga_algebra = CliffordAlgebra(CGENN_PGA_METRIC)
+        else:
+            self.pga_algebra = None
+        self.cond_mv_dim = int(2**self.cond_algebra.dim)
         vf_hidden_dim = hidden_dim if vector_field_hidden_dim is None else vector_field_hidden_dim
 
         # With fisher_checkpoint set, one shared ResNet-101 feeds cond_mv (gradient
@@ -197,7 +230,7 @@ class CliffordFlow(nn.Module):
             cond_in_features = self._fisher_n_mv
         else:
             self.adapter = ImageToMultivectors(
-                algebra, grid=adapter_grid, pretrained_backbone=pretrained_backbone,
+                self.cond_algebra, grid=adapter_grid, pretrained_backbone=pretrained_backbone,
                 encoder_type=encoder_type, depth_anything_model=depth_anything_model,
                 freeze_backbone=freeze_backbone, adapter_channels=adapter_channels,
                 conv_adapter=conv_adapter)
@@ -209,11 +242,12 @@ class CliffordFlow(nn.Module):
                 cond_in_features, self.n_cond_mv, **(gatr or {}))
         else:
             self.condition_head = TralaleroTralala(
-                algebra, in_features=cond_in_features, hidden_dim=hidden_dim,
+                self.cond_algebra, in_features=cond_in_features, hidden_dim=hidden_dim,
                 out_features=self.n_cond_mv)
         if vector_field == "gatr":
             from pose3d.models.gatr_denoiser import GATrVectorField
-            self.vector_field = GATrVectorField(self.n_cond_mv, **(gatr or {}))
+            self.vector_field = GATrVectorField(self.n_cond_mv, token_algebra=cond_algebra,
+                                                **(gatr or {}))
         else:
             self.vector_field = TralaleroTralala(
                 algebra, in_features=2 + self.n_cond_mv, hidden_dim=vf_hidden_dim, out_features=1)
@@ -238,6 +272,12 @@ class CliffordFlow(nn.Module):
             nn.init.zeros_(self.vector_field.out.weight)
             nn.init.zeros_(self.vector_field.out.linear_left.weight)
 
+    @property
+    def cond_algebra(self):
+        """Algebra the condition head computes in: Cl(3,0,1) with --cond_algebra pga, else the
+        flow's own Cl(3,0)."""
+        return self.algebra if self.pga_algebra is None else self.pga_algebra
+
     def _features(self, img, cls):
         """Condition multivectors, plus the Fisher head's matrix A (None without a prior)."""
         if self.fisher_net is None:
@@ -259,6 +299,11 @@ class CliffordFlow(nn.Module):
     def velocity(self, rotor, t, cond_mv):
         rotor_mv = embed_rotor(rotor, self.algebra).unsqueeze(1)
         t_mv = self.algebra.embed(t.reshape(-1, 1), (0,)).unsqueeze(1)
+        if self.cond_mv_dim == PGA_MV_DIM:
+            # The condition tokens are Cl(3,0,1); lift the rotor and time tokens into the same
+            # 16 blades so one sequence can hold all three. Cl(3,0) sits inside Cl(3,0,1) as the
+            # blades that do not touch the degenerate generator, so nothing is lost or scaled.
+            rotor_mv, t_mv = embed_cl3_in_pga(rotor_mv), embed_cl3_in_pga(t_mv)
         inp = torch.cat([rotor_mv, t_mv, cond_mv], dim=1)
         out = self.vector_field(inp)[:, 0]
         return self.algebra.get_grade(out, 2)

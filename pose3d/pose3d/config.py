@@ -216,6 +216,14 @@ class FlowConfig:
     # multivectors): "gatr" runs GATr over the backbone tokens plus n_cond_mv learned queries.
     # Shares the gatr_* sizes with the vector field. Not with mlp_heads or fisher_prior.
     condition_head: Literal["clifford", "gatr"] = "clifford"
+    # Algebra the Clifford (CGENN) condition head computes in. "cl3": Cl(3,0), 8-blade
+    # multivectors, the reference recipe. "pga": Cl(3,0,1), the 16-blade projective algebra
+    # GATr itself uses -- the adapter then cuts the backbone vector into 2048/16 = 128
+    # multivectors and the denoiser takes the head's 16-blade tokens without re-embedding.
+    # Only valid with --vector_field gatr and --condition_head clifford (the rotor, the
+    # velocity and the loss stay in Cl(3,0)). Costs ~5.5x the condition head's geometric
+    # products; see reports/ for the ablation.
+    cond_algebra: Literal["cl3", "pga"] = "cl3"
     gatr_blocks: int = 4
     gatr_mv_channels: int = 8    # hidden multivector channels per token
     gatr_s_channels: int = 32    # hidden scalar channels per token

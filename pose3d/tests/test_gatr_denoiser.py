@@ -97,3 +97,66 @@ def test_gatr_condition_head_rejects_incompatible_options():
         CliffordFlow(ALGEBRA, hidden_dim=[16], n_cond_mv=8, pretrained_backbone=False,
                      encoder_type="resnet50", conv_adapter=False, condition_head="gatr",
                      mlp_heads=True)
+
+
+# -- --cond_algebra pga: the Clifford condition head computes in Cl(3,0,1) -----------------
+
+def _flow_pga(**kwargs):
+    opts = dict(hidden_dim=[16], n_cond_mv=8, pretrained_backbone=False,
+                encoder_type="resnet50", conv_adapter=False, n_time_samples=2,
+                vector_field="gatr", cond_algebra="pga",
+                gatr=dict(num_blocks=2, mv_channels=4, s_channels=8, num_heads=2))
+    opts.update(kwargs)
+    return CliffordFlow(ALGEBRA, **opts)
+
+
+def test_pga_condition_head_runs_in_cl301():
+    model = _flow_pga()
+    assert model.cond_algebra.dim == 4 and model.cond_mv_dim == 16
+    assert type(model.condition_head).__name__ == "TralaleroTralala"
+    # the adapter cuts the same 2048 backbone channels into 16-blade multivectors
+    assert model.adapter.n_mv == 128 and model.adapter.mv_dim == 16
+    assert model.condition_head(torch.randn(3, 128, 16)).shape == (3, 8, 16)
+    # the flow's own algebra is untouched: the rotor and the velocity stay in Cl(3,0)
+    assert model.algebra.dim == 3
+
+
+def test_pga_vector_field_takes_16_blade_tokens():
+    field = _flow_pga().vector_field
+    assert field.token_algebra == "pga" and field.in_mv_dim == 16
+    out = field(torch.randn(3, 10, 16))
+    assert out.shape == (3, 1, 8)      # the velocity is read back in Cl(3,0)
+    assert out.abs().max() == 0        # zero-initialised, as in the Cl(3,0) recipe
+    with pytest.raises(ValueError):
+        field(torch.randn(3, 10, 8))
+
+
+def test_pga_flow_trains_and_samples():
+    torch.manual_seed(0)
+    model = _flow_pga()
+    img = torch.randn(2, 3, 64, 64)
+    rot = torch.linalg.qr(torch.randn(2, 3, 3))[0]
+    rot = rot * torch.linalg.det(rot).sign().view(-1, 1, 1)
+    model.compute_loss(img, rot).backward()
+    for part in (model.condition_head, model.vector_field):
+        grads = [p.grad for p in part.parameters() if p.grad is not None]
+        assert grads and all(torch.isfinite(g).all() for g in grads)
+    assert model.predict(img, n_samples=2, steps=3).shape == (2, 3, 3)
+
+
+@pytest.mark.parametrize("bad", [
+    dict(vector_field="clifford"),                       # needs the GATr denoiser
+    dict(condition_head="gatr"),                         # nothing left to run in Cl(3,0,1)
+    dict(mlp_heads=True),                                # the MLP ablation is Cl(3,0)-sized
+])
+def test_pga_rejects_incompatible_options(bad):
+    with pytest.raises(ValueError):
+        _flow_pga(**bad)
+
+
+def test_cl3_is_still_the_default():
+    model = CliffordFlow(ALGEBRA, hidden_dim=[16], n_cond_mv=8, pretrained_backbone=False,
+                         encoder_type="resnet50", conv_adapter=False, vector_field="gatr",
+                         gatr=dict(num_blocks=2, mv_channels=4, s_channels=8, num_heads=2))
+    assert model.cond_mv_dim == 8 and model.cond_algebra is model.algebra
+    assert model.vector_field.token_algebra == "cl3"

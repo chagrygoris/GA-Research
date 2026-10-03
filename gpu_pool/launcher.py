@@ -441,8 +441,14 @@ class PoolLauncher:
         min_hours: float = 1.0,
         require_idle: bool = False,
         account: Optional[str] = None,
+        exclude_premium: bool = False,
     ) -> PoolAccount:
-        """Choose the target account, or raise with the reason none qualified."""
+        """Choose the target account, or raise with the reason none qualified.
+
+        ``exclude_premium`` keeps a T4 (or CPU) job off the accounts that can reach
+        L4 / RTX Pro 6000 / TPU: one 30-hour budget covers every GPU type, so those hours
+        are worth more on an account where the premium types are an option at all.
+        """
         statuses = self.router.statuses
         if account:
             for status in statuses:
@@ -456,6 +462,8 @@ class PoolLauncher:
             candidates = [s for s in statuses if s.ok]
             if require_idle:
                 candidates = [s for s in candidates if not s.busy]
+            if exclude_premium:
+                candidates = [s for s in candidates if not s.premium_accelerators]
             if not candidates:
                 raise RuntimeError("no reachable%s account in the pool"
                                    % (" idle" if require_idle else ""))
@@ -469,14 +477,16 @@ class PoolLauncher:
             resource=spec.resource,
             require_idle=require_idle,
             accelerator=spec.accelerator if requires_competition(spec.accelerator) else None,
+            exclude_premium=exclude_premium,
         )
         if not candidates:
             raise RuntimeError(
-                "no account has >=%.1f spare %s-hours%s (pool total %.1fh)"
+                "no account has >=%.1f spare %s-hours%s%s (pool total %.1fh)"
                 % (
                     min_hours,
                     spec.resource,
                     " while idle" if require_idle else "",
+                    " without premium-GPU access" if exclude_premium else "",
                     self.router.total_remaining_hours(spec.resource),
                 )
             )
@@ -490,9 +500,11 @@ class PoolLauncher:
         require_idle: bool = False,
         account: Optional[str] = None,
         dry_run: bool = False,
+        exclude_premium: bool = False,
     ) -> LaunchHandle:
         """Push ``spec`` to the best available account and start it running."""
-        target = self.pick_account(spec, min_hours, require_idle, account)
+        target = self.pick_account(spec, min_hours, require_idle, account,
+                                   exclude_premium=exclude_premium)
 
         if dry_run:
             print(json.dumps({"target": target.username,
@@ -512,7 +524,7 @@ class PoolLauncher:
                 if _is_capacity_error(out):
                     tried.append(username)
                     print("%s is at its session limit, trying another account" % username)
-                    nxt = self._next_candidate(spec, min_hours, tried)
+                    nxt = self._next_candidate(spec, min_hours, tried, exclude_premium)
                     if nxt is None:
                         raise RuntimeError(
                             "every candidate account is at its session limit (tried %s): %s"
@@ -527,17 +539,21 @@ class PoolLauncher:
             )
 
     def _next_candidate(
-        self, spec: NotebookSpec, min_hours: float, exclude: Sequence[str]
+        self, spec: NotebookSpec, min_hours: float, exclude: Sequence[str],
+        exclude_premium: bool = False,
     ) -> Optional[PoolAccount]:
         """The next-best account for ``spec``, skipping the ones already refused."""
         if spec.resource == "cpu":
             pool = [s for s in self.router.statuses if s.ok]
+            if exclude_premium:
+                pool = [s for s in pool if not s.premium_accelerators]
             pool.sort(key=lambda s: (s.busy, -s.gpu.remaining_h))
         else:
             pool = self.router.available(
                 min_gpu_hours=min_hours,
                 resource=spec.resource,
                 accelerator=spec.accelerator if requires_competition(spec.accelerator) else None,
+                exclude_premium=exclude_premium,
             )
         for status in pool:
             if status.username not in exclude:
@@ -595,6 +611,11 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
     parser.add_argument("--account", help="force a specific pool account")
     parser.add_argument("--min-hours", type=float, default=1.0)
     parser.add_argument("--idle-only", action="store_true")
+    parser.add_argument(
+        "--exclude-premium", action="store_true",
+        help="never route to an account that can reach L4 / RTX Pro 6000 / TPU; the weekly "
+             "30 hours are one budget for all GPU types, so a T4 run is cheaper elsewhere",
+    )
     parser.add_argument("--wait", type=float, default=0.0, help="seconds to wait for completion")
     parser.add_argument("--dry-run", action="store_true")
     args = parser.parse_args(argv)
@@ -633,12 +654,15 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
         )
 
     router = PoolRouter.from_dir(args.tokens_dir)
-    router.probe_all()
+    # --exclude-premium asks which accounts *can* reach a premium GPU, and that is only
+    # known once competitions are collected (see PoolAccount.can_use).
+    router.probe_all(with_competitions=args.exclude_premium)
     launcher = PoolLauncher(router)
     handle = launcher.launch(
         spec,
         min_hours=args.min_hours,
         require_idle=args.idle_only,
+        exclude_premium=args.exclude_premium,
         account=args.account,
         dry_run=args.dry_run,
     )

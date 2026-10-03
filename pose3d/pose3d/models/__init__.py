@@ -32,6 +32,7 @@ def _clifford_flow(cfg: Config, algebra) -> nn.Module:
         conv_adapter=fl.conv_adapter,
         vector_field=fl.vector_field,
         condition_head=fl.condition_head,
+        cond_algebra=fl.cond_algebra,
         gatr=dict(num_blocks=fl.gatr_blocks, mv_channels=fl.gatr_mv_channels,
                   s_channels=fl.gatr_s_channels, num_heads=fl.gatr_heads),
         mlp_heads=f.mlp_heads,
@@ -305,6 +306,16 @@ def validate(cfg: Config) -> None:
             "or model='vit_baseline' with --vit_pooling_type ga. "
             "Use a supported model/pooling combination or set --algebra_dim 3."
         )
+
+    if cfg.flow.cond_algebra == "pga":
+        if cfg.model.name != "clifford_flow":
+            raise ValueError("--cond_algebra pga only applies to --model clifford_flow")
+        if cfg.flow.vector_field != "gatr" or cfg.flow.condition_head != "clifford":
+            raise ValueError("--cond_algebra pga needs --vector_field gatr and the Clifford "
+                             "condition head (--condition_head clifford)")
+        if dim != 3:
+            raise ValueError("--cond_algebra pga expects --algebra_dim 3: the rotor, the "
+                             "velocity and the loss stay in Cl(3,0)")
 
     rotor_losses = {"rotor", "mv_rotor"}
     rotor_modes = {"rotor", "multivector_rotor"}

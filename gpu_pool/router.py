@@ -734,12 +734,19 @@ class PoolRouter:
         require_idle: bool = False,
         require_free_slot: bool = False,
         accelerator: Optional[str] = None,
+        exclude_premium: bool = False,
     ) -> List[AccountStatus]:
         """Accounts with spare capacity, richest in remaining quota first.
 
         ``accelerator`` keeps only accounts that can reach that GPU type: T4/P100 anywhere,
         L4 / RTX Pro 6000 / TPU only where a competition has been entered. Quota is pooled
         across types, so this is about eligibility, never budget.
+
+        ``exclude_premium`` is the other half of that: it drops the accounts that *can* reach
+        L4 / RTX Pro 6000 / TPU. Since the 30 weekly hours are one budget for every GPU type,
+        a T4 job on a competition-entered account spends hours that only that account could
+        have spent on an RTX. Routing ordinary T4 work to the plain accounts keeps the premium
+        quota where it is the only option.
         """
         out = []
         for status in self.statuses:
@@ -752,6 +759,8 @@ class PoolRouter:
             if require_free_slot and status.kernels_checked and status.free_slots <= 0:
                 continue
             if accelerator and not status.can_use(accelerator):
+                continue
+            if exclude_premium and status.premium_accelerators:
                 continue
             out.append(status)
         return sorted(out, key=lambda s: s.quota(resource).remaining_h, reverse=True)
@@ -914,6 +923,11 @@ def _parse_args(argv: Optional[Sequence[str]] = None) -> argparse.Namespace:
         help="also report entered competitions, which gate every GPU beyond T4/P100",
     )
     parser.add_argument("--idle-only", action="store_true")
+    parser.add_argument(
+        "--exclude-premium", action="store_true",
+        help="skip accounts that can reach L4 / RTX Pro 6000 / TPU, so a T4 job does not "
+             "spend quota only those accounts can use on a premium GPU",
+    )
     parser.add_argument("--running", action="store_true", help="print only active kernels")
     parser.add_argument("--best", action="store_true", help="print the single best account")
     parser.add_argument("--max-concurrent", type=int, default=2)
@@ -938,7 +952,9 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
         recent=args.recent,
         recent_within_hours=args.recent_hours,
         with_accelerators=args.accelerators,
-        with_competitions=args.competitions or bool(args.accelerator),
+        # can_use()/premium_accelerators only have a real answer once competitions are
+        # collected; without them they fall back to guessing from observed history.
+        with_competitions=args.competitions or bool(args.accelerator) or args.exclude_premium,
     )
 
     if args.json:
@@ -961,6 +977,7 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
             resource=args.resource,
             require_idle=args.idle_only,
             accelerator=args.accelerator,
+            exclude_premium=args.exclude_premium,
         )
         if pick is None:
             print("no account satisfies the request")
@@ -978,20 +995,22 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
         return 0
 
     print(router.report(resource=args.resource))
-    if args.min_gpu_hours or args.idle_only or args.accelerator:
+    if args.min_gpu_hours or args.idle_only or args.accelerator or args.exclude_premium:
         picks = router.available(
             min_gpu_hours=args.min_gpu_hours,
             resource=args.resource,
             require_idle=args.idle_only,
             accelerator=args.accelerator,
+            exclude_premium=args.exclude_premium,
         )
         print("")
         print(
-            "candidates (>=%.1f %s-hours%s): %s"
+            "candidates (>=%.1f %s-hours%s%s): %s"
             % (
                 args.min_gpu_hours,
                 args.resource,
                 ", idle only" if args.idle_only else "",
+                ", no premium-capable accounts" if args.exclude_premium else "",
                 ", ".join("%s (%.1fh)" % (p.name, p.quota(args.resource).remaining_h) for p in picks)
                 or "none",
             )

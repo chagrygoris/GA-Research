@@ -71,6 +71,43 @@ Install GATr with `--no-deps`: its `setup.py` pins `numpy<1.25` and `xformers`, 
 the preinstalled torch. `xformers` is only needed for attention masks, which the flow never passes,
 so a stub stands in when it is missing.
 
+### `--cond_algebra pga`: the Clifford condition head in Cl(3,0,1)
+
+With `--vector_field gatr` the denoiser already works in the projective algebra Cl(3,0,1) while the
+condition head still computes in Cl(3,0) and gets embedded at the boundary. `--cond_algebra pga`
+moves the condition head into Cl(3,0,1) as well, so the two halves share one algebra:
+
+```bash
+poetry run python -m pose3d --path_to_datasets ... --vector_field gatr --cond_algebra pga
+```
+
+What changes: the adapter cuts the 2048 backbone channels into 2048/16 = **128** multivectors
+instead of 256, the head's layers are built on `CliffordAlgebra((1, 1, 1, 0))`, and the denoiser
+takes its 16-blade tokens directly (`pose3d/geometry/pga.py` holds the blade maps; CGENN orders
+blades ShortLex with the degenerate generator last, GATr puts it first and calls it `e0`, so the
+reorder carries signs). The rotor, the velocity and the loss stay in Cl(3,0) — only the condition
+head and the tokens handed to GATr move. It is therefore only valid together with
+`--vector_field gatr --condition_head clifford`, and not with `--mlp_heads` or `--fisher_prior`.
+
+Cost, condition head only, measured at the default `--flow_hidden_dim 88`:
+
+| | blades | adapter `n_mv` | cond-head params | GP MACs/sample |
+|---|---|---|---|---|
+| `cl3` (default) | 8 | 256 | 1,036,048 | 18.4M |
+| `pga` | 16 | 128 | 863,536 | 100.9M |
+| `pga --flow_hidden_dim 104` | 16 | 128 | 1,030,480 | 126.1M |
+
+The geometric product contracts over `n_blades**3`, so it costs ~5.5x more while the parameter
+count *falls* (the adapter emits half as many multivectors). `--flow_hidden_dim 104` restores the
+Cl(3,0) parameter budget to within 0.5%, which is the arm to compare against if the question is
+about the algebra rather than the budget.
+
+Two things to watch when reading the result. CGENN's invariants are the grade-wise `q`/`norm`,
+and those annihilate the degenerate direction, so `NormalizationLayer` and `MVSiLU` cannot see
+the `e0` components they are gating. And GATr's equivariant linear basis in Cl(3,0,1) includes
+maps (multiplication by `e0`) that CGENN's `MVLinear` does not have, so this is Cl(3,0,1) without
+the part of GATr that exploits it.
+
 ## Micro and macro metrics
 
 Every reported number has two versions. Micro is pooled over all validation images, so the big

@@ -50,6 +50,7 @@ python gpu_pool/router.py                           # full table
 python gpu_pool/router.py --running                 # only active kernels
 python gpu_pool/router.py --best --idle-only \
                               --min-gpu-hours 6         # pick one account to use
+python gpu_pool/router.py --best --exclude-premium      # ... but never a premium-capable one
 python gpu_pool/router.py --no-kernels              # quota only (~1s, skips status calls)
 python gpu_pool/router.py --json                    # machine readable
 ```
@@ -90,6 +91,16 @@ router.total_remaining_hours("gpu")
 | `quota_refresh` | `refreshAt` | Weekly reset timestamp (UTC) |
 | `active_kernels` | `kernels list --mine` + `kernels status` | Statuses `running`, `queued`, `cancelRequested` |
 | `free_slots` | `--max-concurrent` (default 2) | Confirmed by Kaggle refusing a 3rd push: "Maximum batch GPU session count of 2 reached" |
+
+### `--exclude-premium`
+
+One weekly 30-hour budget covers every GPU type, so an hour spent on T4 by a competition-entered
+account is an hour that account cannot spend on an RTX Pro 6000 or L4 — and the plain accounts
+can never spend it there at all. `--exclude-premium` (on `router.py` and `launcher.py`, and
+`exclude_premium=` on `available()` / `best()` / `pick_account()` / `launch()`) drops every
+account that can reach a competition-gated accelerator, so ordinary T4 work lands on the plain
+ones and the premium quota stays where it is the only option. It forces the competition probe,
+since `can_use` otherwise guesses from observed history.
 
 Only the `--recent N` (default 10) most recently run kernels per account are status-checked, and
 only those run within `--recent-hours` (default 24), since each check is one CLI call and an older
