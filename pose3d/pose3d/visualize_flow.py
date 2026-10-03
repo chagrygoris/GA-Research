@@ -18,11 +18,25 @@ import numpy as np
 import torch
 
 from pose3d.engine.flow_viz import (angle_deg, animation, errors, figure_compare, figure_filmstrip, figure_frames, figure_paths,  # noqa: F401
-                                    pick_images, trajectories)
+                                    interactive_frames, pick_images, trajectories)
 from pose3d.evaluate import build_model
 
 
 PASCAL_VAL_COUNTS = (228, 88, 130, 91, 125, 185, 96, 7, 90, 27, 100, 142)     # test images per class; the validation set is ordered by category
+
+
+def render_files(models, imgs, rots, picks, errs, a, out, cls=None):
+    """Write every visualization of every model into out/: frames_*.png, chart_*.png, filmstrip_*.png, flow_*.gif and one interactive.html."""
+    out = Path(out); out.mkdir(parents=True, exist_ok=True)
+    interactive_frames(models, imgs, rots, picks, min(a.k, 12), a.steps, a.seed, out / "interactive.html", cls=cls, errs=list(errs))
+    for lab, m in models.items():
+        e_m = errors(m, imgs[picks], rots[picks])
+        figure_frames(lab, m, imgs, rots, picks, e_m, a.k, a.steps, a.seed, out / f"frames_{lab}.png")
+        figure_paths(lab, m, imgs, rots, picks, e_m, a.k, a.steps, a.seed, out / f"chart_{lab}.png")
+        figure_filmstrip(lab, m, imgs, rots, picks[1], a.steps, a.seed, out / f"filmstrip_{lab}.png")
+        animation(lab, m, imgs, rots, picks[1], a.k, a.steps, a.seed, out / f"flow_{lab}.gif")
+        print("done", lab, flush=True)
+    return out
 
 
 def log_to_wandb(models, a):
@@ -40,6 +54,11 @@ def log_to_wandb(models, a):
                          config=dict(checkpoint=Path(ck).name, label=lab, k=a.k, steps=a.steps, seed=a.seed, images=a.wandb_images))
         run.summary["viz_pool_median_error_deg"] = float(np.median(errors(model, imgs, rots)))
         run.log(wandb_media(model, ds, n=a.wandb_images, k=a.k, steps=a.steps, seed=a.seed, final=True))
+        if a.wandb_artifact:                          # the full-resolution files, downloadable from the run
+            picks, errs = pick_images(model, imgs, rots, min(a.n_pool, len(imgs)), a.quantiles)
+            d = render_files({lab: model}, imgs, rots, picks, errs, a, Path(a.out) / lab)
+            art = wandb.Artifact(f"flow-viz-{lab}", type="visualization", metadata=dict(checkpoint=Path(ck).name, k=a.k, steps=a.steps, seed=a.seed))
+            art.add_dir(str(d)); run.log_artifact(art)
         print(f"logged {lab} to {run.url}", flush=True)
         run.finish()
 
@@ -59,6 +78,7 @@ def main():
     p.add_argument("--wandb", action="store_true", help="log the visualizations to W&B from the checkpoints (no training)")
     p.add_argument("--wandb_project", default="3D Pose Estimation"); p.add_argument("--wandb_entity", default="clifforders")
     p.add_argument("--wandb_prefix", default="viz_"); p.add_argument("--wandb_group", default="visualizations"); p.add_argument("--wandb_images", type=int, default=8)
+    p.add_argument("--wandb_artifact", action="store_true", help="also upload the PNG/GIF/interactive HTML files as a W&B artifact of each run")
     p.add_argument("--k", type=int, default=24); p.add_argument("--steps", type=int, default=20); p.add_argument("--seed", type=int, default=0)
     a = p.parse_args(); assert len(a.checkpoint) == len(a.label)
     torch.set_num_threads(4); out = Path(a.out); out.mkdir(parents=True, exist_ok=True)
@@ -71,16 +91,5 @@ def main():
     first = next(iter(models.values()))
     picks, errs = pick_images(first, imgs, rots, a.n_pool, a.quantiles)
     print("examples (val index, medoid error of", next(iter(models)), "):", list(zip(picks, [round(e, 1) for e in errs])), flush=True)
-    for lab, m in models.items():
-        e_m = errors(m, imgs[picks], rots[picks])
-        figure_frames(lab, m, imgs, rots, picks, e_m, a.k, a.steps, a.seed, out / f"frames_{lab}.png")
-        figure_paths(lab, m, imgs, rots, picks, e_m, a.k, a.steps, a.seed, out / f"chart_{lab}.png")
-        figure_filmstrip(lab, m, imgs, rots, picks[1], a.steps, a.seed, out / f"filmstrip_{lab}.png")
-        animation(lab, m, imgs, rots, picks[1], a.k, a.steps, a.seed, out / f"flow_{lab}.gif")
-        print("done", lab, flush=True)
-    if len(models) > 1:
-        figure_compare(models, imgs, rots, picks, errs, a.k, a.steps, a.seed, out / "compare_convergence.png")
-
-
-if __name__ == "__main__":
-    main()
+    cls = np.repeat(np.arange(12), PASCAL_VAL_COUNTS) if len(imgs) == sum(PASCAL_VAL_COUNTS) else None
+    render_files(models, imgs, rots, picks, errs, a, out, cls=cls)

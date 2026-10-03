@@ -177,6 +177,60 @@ def figure_frames(label, model, imgs, rots, picks, errs, k, steps, seed, out=Non
     fig.tight_layout(rect=(0, 0, 1, 0.97)); return _finish(fig, out)
 
 
+def interactive_frames(models, imgs, rots, picks, k, steps, seed, out, cls=None, errs=None):
+    """Self-contained plotly HTML: drag to rotate the three unit spheres, hover a curve for its flow time and error; the dropdown picks
+    (model, image). Same encoding as figure_frames: hollow = noise, dot = end (green within 15 deg, red otherwise), star = truth.
+    """
+    import plotly.graph_objects as go
+    from plotly.subplots import make_subplots
+
+    fig = make_subplots(rows=1, cols=4, column_widths=[0.22, 0.26, 0.26, 0.26], horizontal_spacing=0.01,
+                        specs=[[{"type": "xy"}, {"type": "scene"}, {"type": "scene"}, {"type": "scene"}]],
+                        subplot_titles=("", "x-axis tip", "y-axis tip", "z-axis tip"))
+    u, v = np.mgrid[0:2 * np.pi:40j, 0:np.pi:20j]
+    sphere = (np.cos(u) * np.sin(v), np.sin(u) * np.sin(v), np.cos(v))
+    palette = ["#1f77b4", "#ff7f0e", "#2ca02c", "#d62728", "#9467bd", "#8c564b", "#e377c2", "#7f7f7f", "#bcbd22", "#17becf"]
+    groups, labels = [], []
+    for ml, model in models.items():
+        for n, i in enumerate(picks):
+            path = trajectories(model, imgs[i], k, steps, seed)
+            dist = angle_deg(path, rots[i]); t = np.linspace(0, 1, path.shape[0]); ok = dist[-1] < 15
+            start = len(fig.data)
+            fig.add_trace(go.Image(z=(imgs[i].permute(1, 2, 0).numpy() * 255).astype(np.uint8), hoverinfo="skip"), row=1, col=1)
+            for a in range(3):
+                col = a + 2
+                fig.add_trace(go.Surface(x=sphere[0], y=sphere[1], z=sphere[2], opacity=0.12, showscale=False, hoverinfo="skip",
+                                         colorscale=[[0, "#aab"], [1, "#aab"]]), row=1, col=col)
+                for j in range(path.shape[1]):
+                    tip = path[:, j, :, a]
+                    fig.add_trace(go.Scatter3d(x=tip[:, 0], y=tip[:, 1], z=tip[:, 2], mode="lines", showlegend=False,
+                                               line=dict(width=5, color=palette[j % 10]), customdata=np.stack([t, dist[:, j]], 1),
+                                               hovertemplate=f"sample {j}<br>t=%{{customdata[0]:.2f}}<br>%{{customdata[1]:.1f}}° from the truth<extra></extra>"), row=1, col=col)
+                fig.add_trace(go.Scatter3d(x=path[0, :, 0, a], y=path[0, :, 1, a], z=path[0, :, 2, a], mode="markers", showlegend=False, hoverinfo="skip",
+                                           marker=dict(size=4, color="white", line=dict(color="gray", width=2))), row=1, col=col)
+                fig.add_trace(go.Scatter3d(x=path[-1, :, 0, a], y=path[-1, :, 1, a], z=path[-1, :, 2, a], mode="markers", showlegend=False,
+                                           marker=dict(size=5, color=np.where(ok, "green", "red"), line=dict(color="black", width=1)), customdata=dist[-1],
+                                           hovertemplate="final: %{customdata:.1f}° from the truth<extra></extra>"), row=1, col=col)
+                g = rots[i][:, a]
+                fig.add_trace(go.Scatter3d(x=[g[0]], y=[g[1]], z=[g[2]], mode="markers", showlegend=False, hovertext="true pose",
+                                           marker=dict(size=10, color="gold", symbol="diamond", line=dict(color="black", width=2))), row=1, col=col)
+            groups.append((start, len(fig.data)))
+            name = f" ({CLASS_NAMES[cls[i]]})" if cls is not None and 0 <= cls[i] < len(CLASS_NAMES) else ""
+            err = f", medoid error {errs[n]:.1f}°" if errs is not None else ""
+            labels.append(f"{ml}: val #{i}{name}{err}; {int(ok.sum())}/{path.shape[1]} samples end within 15°")
+    for gi, (a0, b0) in enumerate(groups):
+        for tr in fig.data[a0:b0]:
+            tr.visible = gi == 0
+    buttons = [dict(label=lab, method="update", args=[{"visible": [a0 <= n < b0 for n in range(len(fig.data))]}, {"title": lab}]) for (a0, b0), lab in zip(groups, labels)]
+    scene = dict(xaxis=dict(visible=False, range=[-1, 1]), yaxis=dict(visible=False, range=[-1, 1]), zaxis=dict(visible=False, range=[-1, 1]), aspectmode="cube",
+                 camera=dict(eye=dict(x=1.5, y=1.5, z=0.9)))
+    fig.update_layout(title=dict(text=labels[0], x=0.0, xanchor="left", y=0.97), updatemenus=[dict(buttons=buttons, direction="down", x=0.0, y=1.0, xanchor="left", yanchor="bottom", pad=dict(b=6), showactive=True)],
+                      scene=scene, scene2=scene, scene3=scene, margin=dict(l=5, r=5, t=130, b=5), height=540)
+    fig.update_xaxes(visible=False, row=1, col=1); fig.update_yaxes(visible=False, row=1, col=1)
+    fig.write_html(out, include_plotlyjs=True, full_html=True)
+    return out
+
+
 def figure_filmstrip(label, model, imgs, rots, i, steps, seed, out=None, sample=0):
     path = trajectories(model, imgs[i], 8, steps, seed)
     times = [0, steps // 4, steps // 2, 3 * steps // 4, steps]
@@ -278,6 +332,9 @@ def wandb_media(model, dataset, n=6, k=16, steps=20, seed=0, final=False):
             gif = Path(tempfile.mkdtemp(prefix="flow_viz_")) / "flow.gif"
             animation("flow", model, imgs, rots, picks[min(1, len(picks) - 1)], k, steps, seed, str(gif))
             media["viz/flow_animation"] = wandb.Video(str(gif), fps=6, format="gif")
+            html = gif.with_name("interactive.html")
+            interactive_frames({"flow": model}, imgs, rots, picks, min(k, 12), steps, seed, str(html), cls=cls, errs=medoid_err)
+            media["viz/interactive"] = wandb.Html(str(html), inject=False)
         return media
     finally:
         model.train(was_training)
