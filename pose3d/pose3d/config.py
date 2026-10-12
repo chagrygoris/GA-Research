@@ -243,7 +243,20 @@ class FlowConfig:
     # the condition head stays a Clifford MLP. Needs the GATr package (see models/gatr_denoiser.py).
     # "clifford": the CGENN-style Clifford MLP (the 9.63 deg recipe); the gatr_* options are
     # unused then.
-    vector_field: Literal["clifford", "gatr"] = "gatr"
+    # "so3fourier": the image becomes C_f signals on SO(3) (Wigner coefficients up to so3f_lmax, image2sphere-style
+    # lift + S2 -> SO(3) conv) and the velocity is read from them expressed around the pose hypothesis, exactly
+    # equivariant to 90 deg turns and flips of the map (models/so3fourier_head.py). Needs cond_tokens=sphere,
+    # condition_head=none, pose_tokens=rotor. Small (~0.25M after the backbone): s2 32 / so3 8 / hidden 44;
+    # large (~1.1M): 64 / 16 / 124.
+    vector_field: Literal["clifford", "gatr", "so3fourier"] = "gatr"
+    so3f_lmax: int = 6
+    so3f_s2_channels: int = 32
+    so3f_so3_channels: int = 8
+    so3f_hidden: int = 44
+    so3f_nside: int = 4
+    so3f_flip_symmetrize: bool = True
+    # False: the non-equivariant twin (same condition path, the read-out sees [c, R] instead of D(R)^T c).
+    so3f_canonicalize: bool = True
     # Same choice for the condition head (backbone multivectors -> n_cond_mv condition
     # multivectors): "gatr" runs GATr over the backbone tokens plus n_cond_mv learned queries.
     # Shares the gatr_* sizes with the vector field. Not with mlp_heads or fisher_prior.
@@ -261,7 +274,7 @@ class FlowConfig:
     # its own GATr token, its fixed viewing direction as the vector part and dircloud_scalars
     # features as scalar channels, plus the e3 axis (models/dircloud_head.py). Needs
     # pose_tokens=frame_pin and condition_head=none.
-    cond_tokens: Literal["pooled", "so2", "dircloud"] = "pooled"
+    cond_tokens: Literal["pooled", "so2", "dircloud", "sphere"] = "pooled"   # sphere: with vector_field=so3fourier
     dircloud_scalars: int = 64
     so2_channels: int = 128
     # With cond_tokens=so2: also feed a constant image-up token (-e2). Breaks the in-plane SO(2) on

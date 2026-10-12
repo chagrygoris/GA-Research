@@ -46,10 +46,11 @@ class ImageToMultivectors(nn.Module):
                  so2_up_token: bool = False,
                  so2_split_norm: bool = False,
                  so2_tokens: int = 0,
-                 dircloud_scalars: int = 64):
+                 dircloud_scalars: int = 64,
+                 sphere: dict = None):
         super().__init__()
-        if cond_tokens not in ("pooled", "so2", "dircloud"):
-            raise ValueError(f"cond_tokens must be 'pooled', 'so2' or 'dircloud', got {cond_tokens!r}")
+        if cond_tokens not in ("pooled", "so2", "dircloud", "sphere"):
+            raise ValueError(f"cond_tokens must be 'pooled', 'so2', 'dircloud' or 'sphere', got {cond_tokens!r}")
         if cond_tokens != "pooled" and conv_adapter:
             raise ValueError(f"cond_tokens={cond_tokens!r} replaces the pooling, so it needs conv_adapter=False")
         if not is_dense_backbone(encoder_type):
@@ -88,6 +89,12 @@ class ImageToMultivectors(nn.Module):
             from pose3d.models.dircloud_head import DirectionCloudHead
             self.conv_adapter = DirectionCloudHead(backbone_channels, scalars=dircloud_scalars)
             self.n_mv = self.conv_adapter.n_tokens
+            return
+        if cond_tokens == "sphere":
+            # Wigner coefficients of signals on SO(3), (B, c_f, sum_l (2l+1)^2); models/so3fourier_head.py.
+            from pose3d.models.so3fourier_head import SphereConditionHead
+            self.conv_adapter = SphereConditionHead(backbone_channels, **(sphere or {}))
+            self.n_mv = self.conv_adapter.c_f
             return
         if not self.use_conv_adapter:
             # No adapter: the globally pooled backbone vector is cut into consecutive
@@ -128,7 +135,7 @@ class ImageToMultivectors(nn.Module):
         else:
             fmap = self.backbone(x)
         adapted = self.conv_adapter(fmap)
-        if self.cond_tokens in ("so2", "dircloud"):
+        if self.cond_tokens in ("so2", "dircloud", "sphere"):
             return adapted
         if not self.use_conv_adapter:
             return adapted.flatten(1).view(adapted.shape[0], self.n_mv, self.mv_dim)
@@ -196,8 +203,16 @@ class CliffordFlow(nn.Module):
                  so2_up_token: bool = False,
                  so2_split_norm: bool = False,
                  pose_tokens: str = "rotor",
-                 dircloud_scalars: int = 64):
+                 dircloud_scalars: int = 64,
+                 so3fourier: dict = None):
         super().__init__()
+        so3f = dict(so3fourier or {})
+        if (cond_tokens == "sphere") != (vector_field == "so3fourier"):
+            raise ValueError("cond_tokens='sphere' and vector_field='so3fourier' go together")
+        if vector_field == "so3fourier" and (condition_head != "none" or pose_tokens != "rotor"
+                                             or mlp_heads or fisher_checkpoint):
+            raise ValueError("vector_field='so3fourier' needs condition_head='none', pose_tokens='rotor', "
+                             "no mlp_heads and no fisher_prior")
         if pose_tokens not in ("rotor", "frame", "frame_ch", "frame_pin"):
             raise ValueError(f"pose_tokens must be 'rotor', 'frame', 'frame_ch' or 'frame_pin', got {pose_tokens!r}")
         if (cond_tokens == "dircloud") != (pose_tokens == "frame_pin"):
@@ -210,8 +225,8 @@ class CliffordFlow(nn.Module):
             raise ValueError("cond_tokens='so2' and fisher_prior cannot be combined")
         if mlp_heads and fisher_checkpoint:
             raise ValueError("mlp_heads and fisher_prior cannot be combined")
-        if vector_field not in ("clifford", "gatr"):
-            raise ValueError(f"vector_field must be 'clifford' or 'gatr', got {vector_field!r}")
+        if vector_field not in ("clifford", "gatr", "so3fourier"):
+            raise ValueError(f"vector_field must be 'clifford', 'gatr' or 'so3fourier', got {vector_field!r}")
         if condition_head not in ("clifford", "gatr", "none"):
             raise ValueError(f"condition_head must be 'clifford', 'gatr' or 'none', got {condition_head!r}")
         if condition_head == "none" and (cond_tokens == "pooled" or mlp_heads):
@@ -253,7 +268,8 @@ class CliffordFlow(nn.Module):
                 conv_adapter=conv_adapter, cond_tokens=cond_tokens, so2_channels=so2_channels,
                 so2_up_token=so2_up_token, so2_split_norm=so2_split_norm,
                 so2_tokens=n_cond_mv if condition_head == "none" else 0,
-                dircloud_scalars=dircloud_scalars)
+                dircloud_scalars=dircloud_scalars,
+                sphere={k: so3f[k] for k in ("c_s", "c_f", "lmax", "nside") if k in so3f})
             cond_in_features = self.adapter.n_mv
             if cond_tokens == "dircloud":
                 self.n_cond_mv = self.adapter.n_mv   # the cloud's size, not a free choice
@@ -269,7 +285,13 @@ class CliffordFlow(nn.Module):
             self.condition_head = TralaleroTralala(
                 algebra, in_features=cond_in_features, hidden_dim=hidden_dim,
                 out_features=self.n_cond_mv)
-        if pose_tokens == "frame_pin":
+        self.vector_field_kind = vector_field
+        if vector_field == "so3fourier":
+            from pose3d.models.so3fourier_head import SO3FourierVelocity
+            self.vector_field = SO3FourierVelocity(
+                c_f=so3f.get("c_f", 8), lmax=so3f.get("lmax", 6), hidden=so3f.get("hidden", 44),
+                flip_symmetrize=so3f.get("flip_symmetrize", True), canonicalize=so3f.get("canonicalize", True))
+        elif pose_tokens == "frame_pin":
             from pose3d.models.gatr_denoiser import GATrCloudField
             self.vector_field = GATrCloudField(dircloud_scalars + 1, **(gatr or {}))  # + the axis flag
         elif vector_field == "gatr":
@@ -292,6 +314,8 @@ class CliffordFlow(nn.Module):
                 2 + self.n_cond_mv, 1, mv_dim, _n_hidden_layers(vf_hidden_dim), ga_field)
             nn.init.zeros_(self.vector_field.net[-1].weight)
             nn.init.zeros_(self.vector_field.net[-1].bias)
+        elif vector_field == "so3fourier":
+            pass   # SO3FourierVelocity zero-initialises its own read-out
         elif vector_field == "gatr":
             # Zero the output layer so training starts from a zero velocity field, as with the
             # Clifford MLP below.
@@ -320,6 +344,9 @@ class CliffordFlow(nn.Module):
         return cond_mv
 
     def velocity(self, rotor, t, cond_mv):
+        if self.vector_field_kind == "so3fourier":
+            # cond_mv: (B, c_f, N) Wigner coefficients; the read-out returns the body velocity directly.
+            return self.vector_field(rotor_to_matrix(rotor, self.algebra), t, cond_mv)
         if self.pose_tokens == "frame_pin":
             return self._pin_velocity(rotor, t, cond_mv)
         t_mv = self.algebra.embed(t.reshape(-1, 1), (0,)).unsqueeze(1)
