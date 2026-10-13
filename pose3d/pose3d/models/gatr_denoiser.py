@@ -136,7 +136,24 @@ def _compile(module):
     module.compile()
 
 
-class GATrVectorField(nn.Module):
+class _Compilable(nn.Module):
+    """The `compile` option, kept when the module is copied.
+
+    nn.Module drops Module.compile()'s compiled call from its pickled / deep-copied state, so the
+    EMA weights (a deepcopy, torch.optim.swa_utils.AveragedModel) would otherwise run eager."""
+
+    def _set_compiled(self, compile: bool):
+        self.compiled = bool(compile)
+        if compile:
+            _compile(self)
+
+    def __setstate__(self, state):
+        super().__setstate__(state)
+        if self.__dict__.get("compiled"):
+            _compile(self)
+
+
+class GATrVectorField(_Compilable):
     """(B, 2 + n_cond_mv, 8) Cl(3,0) multivectors -> (B, 1, 8), like TralaleroTralala.
 
     Token 0 carries the noisy rotor R_t, tokens 1.. the conditioning multivectors (token 1 is
@@ -159,9 +176,7 @@ class GATrVectorField(nn.Module):
         self.out = self.net.linear_out  # zeroed by CliffordFlow so the initial velocity is 0
         if dense_linear:
             use_dense_linears(self.net)
-        self.compiled = bool(compile)
-        if compile:
-            _compile(self)
+        self._set_compiled(compile)
 
     def forward(self, x):
         b, n, _ = x.shape
@@ -177,7 +192,7 @@ class GATrVectorField(nn.Module):
         return result
 
 
-class GATrConditionHead(nn.Module):
+class GATrConditionHead(_Compilable):
     """(B, n_in, 8) Cl(3,0) multivectors -> (B, n_out, 8), like TralaleroTralala.
 
     The n_in inputs are tokens, followed by n_out learned query multivectors; the output is read
@@ -202,9 +217,7 @@ class GATrConditionHead(nn.Module):
         self.register_buffer("_pga_index", torch.tensor(_PGA_INDEX), persistent=False)
         if dense_linear:
             use_dense_linears(self.net)
-        self.compiled = bool(compile)
-        if compile:
-            _compile(self)
+        self._set_compiled(compile)
 
     def forward(self, x):
         b = x.shape[0]

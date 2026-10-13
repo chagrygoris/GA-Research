@@ -167,16 +167,27 @@ def test_dense_linear_flag_keeps_weights_and_outputs(head):
         torch.testing.assert_close(b, a, atol=1e-10, rtol=1e-10)
 
 
-def test_compiled_vector_field_matches_eager_and_its_copy_runs_its_own_weights():
+def _runs_compiled(module, x):
+    """Whether a call of `module` goes through torch.compile (hooks run inside the compiled call)."""
+    seen = []
+    handle = module.register_forward_hook(lambda m, i, o: seen.append(torch.compiler.is_compiling()))
+    module(x)
+    handle.remove()
+    return seen == [True]
+
+
+def test_compiled_vector_field_matches_eager_and_its_copy_stays_compiled():
     import copy
     from pose3d.models.gatr_denoiser import GATrVectorField
 
     ref, comp = _gatr_pair(GATrVectorField, (8,), dense_linear=True, compile=True)
     x = torch.randn(3, 10, 8)
     torch.testing.assert_close(comp(x), ref(x), atol=1e-5, rtol=1e-4)
-    # The EMA weights are a deepcopy (torch.optim.swa_utils.AveragedModel): it must not keep
-    # calling the original module's weights through the compiled function.
+    assert _runs_compiled(comp, x) and not _runs_compiled(ref, x)
+    # The EMA weights are a deepcopy (torch.optim.swa_utils.AveragedModel), which drops
+    # Module.compile()'s compiled call: the copy must be compiled again and run its own weights.
     twin = copy.deepcopy(comp)
+    assert _runs_compiled(twin, x)
     with torch.no_grad():
         for p in twin.parameters():
             p.mul_(0.5)
