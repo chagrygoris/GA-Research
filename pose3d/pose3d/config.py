@@ -252,6 +252,13 @@ class FlowConfig:
     gatr_mv_channels: int = 8    # hidden multivector channels per token
     gatr_s_channels: int = 32    # hidden scalar channels per token
     gatr_heads: int = 4
+    # Speed options of both GATr modules: the same function and weights, so checkpoints load
+    # either way. dense_linear runs every EquiLinear as one dense matmul instead of GATr's einsum
+    # over its 9 basis maps (whose backward is half of the vector field's step); compile runs the
+    # GATr forward through torch.compile (~30 s per new input shape). Timings in
+    # reports/flash_clifford.
+    gatr_dense_linear: bool = False
+    gatr_compile: bool = False
     # Path to Liu et al.'s Pascal3D+ matrix Fisher checkpoint (state_dict_119.pkl);
     # used only with Features.fisher_prior.
     fisher_checkpoint: Optional[str] = None
