@@ -75,6 +75,31 @@ Install GATr with `--no-deps`: its `setup.py` pins `numpy<1.25` and `xformers`, 
 the preinstalled torch. `xformers` is only needed for attention masks, which the flow never passes,
 so a stub stands in when it is missing.
 
+Two speed options, both off by default, compute the same function with the same weights, so
+checkpoints load either way:
+
+- `--gatr_dense_linear` runs every GATr `EquiLinear` as one dense matmul. GATr's own einsum over the
+  9 basis maps has a slow backward.
+- `--gatr_compile` runs the GATr modules, the EMA copy included, through `torch.compile`. Each new
+  input shape costs 10-25 s of compilation, about a minute per run in total: the first training
+  steps, validation, and the 32-sample final evaluation.
+
+Measured on one RTX Pro 6000 with the trainer's own epoch and evaluation functions, batch 64, fp32,
+synthetic images. The evaluation columns are for 360 images.
+
+| flags | train step | 1-sample evaluation | 32-sample evaluation |
+|---|---|---|---|
+| none | 177 ms | 1.12 s | 6.54 s |
+| `--gatr_dense_linear` | 160 ms | 1.14 s | 6.72 s |
+| `--gatr_compile` | 152 ms | 0.78 s | 5.79 s |
+| both | 136 ms | 0.74 s | 5.49 s |
+
+Details are in `reports/flash_clifford/`.
+
+```bash
+poetry run python -m pose3d --path_to_datasets ... --gatr_dense_linear --gatr_compile
+```
+
 ## Micro and macro metrics
 
 Every reported number has two versions. Micro is pooled over all validation images, so the big

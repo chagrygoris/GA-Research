@@ -255,8 +255,8 @@ class FlowConfig:
     # Speed options of both GATr modules: the same function and weights, so checkpoints load
     # either way. dense_linear runs every EquiLinear as one dense matmul instead of GATr's einsum
     # over its 9 basis maps (whose backward is half of the vector field's step); compile runs the
-    # GATr forward through torch.compile (~30 s per new input shape). Timings in
-    # reports/flash_clifford.
+    # GATr forward through torch.compile (10-25 s per new input shape, ~1 min per run). With both,
+    # 136 vs 177 ms per training step on an RTX Pro 6000 (USAGE.md, reports/flash_clifford).
     gatr_dense_linear: bool = False
     gatr_compile: bool = False
     # Path to Liu et al.'s Pascal3D+ matrix Fisher checkpoint (state_dict_119.pkl);
