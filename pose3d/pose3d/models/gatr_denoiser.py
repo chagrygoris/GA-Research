@@ -129,10 +129,13 @@ def use_dense_linears(module):
 def _compile(module):
     """module.compile(): unlike torch.compile(module) it keeps the state_dict keys unprefixed.
 
-    GATr's cached einsum paths do not trace, so they are switched off (process-wide)."""
+    GATr's cached einsum paths do not trace, so they are switched off (process-wide). Every GATr
+    block, the EMA copy, train / eval mode and each batch shape get their own compiled frames,
+    beyond torch's default limit of 8, after which dynamo silently runs the rest eager."""
     from gatr.utils.einsum import enable_cached_einsum
 
     enable_cached_einsum(False)
+    torch._dynamo.config.recompile_limit = max(torch._dynamo.config.recompile_limit, 64)
     module.compile()
 
 

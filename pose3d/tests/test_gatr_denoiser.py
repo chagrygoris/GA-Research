@@ -212,3 +212,12 @@ def test_gatr_speed_flags_reach_the_vector_field():
                           ALGEBRA).vector_field
     assert all(type(m) is EquiLinear for m in default.modules() if isinstance(m, EquiLinear))
     assert not default.compiled
+
+
+def test_compile_leaves_room_for_every_block_copy_and_shape():
+    # Each GATr block, the EMA copy, train / eval mode and every batch shape get their own
+    # compiled frames; past torch's default limit of 8 dynamo silently falls back to eager.
+    from pose3d.models.gatr_denoiser import GATrVectorField
+
+    GATrVectorField(8, mv_channels=4, s_channels=8, num_blocks=2, num_heads=2, compile=True)
+    assert torch._dynamo.config.recompile_limit >= 64
