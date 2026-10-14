@@ -46,6 +46,7 @@ ModelName = Literal[
     "clifford_flow",   # the main line: conditional flow matching on Spin(3) rotors
     "mlp_flow",        # non-equivariant flow-matching baseline
     "i2s_real",        # published Image2Sphere, adapted to this harness
+    "wignerd",         # Lee & Cho 2024 (arXiv 2411.00543): Image2Sphere trunk regressing Wigner-D coefficients
     "i2s",             # in-repo I2S with a GA head (average-pooled features)
     "ga_i2s",          # in-repo I2S with the GA pixel encoder
     "tralalero",       # direct regression with a GA head
@@ -114,6 +115,16 @@ class TrainConfig:
     eval_samples: int = 32
     # Per-optimizer-step decay of Features.ema (0.999: ~1000-step horizon).
     ema_decay: float = 0.999
+    # Optimizer and schedule. The flow recipes use AdamW with linear warmup + cosine decay. "sgd" is SGD with
+    # Nesterov momentum and "step" multiplies the lr by lr_step_gamma every lr_step_epochs epochs (no warmup),
+    # the Image2Sphere / Wigner-D schedule.
+    optimizer: Literal["adamw", "sgd"] = "adamw"
+    lr_schedule: Literal["cosine", "step"] = "cosine"
+    sgd_momentum: float = 0.9
+    lr_step_epochs: int = 30
+    lr_step_gamma: float = 0.1
+    # Global gradient-norm clip (0 turns it off).
+    grad_clip: float = 1.0
 
 
 @dataclass
@@ -276,6 +287,10 @@ class I2SConfig:
     i2s_eval_rec_level: int = 3
     # i2s_real: apply ImageNet normalisation to the [0, 1] inputs.
     i2s_normalize: bool = True
+    # wignerd: weights w_l of the frequency-domain MSE (paper eq. 4; the paper does not spell them out).
+    # "unit": 1 / (2l+1)^2, so every degree's block of the target has unit squared norm (flat_wigner scales
+    # degree l by sqrt(2l+1)); "uniform": all 1, which lets the high degrees dominate.
+    wigner_loss_weights: Literal["unit", "uniform"] = "unit"
 
 
 @dataclass
