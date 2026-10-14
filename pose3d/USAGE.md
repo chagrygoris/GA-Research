@@ -80,24 +80,32 @@ checkpoints load either way:
 
 - `--gatr_dense_linear` runs every GATr `EquiLinear` as one dense matmul. GATr's own einsum over the
   9 basis maps has a slow backward.
-- `--gatr_compile` runs the GATr modules, the EMA copy included, through `torch.compile`. Each new
-  input shape costs 10-25 s of compilation, about a minute per run in total: the first training
-  steps, validation, and the 32-sample final evaluation.
+- `--gatr_compile` runs the GATr modules, the EMA copy included, through `torch.compile`. It uses
+  compile-friendly versions of GATr's primitives from `models/gatr_fast_ops.py`: the products are
+  unrolled from GATr's own tables, and attention is no longer excluded from compilation. The
+  whole network traces as one graph. On a fresh machine, compilation takes about 5 minutes per
+  run: the first training steps, validation and the 32-sample final evaluation. A warm inductor
+  cache brings this down to well under a minute.
 
-Measured on one RTX Pro 6000 with the trainer's own epoch and evaluation functions, batch 64, fp32,
+`--backbone_bf16` runs only the ResNet backbone under bf16 autocast with channels_last. GATr and the
+CGENN head stay fp32. Unlike the two flags above, it changes the numerics, and the 8.95 deg recipe
+has not been rerun with it.
+
+Measured on one RTX Pro 6000 with the trainer's own epoch and evaluation functions, batch 64,
 synthetic images. The evaluation columns are for 360 images.
 
 | flags | train step | 1-sample evaluation | 32-sample evaluation |
 |---|---|---|---|
-| none | 177 ms | 1.12 s | 6.54 s |
+| none | 176 ms | 1.11 s | 6.54 s |
 | `--gatr_dense_linear` | 160 ms | 1.14 s | 6.72 s |
-| `--gatr_compile` | 152 ms | 0.78 s | 5.79 s |
-| both | 136 ms | 0.74 s | 5.49 s |
+| `--gatr_dense_linear --gatr_compile` | 120 ms | 0.51 s | 3.48 s |
+| ... + `--backbone_bf16` | 80 ms | 0.44 s | 3.41 s |
 
 Details are in `reports/flash_clifford/`.
 
 ```bash
 poetry run python -m pose3d --path_to_datasets ... --gatr_dense_linear --gatr_compile
+poetry run python -m pose3d --path_to_datasets ... --gatr_dense_linear --gatr_compile --backbone_bf16
 ```
 
 ## Micro and macro metrics

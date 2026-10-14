@@ -1,0 +1,179 @@
+# Другие фреймворки для сетей на алгебрах Клиффорда: что ещё ускорит GATr-рецепт
+
+Статус: **spike 2, 2026-10-14.** Продолжает [gatr_on_flash_clifford.md](gatr_on_flash_clifford.md).
+
+База — ветка `gatr-dense-compile` (`--gatr_dense_linear --gatr_compile`): шаг обучения 136 ms против 177 ms у `main`. Вопрос: какие фреймворки и приёмы для Clifford-сетей ускорят обучение и инференс дальше.
+
+Замеры: Kaggle RTX PRO 6000 Blackwell (avgurpetrovich), torch 2.10, batch 64, fp32. Модель из ветки, веса и картинки случайные, EMA и GradScaler как в trainer. Kernel `avgurpetrovich/ga-frameworks-bench`, сырые числа в `frameworks_bench.json`. Код патчей и бенча throwaway.
+
+## 0. Вывод
+
+1. **Готовых fused-ядер для PGA G(3,0,1) нет ни в одной библиотеке.**
+   - cuEquivariance применим только через вручную собранный `SegmentedTensorProduct`; ops-wheel проприетарный, sm_120 не подтверждён.
+   - flash-clifford даёт голый GP и без лицензии.
+   - Остальное либо только O(3) Клебш–Гордан, либо CPU-only, либо тот же плотный einsum.
+2. **Полезнее всего не библиотека, а приёмы из `lgatr` 2.0** (heidelberg-hepml, MIT): примитивы GATr переписаны так, чтобы `torch.compile` их сливал. Перенос этих приёмов на G(3,0,1) поверх ветки дал (та же функция, fp32):
+   - шаг обучения **136 → 122–124 ms** (−9…−10%; 1.45× к `main`);
+   - final eval (32 сэмпла) **979 → 616–619 ms** (−37%; −47% к `main`);
+   - per-epoch predict (1 сэмпл) **138 → 91 ms** (−34%; −58% к `main`).
+3. **bf16 только для ResNet-101**, с GATr и CGENN в fp32, как рекомендует `lgatr`: шаг **124 → 90 ms (1.96× к `main`)**. Численность ResNet при этом меняется, нужен прогон с проверкой 8.95°.
+4. **Архитектурные варианты** (нужно переобучение, проверена только скорость или теория):
+   - KV-cache токенов условия: GATr при final eval быстрее в ~7.7×;
+   - Cl(3,0) вместо PGA: GATr примерно вдвое дешевле;
+   - замена CGENN-головы: максимум ~8% шага.
+
+## 1. Обзор фреймворков
+
+| что | что даёт | G(3,0,1)? | лицензия | годится нам |
+|---|---|---|---|---|
+| [lgatr 2.0](https://github.com/heidelberg-hepml/lgatr) (L-GATr, 2026-07) | GATr под compile: sparse GP через gather, нормы на срезах, attention без `compiler.disable` (custom_op для xformers), `warmup_caches` под CUDA graphs, AMP только вне GA. Обучение на H100: 166 → 57 ч с compile ([arXiv 2608.02735](https://arxiv.org/html/2608.02735)) | нет, только Cl(1,3) | MIT | **да, как шаблон** (раздел 2) |
+| Qualcomm `gatr` 1.4.3 | заморожен с 2025-02; compile «experimental» | да | BSD-3 | это наша база |
+| [LaB-GATr](https://github.com/sukjulian/lab-gatr) | пулинг токенов, xformers | да | MIT | нет: у нас 66 токенов |
+| [flash-clifford](https://github.com/maxxxzdn/flash-clifford) | Triton: fused GELU+WGP+norm для Cl(2,0)/Cl(3,0), голый GP для G(3,0,1) | только GP | **нет лицензии** | нет (см. прошлый отчёт) |
+| [cuEquivariance](https://docs.nvidia.com/cuda/cuequivariance/) | fused CUDA для segmented tensor products; Clifford можно задать своими таблицами (как в `cue_baseline.py` flash-clifford, но там Cl(3,0) через O(3)-irreps) | только вручную (192 пути GP, 81 join) | frontend Apache-2.0, ops проприетарные | низкий приоритет: memory-bound ops, sm_120 не подтверждён, Clifford-бенчмарков нет |
+| [kingdon](https://github.com/tBuLi/kingdon) | символьная кодогенерация развёрнутых сумм произведений с CSE | да | MIT | идея да. Мы сгенерировали код прямо из таблиц GATr, чтобы не сверять соглашения о знаках |
+| [clifra](https://pypi.org/project/clifra/) | gather / index_add, `aot_eager`-тесты | не подтверждено | Apache-2.0 | та же идея, что у lgatr; незрелый |
+| [Multivector Neurons](https://github.com/congliuUvA/Multivector-Neurons) | в ~12× быстрее CGENN (0.027 против 0.324 s/it, [arXiv 2406.04052](https://arxiv.org/abs/2406.04052)) | Cl(3,0) | — | для condition head; её доля мала (раздел 3) |
+| CGENN, cliffordlayers, torch_ga / tfga, jaxga | плотный einsum или tensordot по таблице Кэли (у jaxga — индексы, но только JAX) | — | MIT | ничего не даёт |
+| OpenEquivariance, FlashTP, EquiTriton, e3nn | ядра для O(3) Клебш–Гордан | нет | BSD/MIT/Apache | не применимо |
+| CliffordCUDA, sdiehl/clifford-kernels | CUDA/Triton GP | CliffordCUDA без вырожденной метрики | MIT | незрелые, PGA не поддержана |
+| Versor, Gaalop, klein, garamon, gafro | кодогенерация C++/CUDA/OpenCL или SIMD | частично | разные | без torch и autograd |
+
+## 2. Приёмы lgatr, перенесённые на G(3,0,1)
+
+Патчи примитивов `gatr` 1.4.2 работают поверх `--gatr_dense_linear`. Таблицы GP и join берутся из самого GATr: обе состоят из ±1, на каждую пару (i, j) приходится не больше одного k, ненулевых элементов 192 и 81. Поэтому формы ниже точны по построению.
+
+- GP и join двумя способами:
+  - **gather**, как в lgatr: `(sign * y[..., idx] * x[..., None, :]).sum(-1)`;
+  - **развёрнутый код**: 16 сумм по 192 или 81 членам, сгенерированных из таблицы (то, что выдал бы kingdon).
+- Inner product в layer norm: 4 среза вместо индексного тензора.
+- Attention: `_sdpa_graph_breaking` без `@torch.compiler.disable`, broadcast делается через `expand`.
+- Индексы-списки заменены срезами: `x[..., [0]]`, `tri[..., [3]]`, `reference[..., [14]]`, `_TRIVECTOR_IDX`.
+
+Проверка:
+- CPU, fp64: каждая операция ≤4e-15 к GATr; весь vector field (выход и все градиенты) ≤8e-17.
+- GPU, fp32, против eager GATr: выход 7.2e-8, градиенты ≤1.5e-7. Ровно столько же, сколько у одного dense, то есть fp32-шум.
+
+Отдельные операции, fwd+bwd в ms, train-форма (512·66 последовательностей × 8 каналов):
+
+| операция | einsum GATr | einsum + compile | gather + compile | развёрнутый + compile | flash (для сравнения) |
+|---|---|---|---|---|---|
+| GP | 2.10 | 1.18 | 0.57 | **0.22** | 0.09 |
+| join | 2.07 | 1.20 | 0.93 | **0.21** | — |
+| inner product | 1.05 | 0.59 | — | срезы: **0.06** | — |
+
+Без compile gather и развёрнутый код медленнее einsum в 2–3 раза: сотни мелких ядер. Работают они только под compile. Под compile развёрнутый GP всего в 2.5 раза медленнее Triton-ядра flash-clifford.
+
+Весь шаг:
+
+| вариант | VF fwd+bwd | шаг | graphs / breaks | первая компиляция |
+|---|---|---|---|---|
+| `main` (eager) | 82.8 | 177.2 | — | — |
+| `--gatr_dense_linear` | 67.2 | 161.1 | — | — |
+| dense + compile (ветка) | 42.2 | 136.2 | 48 / 26 | — |
+| + патчи lgatr, gather, без compile | 85.7 | 179.6 | — | — |
+| **+ патчи lgatr, gather, compile** | **30.6** | **124.0** | 11 / 3 | 62 s |
+| **+ патчи lgatr, развёрнутый, compile** | **28.7** | **122.4** | 11 / 3 | 142 s |
+
+Инференс (батч 64, 20 шагов Эйлера):
+
+| вариант | 1 сэмпл: velocity / predict | 32 сэмпла: velocity / predict |
+|---|---|---|
+| `main` | 11.2 / 216 ms | 56.8 / 1167 ms |
+| dense + compile (ветка) | 6.6 / 138 ms | 45.8 / 979 ms |
+| **+ патчи lgatr, compile** (gather / развёрнутый) | **2.9 / 91 ms** · 3.2 / 97 ms | **26.4 / 619 ms** · 25.5 / 616 ms |
+| ручной CUDA graph патченого eager | 3.3 / 101 ms | 76.2 / 1560 ms |
+
+После патчей ручной CUDA graph захватывается без ошибок. Но у патченого eager медленные ядра gather, поэтому при 32 сэмплах он хуже compile.
+
+`torch.compile(mode="reduce-overhead")` по-прежнему падает: «output of CUDAGraphs overwritten by a subsequent run». Один и тот же resume-сегмент блока проигрывается для всех 4 блоков, а 3 оставшихся graph breaks держат промежуточные тензоры между сегментами. Чтобы включить compile + CUDA graphs, эти breaks надо убрать: вероятно, это поиски в `gatr_cache` внутри EquiLinear и attention, а lgatr заранее прогревает такие кэши (`warmup_caches`).
+
+## 3. Остальные кандидаты
+
+- **B. ResNet-101 в bf16 + channels_last**, GA-части в fp32. Шаг 136 → 102 ms (dense + compile) и 124 → **90 ms** (+ патчи lgatr). Численность ResNet меняется, нужен прогон с проверкой. В бенче это сделано патчем forward у экземпляра. В коде это должен быть флаг внутри `ImageToMultivectors.forward`, иначе патч не переживёт deepcopy в EMA.
+- **C. CGENN condition head**: 11.3 ms fwd+bwd на 64 картинки, а ResNet — 75.7 ms. Это ~8–9% шага: ниже порога в 10%, при котором стоило бы менять голову (Multivector Neurons или fused p3m0). Не в приоритете.
+- **E. KV-cache токенов условия.** Токены условия при predict не меняются на 20 шагах Эйлера. Если маской запретить им смотреть на токен ротора, их K/V можно посчитать один раз. Оценка снизу — vector field на 2 токенах вместо 66:
+  - 32 сэмпла: 57.4 → 8.7 ms (dense, eager), 28.6 → 3.7 ms (патчи + compile), то есть **~7.7×** на шаг Эйлера. Final eval ≈ 619 → ~200 ms;
+  - 1 сэмпл: выигрыша нет (2.3 → 1.9 ms), там упор в запуск ядер.
+  
+  Нужны маска и переобучение, а обучение это не ускоряет.
+- **D. Cl(3,0)-GATr вместо PGA** (теория). Наши входы и выход лежат в e0-free подалгебре, join двух e0-free элементов равен нулю, а сама задача — только вращение (трансляционная часть PGA ей не нужна). При 8 компонентах вместо 16:
+  - mv-матмулы EquiLinear дешевле в ~4 раза;
+  - поэлементные операции и gp — в ~2 раза;
+  - join и distance-признаки attention исчезают.
+  
+  Оценка: VF 30 → ~15 ms, шаг ~110 ms в fp32 и ~75 ms с bf16-ResNet. Публичной реализации нет ([de Haan et al. 2311.04744](https://arxiv.org/abs/2311.04744) описывают Euclidean GATr без кода). Это новая архитектура с переобучением, и потеря точности возможна.
+
+## 4. Рекомендации (по соотношению выигрыш / цена)
+
+| # | что | выигрыш | цена | риск для точности |
+|---|---|---|---|---|
+| 1 | Внести патчи lgatr (gather-GP и join, inner на срезах, attention без disable, срезы вместо списков) в `--gatr_compile` ветки | шаг −9%, final eval −37%, per-epoch predict −34% к ветке | ~150 строк в `gatr_denoiser.py` + тесты эквивалентности по образцу существующих | нет: та же функция (≤1.5e-7) |
+| 2 | Флаг `--backbone_bf16` (autocast + channels_last в `ImageToMultivectors`) | шаг −27% поверх п.1 | ~20 строк | **нужен прогон** с проверкой 8.95° |
+| 3 | Убрать 3 оставшихся graph breaks (заранее посчитать базисы из `gatr_cache`, как lgatr `warmup_caches`) и включить compile + CUDA graphs для predict | при 1 сэмпле, вероятно, заметно (сейчас 91 ms на батч), не измерено | малая | нет |
+| 4 | KV-cache токенов условия (маска внимания) | final eval GATr ~7.7× | средняя + обучение | **переобучение** |
+| 5 | Cl(3,0)-GATr | VF ~2×, шаг ~−11% fp32 | большая + обучение | **переобучение**, неизвестна |
+| — | cuEquivariance, flash-clifford, Multivector Neurons для головы | ≤4–8% | средняя | лицензия, sm_120, архитектура |
+
+Gather или развёрнутый код: развёрнутый быстрее на ~2 ms на шаг, но первая компиляция у него 142 s против 62 s. Для обучения выигрыш стоит этой цены (около минуты на прогон), для отладки удобнее gather. Можно оставить оба через параметр.
+
+Прогноз на 100 эпох (train-часть, 1141 шаг на эпоху):
+
+| вариант | на эпоху | за 100 эпох |
+|---|---|---|
+| `main` | ~202 s | ~6.1 ч |
+| ветка | ~155 s | ~4.6 ч |
+| ветка + п.1 | ~140 s | ~4.2 ч |
+| ветка + п.1 + п.2 | ~103 s | ~3.2 ч |
+
+Риск для последней строки: при 90 ms на шаг нужно ~710 картинок/s, и dataloader с warp-аугментацией может стать узким местом. CGENN-рецепт шёл 132 s на эпоху, то есть ≥550 картинок/s, но упирался ли он в loader, неизвестно.
+
+## 5. Методика
+
+- Патчи: `scratchpad/bench/fastgatr2.py`. Бенч: `bench3.py`, каждая стадия отдельным процессом.
+- Датасеты (private): `ga-research-snapshot-gatr-dense-compile` (d90ccb8), `flash-clifford-src` (только для эталона GP), offline-deps, gatr-deps.
+- Тайминги: медиана 30 итераций после 10 прогревочных, через CUDA events. Отдельные операции — `triton.testing.do_bench`.
+- Между запусками eager-шаг совпадает до ±1% (177.2 против 177.7 в прошлом прогоне).
+- Не проверено:
+  - точность с bf16-ResNet;
+  - D и E (нужно обучение);
+  - compile + CUDA graphs (п.3);
+  - нагрузка dataloader при ~90 ms на шаг.
+
+## 6. Внедрено в ветку `gatr-dense-compile`
+
+- `models/gatr_fast_ops.py`: п.1, в развёрнутом варианте. `--gatr_compile` ставит его на весь процесс.
+- Флаг `--backbone_bf16`: п.2, внутри `ImageToMultivectors`, поэтому переживает deepcopy в EMA.
+- Убраны оставшиеся graph breaks (п.3):
+  - импорт внутри трассируемой attention давал 22 разрыва на шаг;
+  - холодные `gatr_cache` (базис EquiLinear, distance-базис attention) давали ещё 4. Модули теперь прогревают их перед каждым скомпилированным вызовом, как `warmup_caches` у lgatr.
+  
+  `torch._dynamo.explain`: 0 breaks. На GPU 7 графов на весь прогон: модель и EMA × train/eval × формы батча.
+
+Проверка:
+- тесты в fp64 против примитивов GATr — каждая операция и весь vector field, ≤1e-12;
+- мутационная проверка: убранная поправка на паддинг в attention ловится;
+- на GPU против eager GATr: относительная ошибка выхода 6.2e-6, градиентов ≤6.5e-6.
+
+GPU-расхождение выросло с 2e-7: теперь и attention считается внутри inductor-графа с другим порядком суммирования. Это fp32-уровень: ошибка в логике дала бы O(1).
+
+Замер ветки d7b671b через `train_epoch` / `validate_epoch` / `calculate_evaluation_metrics` с EMA, 360 картинок на eval. Взята установившаяся эпоха, сырые числа в `branch_bench.json`:
+
+| флаги | шаг | eval, 1 сэмпл | eval, 32 сэмпла |
+|---|---|---|---|
+| — | 176.2 ms | 1.11 s | 6.54 s |
+| `--gatr_dense_linear --gatr_compile` | **120.5 ms (1.46×)** | **0.51 s (2.2×)** | **3.48 s (1.9×)** |
+| + `--backbone_bf16` | **80.3 ms (2.19×)** | 0.44 s | 3.41 s |
+
+- Компиляция на чистой машине — около 5 мин на прогон: ~90 s на каждую новую группу форм (train, валидация, final eval, плюс deepcopy-проверка в бенче). Это цена одного цельного графа с развёрнутыми суммами. При тёплом inductor-кэше — секунды (второй конфиг в том же ядре).
+- Прогноз на 100 эпох:
+
+| флаги | на эпоху (train-часть) | за 100 эпох |
+|---|---|---|
+| `main` | ~201 s | ~6.1 ч |
+| dense + compile | ~137 s | ~4.1 ч |
+| + bf16 | ~92 s | ~2.9 ч |
+
+  При 80 ms на шаг нужно ~800 картинок/s. Узким местом может стать dataloader, это не проверено.
+- Не проверено: точность с `--backbone_bf16` (нужен полный прогон с проверкой 8.95°) и throughput dataloader.
+

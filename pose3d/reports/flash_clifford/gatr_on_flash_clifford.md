@@ -153,6 +153,8 @@ Per-epoch валидация предсказывает с 1 сэмплом: GAT
 
 ## 8. В репо: `--gatr_dense_linear` и `--gatr_compile` (ветка `gatr-dense-compile`)
 
+Обновление: позже `--gatr_compile` перешёл на примитивы `gatr_fast_ops`, а GATr стал одним графом. Цифры ниже — первая версия флагов. Текущие (120.5 ms на шаг, с `--backbone_bf16` — 80.3 ms) — в [frameworks.md](frameworks.md), раздел 6.
+
 Из раздела 6 в код вошли п.1 и п.3 без flash gp (у flash-clifford нет лицензии). Оба флага по умолчанию выключены. Веса и state_dict не меняются, так что чекпоинты подходят в обе стороны.
 
 - `--gatr_dense_linear`. `use_dense_linears` меняет класс каждого `EquiLinear` на `DenseEquiLinear`, который делает один `F.linear`.
