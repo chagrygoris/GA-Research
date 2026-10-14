@@ -23,8 +23,12 @@ import math
 import torch
 import torch.nn.functional as F
 
+# Filled by install(): the product terms and the GATr helpers the functions below call. Kept as
+# module globals because an import inside a traced function is a dynamo graph break.
 _GP_TERMS = None
 _JOIN_TERMS = None
+_gatr_attention = None   # gatr.primitives.attention
+_to_nd = None            # gatr.utils.tensors.to_nd
 
 
 def _terms(table):
@@ -78,9 +82,7 @@ def _dist_vec(tri, basis, normalizer):
 def geometric_attention(q_mv, k_mv, v_mv, q_s, k_s, v_s, normalizer, weights=None, attn_mask=None):
     """gatr.primitives.attention.geometric_attention (1.4.2), step by step, with slices and SDPA
     in the graph. xformers masks fall back to GATr's own function."""
-    attention = importlib.import_module("gatr.primitives.attention")
-    from gatr.utils.tensors import to_nd
-
+    attention, to_nd = _gatr_attention, _to_nd
     if attn_mask is not None and not isinstance(attn_mask, torch.Tensor):
         return attention.geometric_attention(q_mv, k_mv, v_mv, q_s, k_s, v_s, normalizer, weights, attn_mask)
     bh_shape = q_mv.shape[:-3]
@@ -122,14 +124,25 @@ def _gated_forward(self, multivectors, scalars):
             self.scalar_nonlinearity(scalars))
 
 
+def warm_caches(device, dtype):
+    """Fill GATr's per-(device, dtype) caches (lgatr's warmup_caches). A cache miss inside a traced
+    forward is a graph break, so the compiled GATr modules call this before every compiled call."""
+    from gatr.primitives.linear import _compute_pin_equi_linear_basis
+
+    _compute_pin_equi_linear_basis(device, dtype)
+    _gatr_attention._build_dist_basis(device, dtype)
+
+
 def install():
     """Point GATr's layers at these functions (process-wide). Returns a function that undoes it."""
-    global _GP_TERMS, _JOIN_TERMS
+    global _GP_TERMS, _JOIN_TERMS, _gatr_attention, _to_nd
     from gatr.primitives.bilinear import _load_bilinear_basis
     from gatr.primitives.dual import _compute_efficient_join
+    from gatr.utils.tensors import to_nd
 
     _GP_TERMS = _terms(_load_bilinear_basis("gp"))
     _JOIN_TERMS = _terms(_compute_efficient_join())
+    _gatr_attention, _to_nd = importlib.import_module("gatr.primitives.attention"), to_nd
     # importlib: `import gatr.primitives.dual as m` would bind the function `dual` instead
     bilinears = importlib.import_module("gatr.layers.mlp.geometric_bilinears")
     nonlinearities = importlib.import_module("gatr.layers.mlp.nonlinearities")

@@ -124,3 +124,28 @@ def test_compile_runs_on_the_fast_ops():
     GATrVectorField(8, mv_channels=4, s_channels=8, num_blocks=2, num_heads=2, compile=True)
     assert bilinears.geometric_product is gatr_fast_ops.geometric_product
     assert bilinears.equivariant_join is gatr_fast_ops.equivariant_join
+
+
+def test_fast_ops_trace_as_one_graph(fast_ops):
+    """The vector field traces without a single graph break (GATr's own primitives break dozens of
+    times: list __setitem__ in the einsum cache, the compiler.disable'd attention). `explain` runs
+    dynamo only, no inductor compilation."""
+    from pose3d.models.gatr_denoiser import GATrVectorField
+
+    torch._dynamo.reset()
+    field = GATrVectorField(8, mv_channels=4, s_channels=8, num_blocks=2, num_heads=2, dense_linear=True)
+    fast_ops.warm_caches(torch.device("cpu"), torch.float32)   # cold gatr_cache lookups break too
+    explanation = torch._dynamo.explain(field)(torch.randn(3, 10, 8))
+    assert explanation.graph_break_count == 0, [str(r.reason).split("\n")[0] for r in explanation.break_reasons]
+
+
+def test_compiled_modules_warm_the_caches_outside_the_compiled_call(monkeypatch):
+    from pose3d.models import gatr_fast_ops
+    from pose3d.models.gatr_denoiser import GATrVectorField
+
+    field = GATrVectorField(8, mv_channels=4, s_channels=8, num_blocks=2, num_heads=2, compile=True)
+    seen = []
+    monkeypatch.setattr(gatr_fast_ops, "warm_caches",
+                        lambda device, dtype: seen.append((device, dtype, torch.compiler.is_compiling())))
+    field(torch.randn(3, 10, 8))
+    assert seen == [(torch.device("cpu"), torch.float32, False)]

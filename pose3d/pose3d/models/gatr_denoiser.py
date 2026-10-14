@@ -167,6 +167,13 @@ class _Compilable(nn.Module):
         if self.__dict__.get("compiled"):
             _compile(self)
 
+    def __call__(self, x, *args, **kwargs):
+        if self.compiled:  # outside the compiled call: a cache miss inside it is a graph break
+            from pose3d.models import gatr_fast_ops
+
+            gatr_fast_ops.warm_caches(x.device, x.dtype)
+        return super().__call__(x, *args, **kwargs)
+
 
 class GATrVectorField(_Compilable):
     """(B, 2 + n_cond_mv, 8) Cl(3,0) multivectors -> (B, 1, 8), like TralaleroTralala.
