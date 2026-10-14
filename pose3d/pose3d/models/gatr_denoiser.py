@@ -15,7 +15,8 @@ this model never passes). A stub is installed when it is missing, so torch is ne
 
 Two speed options compute the same function with the same parameters, so checkpoints load either
 way: `dense_linear` runs every EquiLinear as one dense matmul (`use_dense_linears`), and `compile`
-runs the forward through torch.compile. Timings: pose3d/reports/flash_clifford.
+runs the forward through torch.compile on compile-friendly primitives (`gatr_fast_ops`).
+Timings: pose3d/reports/flash_clifford.
 """
 
 import functools
@@ -126,14 +127,25 @@ def use_dense_linears(module):
     return module
 
 
+_fast_ops_installed = False
+
+
 def _compile(module):
     """module.compile(): unlike torch.compile(module) it keeps the state_dict keys unprefixed.
 
-    GATr's cached einsum paths do not trace, so they are switched off (process-wide). Every GATr
-    block, the EMA copy, train / eval mode and each batch shape get their own compiled frames,
-    beyond torch's default limit of 8, after which dynamo silently runs the rest eager."""
+    Process-wide, once: GATr's primitives are swapped for the compile-friendly ones of
+    gatr_fast_ops (same functions), and GATr's cached einsum paths, which do not trace, are
+    switched off. Every GATr block, the EMA copy, train / eval mode and each batch shape get their
+    own compiled frames, beyond torch's default limit of 8, after which dynamo silently runs the
+    rest eager."""
+    global _fast_ops_installed
     from gatr.utils.einsum import enable_cached_einsum
 
+    from pose3d.models import gatr_fast_ops
+
+    if not _fast_ops_installed:
+        gatr_fast_ops.install()
+        _fast_ops_installed = True
     enable_cached_einsum(False)
     torch._dynamo.config.recompile_limit = max(torch._dynamo.config.recompile_limit, 64)
     module.compile()
