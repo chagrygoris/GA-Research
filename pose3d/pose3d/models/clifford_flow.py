@@ -31,6 +31,13 @@ from pose3d.models.encoders import (
 from pose3d.models.ga_layers import TralaleroTralala
 
 
+def _native_bf16(device):
+    """CPU, or a GPU from sm_80 (Ampere) on; older GPUs such as the T4 only emulate bf16."""
+    if device.type == "cuda":
+        return torch.cuda.get_device_capability(device) >= (8, 0)
+    return device.type == "cpu"
+
+
 class ImageToMultivectors(nn.Module):
     """Backbone -> ConvAdapter -> a (grid x grid) sequence of multivectors."""
 
@@ -100,7 +107,7 @@ class ImageToMultivectors(nn.Module):
         return self
 
     def _backbone(self, x):
-        if not self.bf16:
+        if not (self.bf16 and _native_bf16(x.device)):
             return self.backbone(x)
         with torch.autocast(x.device.type, dtype=torch.bfloat16):
             return self.backbone(x.contiguous(memory_format=torch.channels_last)).float()

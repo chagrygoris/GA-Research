@@ -202,16 +202,17 @@ def test_gatr_speed_flags_reach_the_vector_field():
     from pose3d.config import parse_args
     from pose3d.models import build_model
 
-    cfg = parse_args(["--path_to_datasets=/tmp", "--gatr_dense_linear", "--gatr_compile",
-                      "--no-pretrained_backbone"])
-    field = build_model(cfg, ALGEBRA).vector_field
+    # On by default: they compute the same function as GATr's own layers.
+    field = build_model(parse_args(["--path_to_datasets=/tmp", "--no-pretrained_backbone"]),
+                        ALGEBRA).vector_field
     linears = [m for m in field.modules() if isinstance(m, EquiLinear)]
     assert linears and all(type(m) is not EquiLinear for m in linears)
     assert field.compiled
-    default = build_model(parse_args(["--path_to_datasets=/tmp", "--no-pretrained_backbone"]),
-                          ALGEBRA).vector_field
-    assert all(type(m) is EquiLinear for m in default.modules() if isinstance(m, EquiLinear))
-    assert not default.compiled
+    off = parse_args(["--path_to_datasets=/tmp", "--no-gatr_dense_linear", "--no-gatr_compile",
+                      "--no-pretrained_backbone"])
+    plain = build_model(off, ALGEBRA).vector_field
+    assert all(type(m) is EquiLinear for m in plain.modules() if isinstance(m, EquiLinear))
+    assert not plain.compiled
 
 
 def test_compile_leaves_room_for_every_block_copy_and_shape():
@@ -244,7 +245,19 @@ def test_backbone_bf16_flag_reaches_the_adapter():
     from pose3d.config import parse_args
     from pose3d.models import build_model
 
-    on = parse_args(["--path_to_datasets=/tmp", "--no-pretrained_backbone", "--backbone_bf16"])
-    off = parse_args(["--path_to_datasets=/tmp", "--no-pretrained_backbone"])
+    on = parse_args(["--path_to_datasets=/tmp", "--no-pretrained_backbone"])  # the default
+    off = parse_args(["--path_to_datasets=/tmp", "--no-pretrained_backbone", "--no-backbone_bf16"])
     assert build_model(on, ALGEBRA).adapter.bf16
     assert not build_model(off, ALGEBRA).adapter.bf16
+
+
+def test_bf16_backbone_only_where_the_hardware_has_bf16(monkeypatch):
+    from pose3d.models.clifford_flow import _native_bf16
+
+    cuda = torch.device("cuda", 0)
+    monkeypatch.setattr(torch.cuda, "get_device_capability", lambda device=None: (7, 5))  # T4
+    assert not _native_bf16(cuda)
+    monkeypatch.setattr(torch.cuda, "get_device_capability", lambda device=None: (8, 0))  # A100
+    assert _native_bf16(cuda)
+    assert _native_bf16(torch.device("cpu"))
+    assert not _native_bf16(torch.device("mps"))

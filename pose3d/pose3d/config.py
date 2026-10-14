@@ -13,7 +13,12 @@ evaluation with 20 Euler steps. The training data is read from the Kaggle datase
 `syfry5suvzovvakmuj/pascal3d-synth-pack`, picked up automatically when mounted (SYNTH_PACK_DIRS);
 without it, use_warp / use_synth fall back to the image files and need the RenderForCNN download.
 DDP over every visible GPU and the pre-built Pascal3D tensors are on by default too; they speed
-a run up and leave the recipe's hyperparameters alone.
+a run up and leave the recipe's hyperparameters alone. So are three speed options of the model:
+`gatr_dense_linear` and `gatr_compile` compute the same function, `backbone_bf16` runs the ResNet
+under bf16. With all three the recipe trains in 3.2 h instead of 6.1 h on one RTX Pro 6000 and
+scored 7.88 deg median / 9.28 deg class-mean with `--seed 1` (kernel
+`avgurpetrovich/gatr-fast-full-b`); without bf16 the same seed gave 7.83 / 9.20, so the gap to
+the unseeded 8.95 is the seed, not bf16 (USAGE.md).
 
 The previous reference recipe, W&B `mnpsfhmd` (9.63 deg median over all test images), is the same
 model with the Clifford MLP vector field on real images only:
@@ -156,6 +161,11 @@ class Features:
     # RenderForCNN synthetic training images, 3 per real image per epoch, as Image2Sphere
     # (from the synth pack, DataConfig.synth_pack_dir; otherwise a separate download, see max_synth).
     use_synth: bool = True
+    # Run CliffordFlow's ResNet backbone under bf16 autocast (channels_last); the GA heads stay
+    # fp32. 120 -> 80 ms per step with FlowConfig's gatr_dense_linear + gatr_compile on an RTX Pro
+    # 6000; a full run scored the same as fp32 (module docstring). GPUs without native bf16
+    # (before sm_80, e.g. T4) run the backbone in fp32 anyway.
+    backbone_bf16: bool = True
 
     # ---- experimental (False) ---------------------------------------------------
     # With ram_memory, cache the file reads instead of augmented crops so use_warp stays
@@ -163,10 +173,6 @@ class Features:
     raw_cache: bool = False
     # Freeze the backbone and train only the heads.
     freeze_encoder: bool = False
-    # Run CliffordFlow's ResNet backbone under bf16 autocast (channels_last); the GA heads stay
-    # fp32. 120 -> 80 ms per step with --gatr_dense_linear --gatr_compile on an RTX Pro 6000
-    # (reports/flash_clifford/frameworks.md). Changes the numerics: the 8.95 deg is unconfirmed.
-    backbone_bf16: bool = False
     # Swap CliffordFlow's two GA heads for parameter-matched plain MLPs (43.7 deg: a
     # comparison showing the GA layers matter, not a candidate improvement).
     mlp_heads: bool = False
@@ -261,9 +267,10 @@ class FlowConfig:
     # over its 9 basis maps (whose backward is half of the vector field's step); compile runs the
     # GATr forward through torch.compile on gatr_fast_ops' primitives, as one graph (~5 min of
     # compilation per run on a fresh machine). With both, 120 vs 176 ms per training step on an
-    # RTX Pro 6000 (USAGE.md, reports/flash_clifford).
-    gatr_dense_linear: bool = False
-    gatr_compile: bool = False
+    # RTX Pro 6000 (USAGE.md, reports/flash_clifford). On by default; --no-gatr_compile skips the
+    # compilation for quick debugging.
+    gatr_dense_linear: bool = True
+    gatr_compile: bool = True
     # Path to Liu et al.'s Pascal3D+ matrix Fisher checkpoint (state_dict_119.pkl);
     # used only with Features.fisher_prior.
     fisher_checkpoint: Optional[str] = None
