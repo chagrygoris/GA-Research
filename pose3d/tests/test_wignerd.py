@@ -42,3 +42,16 @@ def test_forward_loss_backward_and_predict():
     loss.backward()
     assert any(p.grad is not None and p.grad.abs().sum() > 0 for p in m.parameters())
     assert m.predict(img).shape == (2, 3, 3)
+
+
+def test_target_accepts_slightly_non_orthonormal_rotations():
+    """Warp-augmented targets are only approximately rotations; e3nn's matrix_to_angles asserts det == 1."""
+    from scipy.spatial.transform import Rotation
+    from pose3d.models.wignerd import WignerD
+
+    stub = WignerD.__new__(WignerD)
+    stub.lmax = 6
+    R = torch.tensor(Rotation.random(5, random_state=3).as_matrix(), dtype=torch.float32)
+    noisy = R + 2e-3 * torch.randn_like(R)
+    t_clean, t_noisy = WignerD.target(stub, R), WignerD.target(stub, noisy)
+    assert torch.isfinite(t_noisy).all() and (t_clean - t_noisy).abs().max() < 0.1

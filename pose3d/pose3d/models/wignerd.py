@@ -62,8 +62,12 @@ class WignerD(I2SReal):
         from e3nn import o3
         from image2sphere import so3_utils
 
-        abg = o3.matrix_to_angles(rot_gt.detach().float().cpu())        # CPU, as upstream: e3nn's angle extraction is faster and exact there
-        return so3_utils.flat_wigner(self.lmax, *abg).to(rot_gt.device)
+        # The augmented training rotations are not exactly orthonormal (e3nn asserts det == 1 to 1e-8): take the nearest rotation first.
+        u, _, vh = torch.linalg.svd(rot_gt.detach().double().cpu())
+        sign = torch.det(u @ vh)
+        u = torch.cat([u[..., :2], u[..., 2:] * sign[:, None, None]], dim=-1)
+        abg = o3.matrix_to_angles((u @ vh))              # CPU, as upstream: e3nn's angle extraction is faster and exact there
+        return so3_utils.flat_wigner(self.lmax, *abg).float().to(rot_gt.device)
 
     def compute_loss(self, img: torch.Tensor, rot_gt: torch.Tensor, criterion=None) -> torch.Tensor:
         # criterion is ignored, like for the grid cross-entropy it replaces.
