@@ -39,7 +39,8 @@ class ImageToMultivectors(nn.Module):
                  depth_anything_model: str = DEPTH_ANYTHING_DEFAULT,
                  freeze_backbone: bool = False,
                  adapter_channels: int = 256,
-                 conv_adapter: bool = True):
+                 conv_adapter: bool = True,
+                 bf16: bool = False):
         super().__init__()
         if not is_dense_backbone(encoder_type):
             # The conv adapter is sized from a deep backbone's channel count; the
@@ -58,6 +59,11 @@ class ImageToMultivectors(nn.Module):
         self.frozen_backbone = bool(freeze_backbone)
         if self.frozen_backbone:
             freeze_encoder(self.backbone)
+        # The backbone alone under bf16 autocast, channels_last; the GA heads stay fp32 (lgatr's
+        # advice: mixed precision hurts the multivector maths).
+        self.bf16 = bool(bf16)
+        if self.bf16:
+            self.backbone.to(memory_format=torch.channels_last)
         backbone_channels = self.backbone.output_shape[0]
 
         self.use_conv_adapter = bool(conv_adapter)
@@ -93,12 +99,18 @@ class ImageToMultivectors(nn.Module):
             self.backbone.eval()
         return self
 
+    def _backbone(self, x):
+        if not self.bf16:
+            return self.backbone(x)
+        with torch.autocast(x.device.type, dtype=torch.bfloat16):
+            return self.backbone(x.contiguous(memory_format=torch.channels_last)).float()
+
     def forward(self, x):
         if self.frozen_backbone:
             with torch.no_grad():
-                fmap = self.backbone(x)
+                fmap = self._backbone(x)
         else:
-            fmap = self.backbone(x)
+            fmap = self._backbone(x)
         adapted = self.conv_adapter(fmap)
         if not self.use_conv_adapter:
             return adapted.flatten(1).view(adapted.shape[0], self.n_mv, self.mv_dim)
@@ -160,7 +172,8 @@ class CliffordFlow(nn.Module):
                  vector_field: str = "clifford",
                  condition_head: str = "clifford",
                  gatr: dict = None,
-                 fisher_checkpoint: str = None):
+                 fisher_checkpoint: str = None,
+                 backbone_bf16: bool = False):
         super().__init__()
         if mlp_heads and fisher_checkpoint:
             raise ValueError("mlp_heads and fisher_prior cannot be combined")
@@ -200,7 +213,7 @@ class CliffordFlow(nn.Module):
                 algebra, grid=adapter_grid, pretrained_backbone=pretrained_backbone,
                 encoder_type=encoder_type, depth_anything_model=depth_anything_model,
                 freeze_backbone=freeze_backbone, adapter_channels=adapter_channels,
-                conv_adapter=conv_adapter)
+                conv_adapter=conv_adapter, bf16=backbone_bf16)
             cond_in_features = self.adapter.n_mv
 
         if condition_head == "gatr":

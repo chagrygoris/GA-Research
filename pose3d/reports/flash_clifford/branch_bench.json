@@ -1,0 +1,275 @@
+{
+ "flags_v3": {
+  "default/epoch0": {
+   "train_s": 12.99,
+   "ms_per_step": 216.5,
+   "val_loss_s": 0.42,
+   "eval_1sample_s": 1.95,
+   "loss": 5.30944
+  },
+  "default/epoch1": {
+   "train_s": 10.66,
+   "ms_per_step": 177.7,
+   "val_loss_s": 0.26,
+   "eval_1sample_s": 1.12,
+   "loss": 5.29886
+  },
+  "default/epoch2": {
+   "train_s": 10.63,
+   "ms_per_step": 177.2,
+   "val_loss_s": 0.26,
+   "eval_1sample_s": 1.12,
+   "loss": 5.2918
+  },
+  "default/final_eval_0": {
+   "s": 6.55,
+   "n_images": 360
+  },
+  "default/final_eval_1": {
+   "s": 6.54,
+   "n_images": 360
+  },
+  "default/eval_runs_compiled": false,
+  "default/dynamo": {},
+  "dense/vs_eager": {
+   "out": 7.24281861153031e-08,
+   "input_grad": 1.5480878801099607e-07,
+   "param_grads": 1.0399870120636479e-07
+  },
+  "dense/epoch0": {
+   "train_s": 10.52,
+   "ms_per_step": 175.3,
+   "val_loss_s": 0.42,
+   "eval_1sample_s": 1.17,
+   "loss": 5.31664
+  },
+  "dense/epoch1": {
+   "train_s": 9.8,
+   "ms_per_step": 163.3,
+   "val_loss_s": 0.26,
+   "eval_1sample_s": 1.14,
+   "loss": 5.31257
+  },
+  "dense/epoch2": {
+   "train_s": 9.59,
+   "ms_per_step": 159.8,
+   "val_loss_s": 0.26,
+   "eval_1sample_s": 1.14,
+   "loss": 5.2795
+  },
+  "dense/final_eval_0": {
+   "s": 6.72,
+   "n_images": 360
+  },
+  "dense/final_eval_1": {
+   "s": 6.72,
+   "n_images": 360
+  },
+  "dense/eval_runs_compiled": false,
+  "dense/dynamo": {},
+  "compile/vs_eager": {
+   "out": 7.24281861153031e-08,
+   "input_grad": 2.322131820164941e-07,
+   "param_grads": 5.199935060318239e-08
+  },
+  "compile/epoch0": {
+   "train_s": 9.9,
+   "ms_per_step": 165.0,
+   "val_loss_s": 17.6,
+   "eval_1sample_s": 13.65,
+   "loss": 5.31664
+  },
+  "compile/epoch1": {
+   "train_s": 9.55,
+   "ms_per_step": 159.2,
+   "val_loss_s": 0.24,
+   "eval_1sample_s": 0.78,
+   "loss": 5.31257
+  },
+  "compile/epoch2": {
+   "train_s": 9.1,
+   "ms_per_step": 151.7,
+   "val_loss_s": 0.24,
+   "eval_1sample_s": 0.78,
+   "loss": 5.2795
+  },
+  "compile/final_eval_0": {
+   "s": 20.04,
+   "n_images": 360
+  },
+  "compile/final_eval_1": {
+   "s": 5.79,
+   "n_images": 360
+  },
+  "compile/eval_runs_compiled": true,
+  "compile/dynamo": {
+   "graph_break": {
+    "Skip calling `torch.compiler.disable()`d function\n  Explanation: Skip calling function `<function _sdpa_graph_breaking at 0x7e48801fad40>` since it was wrapped with `torch.compiler.disable` (reason: None)\n  Hint: Remove the `torch.compiler.disable` call\n\n  Developer debug context: <function _sdpa_graph_breaking at 0x7e48801fad40>\n\n For more details about this graph break, please visit: https://meta-pytorch.github.io/compile-graph-break-site/gb/gb0098.html": 26
+   },
+   "stats": {
+    "calls_captured": 1219,
+    "unique_graphs": 60
+   }
+  },
+  "dense_compile/vs_eager": {
+   "out": 7.24281861153031e-08,
+   "input_grad": 2.322131820164941e-07,
+   "param_grads": 1.0399870120636479e-07
+  },
+  "dense_compile/epoch0": {
+   "train_s": 8.98,
+   "ms_per_step": 149.7,
+   "val_loss_s": 22.09,
+   "eval_1sample_s": 11.82,
+   "loss": 5.31664
+  },
+  "dense_compile/epoch1": {
+   "train_s": 8.69,
+   "ms_per_step": 144.8,
+   "val_loss_s": 0.25,
+   "eval_1sample_s": 0.75,
+   "loss": 5.31257
+  },
+  "dense_compile/epoch2": {
+   "train_s": 8.18,
+   "ms_per_step": 136.3,
+   "val_loss_s": 0.25,
+   "eval_1sample_s": 0.74,
+   "loss": 5.2795
+  },
+  "dense_compile/final_eval_0": {
+   "s": 17.51,
+   "n_images": 360
+  },
+  "dense_compile/final_eval_1": {
+   "s": 5.49,
+   "n_images": 360
+  },
+  "dense_compile/eval_runs_compiled": true,
+  "dense_compile/dynamo": {
+   "graph_break": {
+    "Skip calling `torch.compiler.disable()`d function\n  Explanation: Skip calling function `<function _sdpa_graph_breaking at 0x795de82fed40>` since it was wrapped with `torch.compiler.disable` (reason: None)\n  Hint: Remove the `torch.compiler.disable` call\n\n  Developer debug context: <function _sdpa_graph_breaking at 0x795de82fed40>\n\n For more details about this graph break, please visit: https://meta-pytorch.github.io/compile-graph-break-site/gb/gb0098.html": 27
+   },
+   "stats": {
+    "calls_captured": 2325,
+    "unique_graphs": 54
+   }
+  }
+ },
+ "one_graph_v5": {
+  "default/epoch0": {
+   "train_s": 13.03,
+   "ms_per_step": 217.2,
+   "val_loss_s": 0.42,
+   "eval_1sample_s": 2.01,
+   "loss": 5.30944
+  },
+  "default/epoch1": {
+   "train_s": 10.64,
+   "ms_per_step": 177.3,
+   "val_loss_s": 0.26,
+   "eval_1sample_s": 1.11,
+   "loss": 5.29886
+  },
+  "default/epoch2": {
+   "train_s": 10.57,
+   "ms_per_step": 176.2,
+   "val_loss_s": 0.26,
+   "eval_1sample_s": 1.11,
+   "loss": 5.2918
+  },
+  "default/final_eval_0": {
+   "s": 6.55,
+   "n_images": 360
+  },
+  "default/final_eval_1": {
+   "s": 6.54,
+   "n_images": 360
+  },
+  "default/eval_runs_compiled": false,
+  "default/dynamo": {},
+  "dense_compile/vs_eager": {
+   "out": 6.219770511961542e-06,
+   "input_grad": 6.449736247304827e-06,
+   "param_grads": 9.879876188279013e-07
+  },
+  "dense_compile/epoch0": {
+   "train_s": 8.1,
+   "ms_per_step": 135.0,
+   "val_loss_s": 93.45,
+   "eval_1sample_s": 91.01,
+   "loss": 5.31664
+  },
+  "dense_compile/epoch1": {
+   "train_s": 7.29,
+   "ms_per_step": 121.5,
+   "val_loss_s": 0.22,
+   "eval_1sample_s": 0.51,
+   "loss": 5.31257
+  },
+  "dense_compile/epoch2": {
+   "train_s": 7.23,
+   "ms_per_step": 120.5,
+   "val_loss_s": 0.22,
+   "eval_1sample_s": 0.51,
+   "loss": 5.2795
+  },
+  "dense_compile/final_eval_0": {
+   "s": 95.48,
+   "n_images": 360
+  },
+  "dense_compile/final_eval_1": {
+   "s": 3.48,
+   "n_images": 360
+  },
+  "dense_compile/eval_runs_compiled": true,
+  "dense_compile/dynamo": {
+   "stats": {
+    "calls_captured": 24749,
+    "unique_graphs": 7
+   },
+   "graph_break": {}
+  },
+  "dense_compile_bf16/vs_eager": {
+   "out": 6.219770511961542e-06,
+   "input_grad": 6.449736247304827e-06,
+   "param_grads": 9.879876188279013e-07
+  },
+  "dense_compile_bf16/epoch0": {
+   "train_s": 12.21,
+   "ms_per_step": 203.5,
+   "val_loss_s": 11.3,
+   "eval_1sample_s": 5.01,
+   "loss": 5.31664
+  },
+  "dense_compile_bf16/epoch1": {
+   "train_s": 5.23,
+   "ms_per_step": 87.2,
+   "val_loss_s": 0.15,
+   "eval_1sample_s": 0.44,
+   "loss": 5.31257
+  },
+  "dense_compile_bf16/epoch2": {
+   "train_s": 4.82,
+   "ms_per_step": 80.3,
+   "val_loss_s": 0.15,
+   "eval_1sample_s": 0.44,
+   "loss": 5.2795
+  },
+  "dense_compile_bf16/final_eval_0": {
+   "s": 8.07,
+   "n_images": 360
+  },
+  "dense_compile_bf16/final_eval_1": {
+   "s": 3.41,
+   "n_images": 360
+  },
+  "dense_compile_bf16/eval_runs_compiled": true,
+  "dense_compile_bf16/dynamo": {
+   "stats": {
+    "calls_captured": 24749,
+    "unique_graphs": 7
+   }
+  }
+ }
+}

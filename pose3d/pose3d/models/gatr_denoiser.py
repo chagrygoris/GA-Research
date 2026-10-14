@@ -12,13 +12,20 @@ https://github.com/Qualcomm-AI-research/geometric-algebra-transformer
 
 The reference package hard-imports `xformers` (only used for optional attention masks, which
 this model never passes). A stub is installed when it is missing, so torch is never replaced.
+
+Two speed options compute the same function with the same parameters, so checkpoints load either
+way: `dense_linear` runs every EquiLinear as one dense matmul (`use_dense_linears`), and `compile`
+runs the forward through torch.compile on compile-friendly primitives (`gatr_fast_ops`).
+Timings: pose3d/reports/flash_clifford.
 """
 
+import functools
 import sys
 import types
 
 import torch
 import torch.nn as nn
+import torch.nn.functional as F
 
 # Cl(3,0) blade -> PGA Cl(3,0,1) blade, both in grade-major order:
 #   1, e1, e2, e3, e12, e13, e23, e123  ->  1, e1..e3 (2-4), e12..e23 (8-10), e123 (14)
@@ -59,7 +66,116 @@ def _import_gatr():
     return GATr
 
 
-class GATrVectorField(nn.Module):
+@functools.lru_cache(maxsize=None)
+def _dense_equilinear_class():
+    from gatr.layers.linear import EquiLinear
+    from gatr.primitives.linear import _compute_pin_equi_linear_basis
+
+    class DenseEquiLinear(EquiLinear):
+        """EquiLinear as ONE matmul over [multivector components, scalars]: same parameters, same map.
+
+        GATr contracts the 9 Pin-equivariant basis maps with an einsum whose backward is slow (half
+        of the vector field's training step). Here the coefficients are folded into a dense
+        (16 out_mv + out_s, 16 in_mv + in_s) matrix on every call, so they stay trainable; the block
+        layout is the one of gatr.utils.compile_linear.compile_equi_linear (frozen weights only).
+        """
+
+        def forward(self, multivectors, scalars=None):
+            om, im, _ = self.weight.shape
+            basis = _compute_pin_equi_linear_basis(self.weight.device, self.weight.dtype)
+            mv_weight = torch.einsum("yxa,aij->yixj", self.weight, basis).reshape(16 * om, 16 * im)
+            with_s = scalars is not None and self.s2mvs is not None
+            n_s_out = self.mvs2s.out_features if self.mvs2s is not None else 0
+            n_s_in = scalars.shape[-1] if with_s else 0
+
+            weight = mv_weight.new_zeros(16 * om + n_s_out, 16 * im + n_s_in)
+            bias = mv_weight.new_zeros(16 * om + n_s_out)
+            weight[:16 * om, :16 * im] = mv_weight
+            if self.bias is not None:  # exists only without input scalars; on the scalar components
+                bias[:16 * om:16] = self.bias.flatten()
+            if with_s:
+                weight[:16 * om:16, 16 * im:] = self.s2mvs.weight
+                if self.s2mvs.bias is not None:
+                    bias[:16 * om:16] = self.s2mvs.bias
+            if n_s_out:
+                weight[16 * om:, :16 * im:16] = self.mvs2s.weight
+                if self.mvs2s.bias is not None:
+                    bias[16 * om:] = self.mvs2s.bias
+                if self.s2s is not None and with_s:
+                    weight[16 * om:, 16 * im:] = self.s2s.weight
+
+            lead = multivectors.shape[:-2]
+            inputs = multivectors.reshape(*lead, 16 * im)
+            if with_s:
+                inputs = torch.cat([inputs, scalars.expand(*lead, n_s_in)], dim=-1)
+            out = F.linear(inputs, weight, bias)
+            return out[..., :16 * om].reshape(*lead, om, 16), (out[..., 16 * om:] if n_s_out else None)
+
+    return DenseEquiLinear
+
+
+def use_dense_linears(module):
+    """Swap every GATr EquiLinear in `module` (itself included) for DenseEquiLinear, in place.
+
+    Only the class changes, so the parameters, state_dict keys and checkpoints stay the same."""
+    from gatr.layers.linear import EquiLinear
+
+    dense = _dense_equilinear_class()
+    for m in module.modules():
+        if type(m) is EquiLinear:
+            m.__class__ = dense
+    return module
+
+
+_fast_ops_installed = False
+
+
+def _compile(module):
+    """module.compile(): unlike torch.compile(module) it keeps the state_dict keys unprefixed.
+
+    Process-wide, once: GATr's primitives are swapped for the compile-friendly ones of
+    gatr_fast_ops (same functions), and GATr's cached einsum paths, which do not trace, are
+    switched off. Every GATr block, the EMA copy, train / eval mode and each batch shape get their
+    own compiled frames, beyond torch's default limit of 8, after which dynamo silently runs the
+    rest eager."""
+    global _fast_ops_installed
+    from gatr.utils.einsum import enable_cached_einsum
+
+    from pose3d.models import gatr_fast_ops
+
+    if not _fast_ops_installed:
+        gatr_fast_ops.install()
+        _fast_ops_installed = True
+    enable_cached_einsum(False)
+    torch._dynamo.config.recompile_limit = max(torch._dynamo.config.recompile_limit, 64)
+    module.compile()
+
+
+class _Compilable(nn.Module):
+    """The `compile` option, kept when the module is copied.
+
+    nn.Module drops Module.compile()'s compiled call from its pickled / deep-copied state, so the
+    EMA weights (a deepcopy, torch.optim.swa_utils.AveragedModel) would otherwise run eager."""
+
+    def _set_compiled(self, compile: bool):
+        self.compiled = bool(compile)
+        if compile:
+            _compile(self)
+
+    def __setstate__(self, state):
+        super().__setstate__(state)
+        if self.__dict__.get("compiled"):
+            _compile(self)
+
+    def __call__(self, x, *args, **kwargs):
+        if self.compiled:  # outside the compiled call: a cache miss inside it is a graph break
+            from pose3d.models import gatr_fast_ops
+
+            gatr_fast_ops.warm_caches(x.device, x.dtype)
+        return super().__call__(x, *args, **kwargs)
+
+
+class GATrVectorField(_Compilable):
     """(B, 2 + n_cond_mv, 8) Cl(3,0) multivectors -> (B, 1, 8), like TralaleroTralala.
 
     Token 0 carries the noisy rotor R_t, tokens 1.. the conditioning multivectors (token 1 is
@@ -68,7 +184,8 @@ class GATrVectorField(nn.Module):
     """
 
     def __init__(self, n_cond_mv: int, mv_channels: int = 8, s_channels: int = 32,
-                 num_blocks: int = 4, num_heads: int = 4):
+                 num_blocks: int = 4, num_heads: int = 4, dense_linear: bool = False,
+                 compile: bool = False):
         super().__init__()
         GATr = _import_gatr()
         self.net = GATr(
@@ -79,6 +196,9 @@ class GATrVectorField(nn.Module):
         self.register_buffer("_pga_index", torch.tensor(_PGA_INDEX), persistent=False)
         self.register_buffer("_rot_index", torch.tensor(_ROTATION_BIVECTOR), persistent=False)
         self.out = self.net.linear_out  # zeroed by CliffordFlow so the initial velocity is 0
+        if dense_linear:
+            use_dense_linears(self.net)
+        self._set_compiled(compile)
 
     def forward(self, x):
         b, n, _ = x.shape
@@ -94,7 +214,7 @@ class GATrVectorField(nn.Module):
         return result
 
 
-class GATrConditionHead(nn.Module):
+class GATrConditionHead(_Compilable):
     """(B, n_in, 8) Cl(3,0) multivectors -> (B, n_out, 8), like TralaleroTralala.
 
     The n_in inputs are tokens, followed by n_out learned query multivectors; the output is read
@@ -104,7 +224,8 @@ class GATrConditionHead(nn.Module):
     """
 
     def __init__(self, n_in: int, n_out: int, mv_channels: int = 8, s_channels: int = 32,
-                 num_blocks: int = 4, num_heads: int = 4, token_dim: int = 16):
+                 num_blocks: int = 4, num_heads: int = 4, token_dim: int = 16,
+                 dense_linear: bool = False, compile: bool = False):
         super().__init__()
         GATr = _import_gatr()
         self.net = GATr(
@@ -116,6 +237,9 @@ class GATrConditionHead(nn.Module):
         self.query = nn.Parameter(0.1 * torch.randn(n_out, 8))
         self.token_embedding = nn.Parameter(torch.randn(n_in + n_out, token_dim))
         self.register_buffer("_pga_index", torch.tensor(_PGA_INDEX), persistent=False)
+        if dense_linear:
+            use_dense_linears(self.net)
+        self._set_compiled(compile)
 
     def forward(self, x):
         b = x.shape[0]

@@ -75,6 +75,52 @@ Install GATr with `--no-deps`: its `setup.py` pins `numpy<1.25` and `xformers`, 
 the preinstalled torch. `xformers` is only needed for attention masks, which the flow never passes,
 so a stub stands in when it is missing.
 
+Two speed options, both off by default, compute the same function with the same weights, so
+checkpoints load either way:
+
+- `--gatr_dense_linear` runs every GATr `EquiLinear` as one dense matmul. GATr's own einsum over the
+  9 basis maps has a slow backward.
+- `--gatr_compile` runs the GATr modules, the EMA copy included, through `torch.compile`. It uses
+  compile-friendly versions of GATr's primitives from `models/gatr_fast_ops.py`: the products are
+  unrolled from GATr's own tables, and attention is no longer excluded from compilation. The
+  whole network traces as one graph. On a fresh machine, compilation takes about 5 minutes per
+  run: the first training steps, validation and the 32-sample final evaluation. A warm inductor
+  cache brings this down to well under a minute.
+
+`--backbone_bf16` runs only the ResNet backbone under bf16 autocast with channels_last. GATr and the
+CGENN head stay fp32. Unlike the two flags above, it changes the numerics; a full run of the recipe
+with it scores the same as without (the second table).
+
+Measured on one RTX Pro 6000 with the trainer's own epoch and evaluation functions, batch 64,
+synthetic images. The evaluation columns are for 360 images.
+
+| flags | train step | 1-sample evaluation | 32-sample evaluation |
+|---|---|---|---|
+| none | 176 ms | 1.11 s | 6.54 s |
+| `--gatr_dense_linear` | 160 ms | 1.14 s | 6.72 s |
+| `--gatr_dense_linear --gatr_compile` | 120 ms | 0.51 s | 3.48 s |
+| ... + `--backbone_bf16` | 80 ms | 0.44 s | 3.41 s |
+
+Full 100-epoch runs of the default recipe on the same GPU, final 32-sample evaluation of the EMA
+weights:
+
+| flags | epoch | run | median | class-mean |
+|---|---|---|---|---|
+| none (reference, unseeded) | 215 s | 6.1 h | 7.85 deg | 8.95 deg |
+| `--gatr_dense_linear --gatr_compile --seed 1` | 148 s | 4.5 h | 7.83 deg | 9.20 deg |
+| ... + `--backbone_bf16` | 103 s | 3.2 h | 7.88 deg | 9.28 deg |
+
+The two seeded runs agree within 0.1 deg. The class-mean gap to 8.95 is the same with and without
+bf16, and the first of them computes the reference's function, so the gap is most likely the seed:
+the class-mean is noisy (diningtable has 7 validation images).
+
+Details are in `reports/flash_clifford/`.
+
+```bash
+poetry run python -m pose3d --path_to_datasets ... --gatr_dense_linear --gatr_compile
+poetry run python -m pose3d --path_to_datasets ... --gatr_dense_linear --gatr_compile --backbone_bf16
+```
+
 ## Micro and macro metrics
 
 Every reported number has two versions. Micro is pooled over all validation images, so the big

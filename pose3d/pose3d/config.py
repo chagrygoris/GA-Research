@@ -163,6 +163,10 @@ class Features:
     raw_cache: bool = False
     # Freeze the backbone and train only the heads.
     freeze_encoder: bool = False
+    # Run CliffordFlow's ResNet backbone under bf16 autocast (channels_last); the GA heads stay
+    # fp32. 120 -> 80 ms per step with --gatr_dense_linear --gatr_compile on an RTX Pro 6000
+    # (reports/flash_clifford/frameworks.md). Changes the numerics: the 8.95 deg is unconfirmed.
+    backbone_bf16: bool = False
     # Swap CliffordFlow's two GA heads for parameter-matched plain MLPs (43.7 deg: a
     # comparison showing the GA layers matter, not a candidate improvement).
     mlp_heads: bool = False
@@ -252,6 +256,14 @@ class FlowConfig:
     gatr_mv_channels: int = 8    # hidden multivector channels per token
     gatr_s_channels: int = 32    # hidden scalar channels per token
     gatr_heads: int = 4
+    # Speed options of both GATr modules: the same function and weights, so checkpoints load
+    # either way. dense_linear runs every EquiLinear as one dense matmul instead of GATr's einsum
+    # over its 9 basis maps (whose backward is half of the vector field's step); compile runs the
+    # GATr forward through torch.compile on gatr_fast_ops' primitives, as one graph (~5 min of
+    # compilation per run on a fresh machine). With both, 120 vs 176 ms per training step on an
+    # RTX Pro 6000 (USAGE.md, reports/flash_clifford).
+    gatr_dense_linear: bool = False
+    gatr_compile: bool = False
     # Path to Liu et al.'s Pascal3D+ matrix Fisher checkpoint (state_dict_119.pkl);
     # used only with Features.fisher_prior.
     fisher_checkpoint: Optional[str] = None
