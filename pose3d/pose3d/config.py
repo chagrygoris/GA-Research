@@ -163,6 +163,10 @@ class Features:
     raw_cache: bool = False
     # Freeze the backbone and train only the heads.
     freeze_encoder: bool = False
+    # Run CliffordFlow's ResNet backbone under bf16 autocast (channels_last); the GA heads stay
+    # fp32. 124 -> 90 ms per step with --gatr_dense_linear --gatr_compile on an RTX Pro 6000
+    # (reports/flash_clifford/frameworks.md). Changes the numerics: the 8.95 deg is unconfirmed.
+    backbone_bf16: bool = False
     # Swap CliffordFlow's two GA heads for parameter-matched plain MLPs (43.7 deg: a
     # comparison showing the GA layers matter, not a candidate improvement).
     mlp_heads: bool = False

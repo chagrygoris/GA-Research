@@ -37,6 +37,7 @@ def _clifford_flow(cfg: Config, algebra) -> nn.Module:
                   dense_linear=fl.gatr_dense_linear, compile=fl.gatr_compile),
         mlp_heads=f.mlp_heads,
         fisher_checkpoint=fl.fisher_checkpoint if f.fisher_prior else None,
+        backbone_bf16=f.backbone_bf16,
     )
 
 

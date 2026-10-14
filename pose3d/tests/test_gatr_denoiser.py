@@ -221,3 +221,30 @@ def test_compile_leaves_room_for_every_block_copy_and_shape():
 
     GATrVectorField(8, mv_channels=4, s_channels=8, num_blocks=2, num_heads=2, compile=True)
     assert torch._dynamo.config.recompile_limit >= 64
+
+
+def test_bf16_backbone_returns_fp32_close_to_the_fp32_backbone():
+    from pose3d.models.clifford_flow import ImageToMultivectors
+
+    torch.manual_seed(0)
+    ref = ImageToMultivectors(ALGEBRA, pretrained_backbone=False, encoder_type="resnet50",
+                              conv_adapter=False).eval()
+    low = ImageToMultivectors(ALGEBRA, pretrained_backbone=False, encoder_type="resnet50",
+                              conv_adapter=False, bf16=True).eval()
+    low.load_state_dict(ref.state_dict())
+    img = torch.rand(2, 3, 64, 64)
+    with torch.no_grad():
+        a, b = ref(img), low(img)
+    assert b.dtype == torch.float32 and b.shape == a.shape
+    assert (b - a).norm() / a.norm() < 0.05      # bf16 keeps ~3 significant digits
+    assert (b - a).abs().max() > 0               # and it really ran in bf16
+
+
+def test_backbone_bf16_flag_reaches_the_adapter():
+    from pose3d.config import parse_args
+    from pose3d.models import build_model
+
+    on = parse_args(["--path_to_datasets=/tmp", "--no-pretrained_backbone", "--backbone_bf16"])
+    off = parse_args(["--path_to_datasets=/tmp", "--no-pretrained_backbone"])
+    assert build_model(on, ALGEBRA).adapter.bf16
+    assert not build_model(off, ALGEBRA).adapter.bf16
