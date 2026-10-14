@@ -194,6 +194,9 @@ def train(model, train_loader, val_loader, optimizer, scheduler, criterion, run,
 
     final_evaluation(eval_model, val_loader, run, cfg, raw_model=model if ema is not None else None)
     log_viz(eval_model, val_loader, run, cfg, final=True, commit=True)
+    if cfg.run.dataset == "symsol" and hasattr(eval_model, "grid_logits") and is_main():
+        from pose3d.engine.symsol_ll import symsol_final_log_likelihood
+        symsol_final_log_likelihood(eval_model, cfg, run)
     return eval_model
 
 

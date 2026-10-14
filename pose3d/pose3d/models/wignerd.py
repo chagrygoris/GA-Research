@@ -57,6 +57,12 @@ class WignerD(I2SReal):
         psi = self.forward(img).squeeze(1).float()
         return rots[(psi @ wig).argmax(dim=1)]
 
+    @torch.no_grad()
+    def grid_logits(self, img: torch.Tensor) -> torch.Tensor:
+        """Scores <Psi, D(R)> of every grid rotation, (B, Q): the unnormalised log-density the softmax of the paper's inference is taken over."""
+        wig, _ = self._eval_grid(img.device)
+        return self.forward(img).squeeze(1).float() @ wig
+
     def target(self, rot_gt: torch.Tensor) -> torch.Tensor:
         """Flattened Wigner-D coefficients of the ground-truth rotations, (B, M)."""
         from e3nn import o3

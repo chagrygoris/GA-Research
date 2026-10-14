@@ -210,6 +210,14 @@ class DataConfig:
     # 1: the standard 5-shape benchmark (tet, cube, icosa, cone, cyl). 2/3/4: the single-shape
     # near-symmetric variants (sphereX/cylO/tetX).
     symsol_set: int = 1
+    # "10 % of the training data" (Howell et al. 2023, Table 2) is --symsol_train_views 4500 (of 45,000 per shape). None: all views.
+    symsol_train_views: Optional[int] = None
+    symsol_test_views: Optional[int] = None        # views per shape scored every epoch (None: all 5,000)
+    # Final grid log-likelihood (wignerd): test views per shape, and equivalent poses scored per view.
+    symsol_ll_views: int = 5000
+    symsol_ll_equivalents: int = 8
+    # Training items also carry every equivalent pose (rots_eq / n_eq) instead of one random equivalent.
+    symsol_nearest_coupling: bool = False
 
 
 @dataclass
