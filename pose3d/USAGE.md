@@ -88,8 +88,8 @@ checkpoints load either way:
   cache brings this down to well under a minute.
 
 `--backbone_bf16` runs only the ResNet backbone under bf16 autocast with channels_last. GATr and the
-CGENN head stay fp32. Unlike the two flags above, it changes the numerics, and the 8.95 deg recipe
-has not been rerun with it.
+CGENN head stay fp32. Unlike the two flags above, it changes the numerics; a full run of the recipe
+with it scores the same as without (the second table).
 
 Measured on one RTX Pro 6000 with the trainer's own epoch and evaluation functions, batch 64,
 synthetic images. The evaluation columns are for 360 images.
@@ -100,6 +100,19 @@ synthetic images. The evaluation columns are for 360 images.
 | `--gatr_dense_linear` | 160 ms | 1.14 s | 6.72 s |
 | `--gatr_dense_linear --gatr_compile` | 120 ms | 0.51 s | 3.48 s |
 | ... + `--backbone_bf16` | 80 ms | 0.44 s | 3.41 s |
+
+Full 100-epoch runs of the default recipe on the same GPU, final 32-sample evaluation of the EMA
+weights:
+
+| flags | epoch | run | median | class-mean |
+|---|---|---|---|---|
+| none (reference, unseeded) | 215 s | 6.1 h | 7.85 deg | 8.95 deg |
+| `--gatr_dense_linear --gatr_compile --seed 1` | 148 s | 4.5 h | 7.83 deg | 9.20 deg |
+| ... + `--backbone_bf16` | 103 s | 3.2 h | 7.88 deg | 9.28 deg |
+
+The two seeded runs agree within 0.1 deg. The class-mean gap to 8.95 is the same with and without
+bf16, and the first of them computes the reference's function, so the gap is most likely the seed:
+the class-mean is noisy (diningtable has 7 validation images).
 
 Details are in `reports/flash_clifford/`.
 
