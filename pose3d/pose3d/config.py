@@ -299,6 +299,9 @@ class I2SConfig:
     # "unit": 1 / (2l+1)^2, so every degree's block of the target has unit squared norm (flat_wigner scales
     # degree l by sqrt(2l+1)); "uniform": all 1, which lets the high degrees dominate.
     wigner_loss_weights: Literal["unit", "uniform"] = "unit"
+    # wignerd: "sum" adds the weighted squared errors of the 455 coefficients, "mean" divides that by 455 (torch's MSELoss default).
+    # The paper writes the sum (eq. 4) and calls it MSE, and its lr 0.1 only makes sense against one of the two scales.
+    wigner_loss_reduction: Literal["sum", "mean"] = "sum"
 
 
 @dataclass

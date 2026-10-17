@@ -55,3 +55,13 @@ def test_target_accepts_slightly_non_orthonormal_rotations():
     noisy = R + 2e-3 * torch.randn_like(R)
     t_clean, t_noisy = WignerD.target(stub, R), WignerD.target(stub, noisy)
     assert torch.isfinite(t_noisy).all() and (t_clean - t_noisy).abs().max() < 0.1
+
+
+def test_mean_reduction_divides_the_sum_by_the_coefficient_count():
+    from pose3d.models.wignerd import WignerD
+
+    a = WignerD(encoder_type="resnet50", pretrained_backbone=False, eval_rec_level=1, loss_reduction="sum")
+    b = WignerD(encoder_type="resnet50", pretrained_backbone=False, eval_rec_level=1, loss_reduction="mean", loss_weights="unit")
+    assert torch.allclose(a.loss_w / 455, b.loss_w)
+    c = WignerD(encoder_type="resnet50", pretrained_backbone=False, eval_rec_level=1, loss_reduction="mean", loss_weights="uniform")
+    assert torch.allclose(c.loss_w, torch.full((455,), 1 / 455))      # F.mse_loss over the 455 coefficients

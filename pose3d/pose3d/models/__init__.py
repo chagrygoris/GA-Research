@@ -60,6 +60,7 @@ def _wignerd(cfg: Config, algebra) -> nn.Module:
         eval_rec_level=cfg.i2s.i2s_eval_rec_level,
         normalize_input=cfg.i2s.i2s_normalize,
         loss_weights=cfg.i2s.wigner_loss_weights,
+        loss_reduction=cfg.i2s.wigner_loss_reduction,
     )
 
 

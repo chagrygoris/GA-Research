@@ -25,12 +25,15 @@ def degree_weights(lmax: int, mode: str) -> torch.Tensor:
 
 
 class WignerD(I2SReal):
-    def __init__(self, *args, lmax: int = 6, loss_weights: str = "unit", eval_rec_level: int = 5, **kwargs):
+    def __init__(self, *args, lmax: int = 6, loss_weights: str = "unit", loss_reduction: str = "sum", eval_rec_level: int = 5, **kwargs):
         super().__init__(*args, lmax=lmax, eval_rec_level=1, **kwargs)       # the level-5 grid is built lazily, on the device that scores
         self.lmax = lmax
         self.eval_level = eval_rec_level
         self._grid = None
-        self.register_buffer("loss_w", degree_weights(lmax, loss_weights), persistent=False)
+        if loss_reduction not in ("sum", "mean"):
+            raise ValueError(f"loss_reduction must be 'sum' or 'mean', got {loss_reduction!r}")
+        w = degree_weights(lmax, loss_weights)
+        self.register_buffer("loss_w", w / w.numel() if loss_reduction == "mean" else w, persistent=False)
 
     @torch.no_grad()
     def _eval_grid(self, device):
