@@ -31,21 +31,28 @@ def angle_deg(r_a, r_b):
 
 
 @torch.no_grad()
-def trajectories(model, img, k=24, steps=20, seed=0):
-    """(steps + 1, k, 3, 3): k noise rotations integrated to the model's pose, every Euler step kept."""
+def rotor_trajectories(model, img, k=24, steps=20, seed=0):
+    """(steps + 1, k, 4): the flow's unit rotors (scalar, e12, e13, e23), k noise rotors integrated to the model's pose, every Euler step kept."""
     dev = next(model.parameters()).device
     cond = model.condition(img[None].to(dev)).repeat(k, 1, 1)
     state = torch.random.get_rng_state()
     torch.manual_seed(seed)                      # the same noise for every model and every call
     rotor = random_rotor(k).to(dev)
     torch.random.set_rng_state(state)            # ... without disturbing the training run's random stream
-    path = [rotor_to_matrix(rotor, model.algebra)]
+    path = [rotor]
     dt = 1.0 / steps
     for i in range(steps):
         v = model.velocity(rotor, torch.full((k,), i * dt, device=dev), cond)
         rotor = rotor_multiply(rotor, exp_map(dt * v), model.algebra)
-        path.append(rotor_to_matrix(rotor, model.algebra))
+        path.append(rotor)
     return torch.stack(path).cpu().numpy()
+
+
+@torch.no_grad()
+def trajectories(model, img, k=24, steps=20, seed=0):
+    """(steps + 1, k, 3, 3): k noise rotations integrated to the model's pose, every Euler step kept."""
+    rotors = torch.from_numpy(rotor_trajectories(model, img, k, steps, seed))
+    return torch.stack([rotor_to_matrix(r, model.algebra) for r in rotors]).numpy()
 
 
 def _finish(fig, out):
