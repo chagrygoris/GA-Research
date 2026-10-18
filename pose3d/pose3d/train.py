@@ -31,16 +31,29 @@ def make_algebra(algebra_dim: int = 3) -> CliffordAlgebra:
     return CliffordAlgebra(tuple([1] * algebra_dim))
 
 
+def build_optimizer(model, cfg: Config):
+    params = model.parameters()
+    if cfg.train.optimizer == "sgd":
+        return torch.optim.SGD(params, lr=cfg.effective_lr, momentum=cfg.train.momentum,
+                               nesterov=cfg.train.nesterov)
+    return torch.optim.AdamW(params, lr=cfg.effective_lr)
+
+
 def build_scheduler(optimizer, cfg: Config):
-    """Linear warmup for `warmup_epochs`, then cosine decay to 5% of the base lr."""
+    """Linear warmup for `warmup_epochs`, then cosine decay to 5% of the base lr, or (lr_schedule=step)
+    a factor lr_step_gamma every lr_step_epochs epochs."""
     warmup_epochs = cfg.train.warmup_epochs
     cosine_epochs = cfg.train.n_epochs - warmup_epochs
 
-    cosine = torch.optim.lr_scheduler.CosineAnnealingLR(
-        optimizer,
-        T_max=cosine_epochs,
-        eta_min=cfg.effective_lr * 0.05,
-    )
+    if cfg.train.lr_schedule == "step":
+        cosine = torch.optim.lr_scheduler.StepLR(optimizer, step_size=cfg.train.lr_step_epochs,
+                                                 gamma=cfg.train.lr_step_gamma)
+    else:
+        cosine = torch.optim.lr_scheduler.CosineAnnealingLR(
+            optimizer,
+            T_max=cosine_epochs,
+            eta_min=cfg.effective_lr * 0.05,
+        )
     if warmup_epochs <= 0:
         return cosine
 
@@ -88,7 +101,7 @@ def instantiate(cfg: Config):
     model.to(cfg.device)
     model = distributed.convert_sync_bn(model, cfg)
 
-    optimizer = torch.optim.AdamW(model.parameters(), lr=cfg.effective_lr)
+    optimizer = build_optimizer(model, cfg)
     scheduler = build_scheduler(optimizer, cfg)
     criterion = build_criterion(cfg)
 

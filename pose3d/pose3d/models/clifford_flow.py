@@ -22,6 +22,7 @@ from pose3d.geometry.flow import (
     rotor_multiply,
 )
 from pose3d.geometry.rotor import embed_rotor, matrix_to_rotor, random_rotor, rotor_to_matrix
+from pose3d.geometry.matrix import nearest_equivalent
 from pose3d.models import fisher_prior
 from pose3d.models.encoders import (
     DEPTH_ANYTHING_DEFAULT,
@@ -47,10 +48,14 @@ class ImageToMultivectors(nn.Module):
                  so2_split_norm: bool = False,
                  so2_tokens: int = 0,
                  dircloud_scalars: int = 64,
-                 sphere: dict = None):
+                 dircloud_up_token: bool = False,
+                 sphere: dict = None,
+                 points: int = 0):
         super().__init__()
-        if cond_tokens not in ("pooled", "so2", "dircloud", "sphere"):
-            raise ValueError(f"cond_tokens must be 'pooled', 'so2', 'dircloud' or 'sphere', got {cond_tokens!r}")
+        if cond_tokens not in ("pooled", "so2", "dircloud", "spherecloud", "sphere", "points", "pointsphere",
+                               "pointcloud", "pointgatrsphere", "spheregatr"):
+            raise ValueError(f"cond_tokens must be 'pooled', 'so2', 'dircloud', 'spherecloud', 'sphere', 'points' "
+                             f"or 'pointsphere', got {cond_tokens!r}")
         if cond_tokens != "pooled" and conv_adapter:
             raise ValueError(f"cond_tokens={cond_tokens!r} replaces the pooling, so it needs conv_adapter=False")
         if not is_dense_backbone(encoder_type):
@@ -65,6 +70,28 @@ class ImageToMultivectors(nn.Module):
             raise ValueError("adapter_channels must be a positive integer")
 
         mv_dim = 2**algebra.dim
+        if cond_tokens in ("points", "pointsphere", "pointcloud", "pointgatrsphere"):
+            # The input is a point cloud (B, N, 3), not an image: no backbone (datasets/modelnet_points.py).
+            self.backbone, self.frozen_backbone, self.use_conv_adapter = nn.Identity(), False, False
+            self.cond_tokens = cond_tokens
+            if cond_tokens == "pointcloud":
+                # The raw cloud, for the GATr condition head (PointGATrEncoder) to compress.
+                self.conv_adapter, self.n_mv = nn.Identity(), 0
+            elif cond_tokens == "points":
+                from pose3d.models.dircloud_head import PointCloudTokens
+                self.conv_adapter = PointCloudTokens(points or 256)
+                self.n_mv = self.conv_adapter.n_tokens
+            elif cond_tokens == "pointgatrsphere":
+                from pose3d.models.so3fourier_head import PointGATrSphereHead
+                sph = dict(sphere or {})
+                enc = sph.pop("gatr", {})
+                self.conv_adapter = PointGATrSphereHead(**{k: v for k, v in sph.items() if k != "nside"}, **enc)
+                self.n_mv = self.conv_adapter.c_f
+            else:
+                from pose3d.models.so3fourier_head import PointSphereHead
+                self.conv_adapter = PointSphereHead(**{k: v for k, v in (sphere or {}).items() if k != "nside"})
+                self.n_mv = self.conv_adapter.c_f
+            return
         self.backbone = build_encoder(encoder_type, pretrained=pretrained_backbone,
                                       depth_anything_model=depth_anything_model)
         self.frozen_backbone = bool(freeze_backbone)
@@ -87,13 +114,37 @@ class ImageToMultivectors(nn.Module):
             # One token per cell of the 7x7 map (direction + scalar features) plus the e3 axis,
             # packed (B, 50, 8 + dircloud_scalars + 1); see models/dircloud_head.py.
             from pose3d.models.dircloud_head import DirectionCloudHead
-            self.conv_adapter = DirectionCloudHead(backbone_channels, scalars=dircloud_scalars)
+            self.conv_adapter = DirectionCloudHead(backbone_channels, scalars=dircloud_scalars,
+                                                   up_token=dircloud_up_token)
             self.n_mv = self.conv_adapter.n_tokens
             return
+        if cond_tokens == "spherecloud":
+            # P1's cloud from the image2sphere lift: the 88 hemisphere points and their lifted signal, plus the
+            # e3 axis, packed (B, 89, 8 + dircloud_scalars + 1); see models/dircloud_head.py.
+            from pose3d.models.dircloud_head import SphereCloudHead
+            self.conv_adapter = SphereCloudHead(backbone_channels, scalars=dircloud_scalars)
+            self.n_mv = self.conv_adapter.n_tokens
+            return
+        if cond_tokens == "spheregatr":
+            # The SO(3)-Fourier lift with a GATr encoder over the hemisphere points (models/so3fourier_head.py).
+            from pose3d.models.so3fourier_head import SphereGATrHead
+            sph = dict(sphere or {})
+            enc = sph.pop("gatr", {})
+            self.conv_adapter = SphereGATrHead(backbone_channels, **sph, **enc)
+            self.n_mv = self.conv_adapter.c_f
+            return
         if cond_tokens == "sphere":
+            sphere = dict(sphere or {})
+            if sphere.pop("lift_only", False):
+                # Scalar signals at the hemisphere points, (B, c_s, P); models/rotor_corr_head.py reads them.
+                from pose3d.models.so3fourier_head import SphereLift
+                self.conv_adapter = SphereLift(backbone_channels, **{k: sphere[k] for k in ("c_s", "nside")
+                                                                     if k in sphere})
+                self.n_mv = self.conv_adapter.c_s
+                return
             # Wigner coefficients of signals on SO(3), (B, c_f, sum_l (2l+1)^2); models/so3fourier_head.py.
             from pose3d.models.so3fourier_head import SphereConditionHead
-            self.conv_adapter = SphereConditionHead(backbone_channels, **(sphere or {}))
+            self.conv_adapter = SphereConditionHead(backbone_channels, **sphere)
             self.n_mv = self.conv_adapter.c_f
             return
         if not self.use_conv_adapter:
@@ -135,7 +186,8 @@ class ImageToMultivectors(nn.Module):
         else:
             fmap = self.backbone(x)
         adapted = self.conv_adapter(fmap)
-        if self.cond_tokens in ("so2", "dircloud", "sphere"):
+        if self.cond_tokens in ("so2", "dircloud", "spherecloud", "sphere", "points", "pointsphere", "pointcloud",
+                                "pointgatrsphere", "spheregatr"):
             return adapted
         if not self.use_conv_adapter:
             return adapted.flatten(1).view(adapted.shape[0], self.n_mv, self.mv_dim)
@@ -197,6 +249,8 @@ class CliffordFlow(nn.Module):
                  vector_field: str = "clifford",
                  condition_head: str = "clifford",
                  gatr: dict = None,
+                 gatr_zero_readout: bool = True,
+                 gatr_final_norm: bool = False,
                  fisher_checkpoint: str = None,
                  cond_tokens: str = "pooled",
                  so2_channels: int = 128,
@@ -204,29 +258,45 @@ class CliffordFlow(nn.Module):
                  so2_split_norm: bool = False,
                  pose_tokens: str = "rotor",
                  dircloud_scalars: int = 64,
-                 so3fourier: dict = None):
+                 dircloud_up_token: bool = False,
+                 so3fourier: dict = None,
+                 rotorcorr: dict = None,
+                 n_points: int = 256,
+                 gatr_pose_harmonics: int = 0,
+                 gatr_encoder: dict = None):
         super().__init__()
         so3f = dict(so3fourier or {})
-        if (cond_tokens == "sphere") != (vector_field == "so3fourier"):
-            raise ValueError("cond_tokens='sphere' and vector_field='so3fourier' go together")
-        if vector_field == "so3fourier" and (condition_head != "none" or pose_tokens != "rotor"
-                                             or mlp_heads or fisher_checkpoint):
-            raise ValueError("vector_field='so3fourier' needs condition_head='none', pose_tokens='rotor', "
+        rc = dict(rotorcorr or {})
+        sphere_fields = ("so3fourier", "rotorcorr")
+        if (cond_tokens in ("sphere", "pointsphere", "pointgatrsphere", "spheregatr")) != (vector_field in sphere_fields):
+            raise ValueError("cond_tokens='sphere' / 'pointsphere' go with vector_field='so3fourier' or 'rotorcorr'")
+        if cond_tokens in ("pointsphere", "pointgatrsphere", "spheregatr") and vector_field != "so3fourier":
+            raise ValueError("cond_tokens='pointsphere' feeds the SO(3)-Fourier read-out: vector_field='so3fourier'")
+        if vector_field in sphere_fields and (condition_head != "none" or pose_tokens != "rotor"
+                                              or mlp_heads or fisher_checkpoint):
+            raise ValueError(f"vector_field={vector_field!r} needs condition_head='none', pose_tokens='rotor', "
                              "no mlp_heads and no fisher_prior")
         if pose_tokens not in ("rotor", "frame", "frame_ch", "frame_pin"):
             raise ValueError(f"pose_tokens must be 'rotor', 'frame', 'frame_ch' or 'frame_pin', got {pose_tokens!r}")
-        if (cond_tokens == "dircloud") != (pose_tokens == "frame_pin"):
-            raise ValueError("cond_tokens='dircloud' and pose_tokens='frame_pin' go together (P1)")
-        if cond_tokens == "dircloud" and condition_head != "none":
-            raise ValueError("cond_tokens='dircloud' feeds the cloud straight to GATr: it needs condition_head='none'")
+        clouds = ("dircloud", "spherecloud", "points")
+        if (cond_tokens in clouds + ("pointcloud",)) != (pose_tokens == "frame_pin"):
+            raise ValueError("cond_tokens='dircloud' / 'spherecloud' / 'points' / 'pointcloud' and "
+                             "pose_tokens='frame_pin' go together (P1)")
+        if cond_tokens == "pointcloud" and (condition_head != "gatr" or vector_field != "gatr"):
+            raise ValueError("cond_tokens='pointcloud' is the 8.95 recipe on points: condition_head='gatr' "
+                             "(PointGATrEncoder) and vector_field='gatr'")
+        if cond_tokens in clouds and condition_head != "none":
+            raise ValueError(f"cond_tokens={cond_tokens!r} feeds the cloud straight to GATr: it needs "
+                             "condition_head='none'")
         if pose_tokens != "rotor" and (vector_field != "gatr" or mlp_heads):
             raise ValueError(f"pose_tokens={pose_tokens!r} needs the GATr vector field (and no mlp_heads)")
         if cond_tokens != "pooled" and fisher_checkpoint:
             raise ValueError("cond_tokens='so2' and fisher_prior cannot be combined")
         if mlp_heads and fisher_checkpoint:
             raise ValueError("mlp_heads and fisher_prior cannot be combined")
-        if vector_field not in ("clifford", "gatr", "so3fourier"):
-            raise ValueError(f"vector_field must be 'clifford', 'gatr' or 'so3fourier', got {vector_field!r}")
+        if vector_field not in ("clifford", "gatr", "so3fourier", "rotorcorr"):
+            raise ValueError(f"vector_field must be 'clifford', 'gatr', 'so3fourier' or 'rotorcorr', "
+                             f"got {vector_field!r}")
         if condition_head not in ("clifford", "gatr", "none"):
             raise ValueError(f"condition_head must be 'clifford', 'gatr' or 'none', got {condition_head!r}")
         if condition_head == "none" and (cond_tokens == "pooled" or mlp_heads):
@@ -268,15 +338,23 @@ class CliffordFlow(nn.Module):
                 conv_adapter=conv_adapter, cond_tokens=cond_tokens, so2_channels=so2_channels,
                 so2_up_token=so2_up_token, so2_split_norm=so2_split_norm,
                 so2_tokens=n_cond_mv if condition_head == "none" else 0,
-                dircloud_scalars=dircloud_scalars,
-                sphere={k: so3f[k] for k in ("c_s", "c_f", "lmax", "nside") if k in so3f})
+                dircloud_scalars=dircloud_scalars, dircloud_up_token=dircloud_up_token,
+                sphere=(dict({k: rc[k] for k in ("c_s", "nside") if k in rc}, lift_only=True)
+                        if vector_field == "rotorcorr" else
+                        dict({k: so3f[k] for k in ("c_s", "c_f", "lmax", "nside") if k in so3f},
+                             **({"gatr": dict(gatr_encoder or gatr or {})}
+                                if cond_tokens in ("pointgatrsphere", "spheregatr") else {}))),
+                points=n_points)
             cond_in_features = self.adapter.n_mv
-            if cond_tokens == "dircloud":
+            if cond_tokens in clouds:
                 self.n_cond_mv = self.adapter.n_mv   # the cloud's size, not a free choice
 
         if condition_head == "none":
             # The so2 head already emits n_cond_mv honest multivectors (incl. the e3 axis token).
             self.condition_head = nn.Identity()
+        elif condition_head == "gatr" and cond_tokens == "pointcloud":
+            from pose3d.models.gatr_denoiser import PointGATrEncoder
+            self.condition_head = PointGATrEncoder(self.n_cond_mv, **(gatr or {}))
         elif condition_head == "gatr":
             from pose3d.models.gatr_denoiser import GATrConditionHead
             self.condition_head = GATrConditionHead(
@@ -291,14 +369,28 @@ class CliffordFlow(nn.Module):
             self.vector_field = SO3FourierVelocity(
                 c_f=so3f.get("c_f", 8), lmax=so3f.get("lmax", 6), hidden=so3f.get("hidden", 44),
                 flip_symmetrize=so3f.get("flip_symmetrize", True), canonicalize=so3f.get("canonicalize", True))
+        elif vector_field == "rotorcorr":
+            from pose3d.models.rotor_corr_head import RotorCorrelationVelocity
+            self.vector_field = RotorCorrelationVelocity(
+                self.adapter.conv_adapter.points, c_s=self.adapter.conv_adapter.c_s,
+                **{k: rc[k] for k in ("templates", "hidden", "kappa", "flip_symmetrize") if k in rc})
+        elif cond_tokens == "pointcloud":
+            from pose3d.models.gatr_denoiser import GATrCloudField
+            # The 8.95 recipe on points: the GATr field over [pose, n_cond_mv PGA condition tokens].
+            self.vector_field = GATrCloudField(self.condition_head.out_scalars, final_norm=gatr_final_norm,
+                                               cond_mv=16, pose_lmax=gatr_pose_harmonics, **(gatr or {}))
         elif pose_tokens == "frame_pin":
             from pose3d.models.gatr_denoiser import GATrCloudField
-            self.vector_field = GATrCloudField(dircloud_scalars + 1, **(gatr or {}))  # + the axis flag
+            # Scalar channels per condition token: the cell features plus the constant tokens' flags.
+            self.vector_field = GATrCloudField(self.adapter.conv_adapter.width - 8, final_norm=gatr_final_norm,
+                                               pose_lmax=gatr_pose_harmonics, **(gatr or {}))
         elif vector_field == "gatr":
             from pose3d.models.gatr_denoiser import GATrVectorField
             self.vector_field = GATrVectorField(
                 self.n_cond_mv, n_pose_tokens=3 if pose_tokens == "frame" else 1,
-                pose_channels=3 if pose_tokens == "frame_ch" else 1, **(gatr or {}))
+                pose_channels=3 if pose_tokens == "frame_ch" else 1,
+                extra_scalars=(gatr_pose_harmonics + 1) ** 2 if gatr_pose_harmonics and pose_tokens == "rotor" else 0,
+                **(gatr or {}))
         else:
             self.vector_field = TralaleroTralala(
                 algebra, in_features=2 + self.n_cond_mv, hidden_dim=vf_hidden_dim, out_features=1)
@@ -314,13 +406,15 @@ class CliffordFlow(nn.Module):
                 2 + self.n_cond_mv, 1, mv_dim, _n_hidden_layers(vf_hidden_dim), ga_field)
             nn.init.zeros_(self.vector_field.net[-1].weight)
             nn.init.zeros_(self.vector_field.net[-1].bias)
-        elif vector_field == "so3fourier":
-            pass   # SO3FourierVelocity zero-initialises its own read-out
-        elif vector_field == "gatr":
+        elif vector_field in sphere_fields:
+            pass   # SO3FourierVelocity / RotorCorrelationVelocity zero-initialise their own read-outs
+        elif vector_field == "gatr" and gatr_zero_readout:
             # Zero the output layer so training starts from a zero velocity field, as with the
-            # Clifford MLP below.
+            # Clifford MLP below (see FlowConfig.gatr_zero_readout for when this stalls P1).
             for p in self.vector_field.out.parameters():
                 nn.init.zeros_(p)
+        elif vector_field == "gatr":
+            pass   # GATr's own initialisation of the read-out
         else:
             nn.init.zeros_(self.vector_field.out.weight)
             nn.init.zeros_(self.vector_field.out.linear_left.weight)
@@ -344,8 +438,9 @@ class CliffordFlow(nn.Module):
         return cond_mv
 
     def velocity(self, rotor, t, cond_mv):
-        if self.vector_field_kind == "so3fourier":
-            # cond_mv: (B, c_f, N) Wigner coefficients; the read-out returns the body velocity directly.
+        if self.vector_field_kind in ("so3fourier", "rotorcorr"):
+            # cond_mv: (B, c_f, N) Wigner coefficients (so3fourier) or (B, c_s, P) signals at the hemisphere
+            # points (rotorcorr); the read-out returns the body velocity directly.
             return self.vector_field(rotor_to_matrix(rotor, self.algebra), t, cond_mv)
         if self.pose_tokens == "frame_pin":
             return self._pin_velocity(rotor, t, cond_mv)
@@ -354,7 +449,19 @@ class CliffordFlow(nn.Module):
             return self._frame_velocity(rotor, t_mv, cond_mv)
         rotor_mv = embed_rotor(rotor, self.algebra).unsqueeze(1)
         inp = torch.cat([rotor_mv, t_mv, cond_mv], dim=1)
-        out = self.vector_field(inp)[:, 0]
+        if getattr(self.vector_field, "extra_scalars", 0):
+            # Pose harmonics (FlowConfig.gatr_pose_harmonics): Y_lm, l <= L, of every condition token's vector part
+            # in the current pose's frame, R^T v / |R^T v|, as scalars of that token (zero on the rotor and time).
+            from e3nn import o3
+            R = rotor_to_matrix(rotor, self.algebra)
+            y = torch.einsum("bji,bnj->bni", R, cond_mv[..., 1:4])
+            u = y / y.norm(dim=-1, keepdim=True).clamp(min=1e-6)
+            L = int(round(self.vector_field.extra_scalars ** 0.5)) - 1
+            harm = o3.spherical_harmonics(list(range(L + 1)), u, normalize=True, normalization="component")
+            extra = torch.cat([harm.new_zeros(harm.shape[0], 2, harm.shape[-1]), harm], dim=1)
+            out = self.vector_field(inp, extra)[:, 0]
+        else:
+            out = self.vector_field(inp)[:, 0]
         return self.algebra.get_grade(out, 2)
 
     def _frame_velocity(self, rotor, t_mv, cond_mv):
@@ -385,7 +492,7 @@ class CliffordFlow(nn.Module):
         a = frame[:, 0]
         pose[:, 0, 4], pose[:, 0, 5], pose[:, 0, 6] = a[:, 2], -a[:, 1], a[:, 0]   # e12, e13, e23
         pose[:, 1, 1:4], pose[:, 2, 1:4] = frame[:, 1], frame[:, 2]
-        return self._spatial_to_body(rotor, self.vector_field(pose, t, cond))
+        return self._spatial_to_body(rotor, self.vector_field(pose, t, cond, R=frame.transpose(-1, -2)))
 
     def _spatial_to_body(self, rotor, spatial):
         """Camera-frame velocity bivector (e12, e13, e23) -> body velocity r~ w r."""
@@ -397,7 +504,7 @@ class CliffordFlow(nn.Module):
     def forward(self, x, rotor, t, cls=None):
         return self.velocity(rotor, t, self.condition(x, cls))
 
-    def compute_loss(self, img, rot_gt, criterion=None, cls=None):
+    def compute_loss(self, img, rot_gt, criterion=None, cls=None, rots_eq=None, n_eq=None):
         # The backbone forward dominates the step cost while the vector field is
         # small, so drawing several (t, r0) pairs per image buys that many more
         # flow-matching samples for one shared conditioning pass.
@@ -423,6 +530,11 @@ class CliffordFlow(nn.Module):
         else:
             r0 = random_rotor(n).to(r1.device)
         t = torch.rand(n, device=r1.device)
+        if rots_eq is not None:
+            # SYMSOL: flow each r0 to its nearest equivalent pose (DataConfig.symsol_nearest_coupling).
+            R1 = nearest_equivalent(rotor_to_matrix(r0, self.algebra), rots_eq.repeat_interleave(k, dim=0),
+                                    n_eq.repeat_interleave(k, dim=0))
+            r1 = matrix_to_rotor(R1)
 
         rt = geodesic_interpolate(r0, r1, t, self.algebra)
         target = relative_log(r0, r1, self.algebra)

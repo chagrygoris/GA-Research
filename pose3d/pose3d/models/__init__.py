@@ -34,6 +34,8 @@ def _clifford_flow(cfg: Config, algebra) -> nn.Module:
         condition_head=fl.condition_head,
         gatr=dict(num_blocks=fl.gatr_blocks, mv_channels=fl.gatr_mv_channels,
                   s_channels=fl.gatr_s_channels, num_heads=fl.gatr_heads),
+        gatr_zero_readout=fl.gatr_zero_readout,
+        gatr_final_norm=fl.gatr_final_norm,
         mlp_heads=f.mlp_heads,
         fisher_checkpoint=fl.fisher_checkpoint if f.fisher_prior else None,
         cond_tokens=fl.cond_tokens,
@@ -42,20 +44,55 @@ def _clifford_flow(cfg: Config, algebra) -> nn.Module:
         so2_split_norm=fl.so2_split_norm,
         pose_tokens=fl.pose_tokens,
         dircloud_scalars=fl.dircloud_scalars,
+        dircloud_up_token=fl.dircloud_up_token,
         so3fourier=dict(lmax=fl.so3f_lmax, c_s=fl.so3f_s2_channels, c_f=fl.so3f_so3_channels,
                         hidden=fl.so3f_hidden, nside=fl.so3f_nside,
                         flip_symmetrize=fl.so3f_flip_symmetrize, canonicalize=fl.so3f_canonicalize),
+        rotorcorr=dict(c_s=fl.so3f_s2_channels, nside=fl.so3f_nside, templates=fl.rc_templates,
+                       hidden=fl.rc_hidden, kappa=fl.rc_kappa, flip_symmetrize=fl.so3f_flip_symmetrize),
+        n_points=cfg.data.points_n,
+        gatr_pose_harmonics=fl.gatr_pose_harmonics,
+        gatr_encoder=dict(num_blocks=fl.gatr_enc_blocks, mv_channels=fl.gatr_mv_channels,
+                          s_channels=fl.gatr_s_channels, num_heads=fl.gatr_heads),
     )
 
 
 def _mlp_flow(cfg: Config, algebra) -> nn.Module:
     from pose3d.models.mlp_flow import MLPFlow
 
+    fl = cfg.flow
     return MLPFlow(
         algebra,
+        cond_hidden=fl.mlp_cond_hidden,
+        cond_features=fl.mlp_cond_features,
+        field_hidden=fl.mlp_field_hidden,
         pretrained_backbone=cfg.features.pretrained_backbone,
-        adapter_grid=cfg.flow.adapter_grid,
+        adapter_grid=fl.adapter_grid,
         encoder_type=cfg.model.encoder,
+        conv_adapter=fl.mlp_conv_adapter,
+    )
+
+
+def _dit_flow(cfg: Config, algebra) -> nn.Module:
+    from pose3d.models.dit_flow import DiTFlow
+
+    fl = cfg.flow
+    return DiTFlow(
+        algebra,
+        pretrained_backbone=cfg.features.pretrained_backbone,
+        encoder_type=cfg.model.encoder,
+        freeze_backbone=cfg.features.freeze_encoder,
+        n_time_samples=cfg.n_time_samples,
+        n_cond_tokens=fl.n_cond_mv,
+        dim=fl.dit_dim,
+        blocks=fl.dit_blocks,
+        heads=fl.dit_heads,
+        mlp_ratio=fl.dit_mlp_ratio,
+        pose_lmax=fl.dit_pose_lmax,
+        point_input=cfg.run.dataset in ("modelnet10_points", "symsol_points"),
+        sphere_input=fl.dit_sphere_tokens,
+        sphere_channels=fl.so3f_s2_channels,
+        sphere_nside=fl.so3f_nside,
     )
 
 
@@ -276,6 +313,7 @@ def _dummynet(cfg: Config, algebra) -> nn.Module:
 MODEL_BUILDERS: Dict[str, Callable[[Config, object], nn.Module]] = {
     "clifford_flow": _clifford_flow,
     "mlp_flow": _mlp_flow,
+    "dit_flow": _dit_flow,
     "i2s_real": _i2s_real,
     "i2s": _i2s,
     "ga_i2s": _ga_i2s,

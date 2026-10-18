@@ -46,7 +46,7 @@ def test_cloud_moves_with_the_map(transform, G):
     torch.testing.assert_close(head.direction.norm(dim=-1), torch.ones(49, dtype=head.direction.dtype))
 
 
-def _flow(dtype=torch.float64):
+def _flow(dtype=torch.float64, up_token=False, final_norm=False):
     from pose3d.models.gatr_denoiser import _ensure_xformers_stub
 
     _ensure_xformers_stub()
@@ -58,7 +58,8 @@ def _flow(dtype=torch.float64):
     model = CliffordFlow(CliffordAlgebra((1, 1, 1)), hidden_dim=[8], pretrained_backbone=False,
                          encoder_type="resnet50", conv_adapter=False, n_time_samples=2,
                          vector_field="gatr", cond_tokens="dircloud", pose_tokens="frame_pin",
-                         condition_head="none", dircloud_scalars=8,
+                         condition_head="none", dircloud_scalars=8, dircloud_up_token=up_token,
+                         gatr_final_norm=final_norm,
                          gatr=dict(num_blocks=2, mv_channels=4, s_channels=8, num_heads=2)).to(dtype)
     with torch.no_grad():   # undo the zero-initialised read-out
         for p in model.vector_field.out.parameters():
@@ -129,3 +130,77 @@ def test_dircloud_needs_its_pose_tokens():
         CliffordFlow(CliffordAlgebra((1, 1, 1)), pretrained_backbone=False, encoder_type="resnet50",
                      conv_adapter=False, vector_field="gatr", cond_tokens="dircloud",
                      pose_tokens="frame_ch", condition_head="none")
+
+
+def _p1_flow(zero_readout):
+    from clifford.algebra.cliffordalgebra import CliffordAlgebra
+    from pose3d.models.clifford_flow import CliffordFlow
+
+    torch.manual_seed(0)
+    return CliffordFlow(CliffordAlgebra((1, 1, 1)), hidden_dim=[8], pretrained_backbone=False,
+                        encoder_type="resnet50", conv_adapter=False, n_time_samples=2,
+                        vector_field="gatr", cond_tokens="dircloud", pose_tokens="frame_pin",
+                        condition_head="none", dircloud_scalars=8, gatr_zero_readout=zero_readout,
+                        gatr=dict(num_blocks=2, mv_channels=4, s_channels=8, num_heads=2))
+
+
+def test_zero_readout_leaves_no_gradient_upstream():
+    """The SYMSOL stall: with the zeroed read-out nothing upstream of it learns, only its few bivector weights,
+    which a uniform pose prior averages to zero. GATr's own read-out init lets every layer learn from step 0."""
+    for zero, upstream_learns in ((True, False), (False, True)):
+        model = _p1_flow(zero).train()
+        model.compute_loss(torch.rand(2, 3, 224, 224), rotor_to_matrix(random_rotor(2), model.algebra)).backward()
+        blocks = [p.grad for n, p in model.vector_field.named_parameters() if "linear_out" not in n]
+        moved = any(g is not None and g.abs().max() > 0 for g in blocks)
+        assert moved == upstream_learns
+
+
+def test_up_token_keeps_the_flip_and_breaks_the_turn():
+    """--dircloud_up_token: the constant -e2 token is unchanged by the left-right flip, so the flow still flips
+    with a mirrored image exactly; a 90 deg turn now changes the answer (the head may read the channels)."""
+    model = _flow(up_token=True)
+    assert model.n_cond_mv == 51
+    fmap = torch.randn(2, 2048, 7, 7, dtype=torch.float64)
+    R = rotor_to_matrix(random_rotor(2).double(), model.algebra)
+    t = torch.tensor([0.2, 0.9], dtype=torch.float64)
+    v = _velocity_from_map(model, fmap, matrix_to_rotor(R), t)
+    v_flip = _velocity_from_map(model, _flip(fmap), matrix_to_rotor(FLIP @ R @ FLIP), t)
+    torch.testing.assert_close(v_flip, torch.tensor([-1.0, -1.0, 1.0], dtype=torch.float64) * v,
+                               atol=1e-8, rtol=1e-6)
+    v_rot = _velocity_from_map(model, _rot90(fmap), matrix_to_rotor(R_Z_MINUS_90 @ R), t)
+    # Small at random init (little reaches the pose token yet), but far above float64 rounding (~1e-13 when exact).
+    assert (v_rot - v).abs().max() > 1e-9
+
+
+def test_up_token_layout():
+    from pose3d.models.dircloud_head import DirectionCloudHead
+
+    head = DirectionCloudHead(c_in=16, scalars=4, up_token=True)
+    out = head(torch.randn(1, 16, 7, 7))
+    assert out.shape == (1, 51, 8 + 4 + 2)
+    assert out[0, 49, 3] == 1 and out[0, 49, 12] == 1 and out[0, 49, 13] == 0     # axis e3 + its flag
+    assert out[0, 50, 2] == -1 and out[0, 50, 13] == 1 and out[0, 50, 12] == 0    # up -e2 + its flag
+
+
+def test_final_norm_keeps_both_symmetries_exact():
+    model = _flow(final_norm=True)
+    fmap = torch.randn(2, 2048, 7, 7, dtype=torch.float64)
+    R = rotor_to_matrix(random_rotor(2).double(), model.algebra)
+    t = torch.tensor([0.3, 0.8], dtype=torch.float64)
+    v = _velocity_from_map(model, fmap, matrix_to_rotor(R), t)
+    assert v.abs().max() > 1e-3
+    torch.testing.assert_close(_velocity_from_map(model, _rot90(fmap), matrix_to_rotor(R_Z_MINUS_90 @ R), t), v,
+                               atol=1e-8, rtol=1e-6)
+    torch.testing.assert_close(_velocity_from_map(model, _flip(fmap), matrix_to_rotor(FLIP @ R @ FLIP), t),
+                               torch.tensor([-1.0, -1.0, 1.0], dtype=torch.float64) * v, atol=1e-8, rtol=1e-6)
+
+
+def test_final_norm_read_out_ignores_the_hidden_scale():
+    """The route P1 used to switch shapes off (shrinking the hidden state) no longer changes the output."""
+    model = _flow(final_norm=True)
+    read_out = model.vector_field.net.linear_out
+    mv = torch.randn(3, 5, 4, 16, dtype=torch.float64)
+    s = torch.randn(3, 5, 8, dtype=torch.float64)
+    a_mv, a_s = read_out(mv, scalars=s)
+    b_mv, b_s = read_out(20.0 * mv, scalars=20.0 * s)
+    torch.testing.assert_close(b_mv, a_mv, atol=1e-3, rtol=1e-3)

@@ -118,6 +118,8 @@ def build_model(checkpoint, device, eval_rec_level=None):
         so2_split_norm=saved.get("so2_split_norm", False),
         pose_tokens=saved.get("pose_tokens", "rotor"),
         dircloud_scalars=saved.get("dircloud_scalars", 64),
+        dircloud_up_token=saved.get("dircloud_up_token", False),
+        gatr_final_norm=saved.get("gatr_final_norm", False),
         so3fourier=dict(lmax=saved.get("so3f_lmax", 6), c_s=saved.get("so3f_s2_channels", 32),
                         c_f=saved.get("so3f_so3_channels", 8), hidden=saved.get("so3f_hidden", 44),
                         nside=saved.get("so3f_nside", 4), flip_symmetrize=saved.get("so3f_flip_symmetrize", True),

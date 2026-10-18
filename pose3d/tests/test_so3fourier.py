@@ -12,7 +12,7 @@ from e3nn import o3  # noqa: E402
 
 from pose3d.geometry.rotor import matrix_to_rotor, random_rotor, rotor_to_matrix  # noqa: E402
 from pose3d.models.so3fourier_head import (  # noqa: E402
-    SO3FourierVelocity, SphereConditionHead, hemisphere_grid, wigner_blocks)
+    SO3FourierVelocity, SphereConditionHead, hemisphere_grid, wigner_blocks, wigner_from_harmonics)
 
 R_Z_MINUS_90 = torch.tensor([[0.0, 1.0, 0.0], [-1.0, 0.0, 0.0], [0.0, 0.0, 1.0]], dtype=torch.float64)
 FLIP = torch.diag(torch.tensor([-1.0, 1.0, 1.0], dtype=torch.float64))
@@ -101,6 +101,45 @@ def test_readout_invariant_under_any_rotation():
     v = vf(R, t, c)
     assert v.abs().max() > 1e-3
     torch.testing.assert_close(vf(G @ R, t, cG), v, atol=1e-10, rtol=1e-8)
+
+
+def test_wigner_matches_e3nn_and_follows_the_module_device():
+    vf = _readout()
+    R = o3.rand_matrix(4).double()
+    ref = [o3.wigner_D(l, *o3.matrix_to_angles(R)) for l in range(vf.lmax + 1)]
+    for D, D_ref in zip(wigner_blocks(R, vf.lmax, vf.harmonic_basis()), ref):
+        torch.testing.assert_close(D, D_ref, atol=1e-10, rtol=1e-8)
+    # The basis moves with the module (e3nn's wigner_D builds its constants on the CPU and broke on cuda).
+    vf = vf.to("meta")
+    X, pinvs = vf.harmonic_basis()
+    assert all(D.device.type == "meta" for D in wigner_from_harmonics(torch.eye(3, device="meta")[None], X, pinvs))
+
+
+def test_wigner_derivative_is_finite_at_gimbal_lock():
+    """d D(R exp(e)) / de at poses where e3nn's Y-X-Y Euler angles are singular (beta = 0: rotations about y,
+    and the identity), against central differences: the flow likelihood differentiates through here."""
+    vf = _readout()
+    basis = vf.harmonic_basis()
+    for R in (torch.eye(3, dtype=torch.float64), o3.matrix_y(torch.tensor(0.7, dtype=torch.float64))):
+        e = torch.zeros(3, dtype=torch.float64, requires_grad=True)
+        K = torch.zeros(3, 3, dtype=torch.float64)
+        K = K.index_put((torch.tensor([0, 0, 1, 1, 2, 2]), torch.tensor([1, 2, 0, 2, 0, 1])),
+                        torch.stack([-e[2], e[1], e[2], -e[0], -e[1], e[0]]))
+        D = wigner_blocks((R @ (torch.eye(3, dtype=torch.float64) + K))[None], vf.lmax, basis)[vf.lmax][0]
+        g = torch.autograd.grad(D.sum(), e)[0]
+        assert torch.isfinite(g).all()
+        h, fd = 1e-6, torch.zeros(3, dtype=torch.float64)
+        for i in range(3):
+            w = torch.zeros(3, dtype=torch.float64); w[i] = h
+            Rp, Rm = R @ torch.linalg.matrix_exp(_hat(w)), R @ torch.linalg.matrix_exp(_hat(-w))
+            fd[i] = (wigner_blocks(Rp[None], vf.lmax, basis)[vf.lmax].sum()
+                     - wigner_blocks(Rm[None], vf.lmax, basis)[vf.lmax].sum()) / (2 * h)
+        torch.testing.assert_close(g, fd, atol=1e-6, rtol=1e-5)
+
+
+def _hat(w):
+    return torch.stack([torch.stack([w.new_zeros(()), -w[2], w[1]]), torch.stack([w[2], w.new_zeros(()), -w[0]]),
+                        torch.stack([-w[1], w[0], w.new_zeros(())])])
 
 
 def _flow(dtype=torch.float64, canonicalize=True, flip_symmetrize=True):
@@ -204,3 +243,46 @@ def test_param_counts_and_twin_parity(c_s, c_f, hidden, target):
     twin = SO3FourierVelocity(c_f=c_f, lmax=6, hidden=hidden, canonicalize=False)
     assert abs(n(head) + n(eq) - target) <= 0.03 * target
     assert abs(n(twin) - n(eq)) <= 0.005 * (n(head) + n(eq))
+
+
+def _hybrid_flow(dtype=torch.float64):
+    from pose3d.models.gatr_denoiser import _ensure_xformers_stub
+    _ensure_xformers_stub()
+    pytest.importorskip("gatr")
+    from clifford.algebra.cliffordalgebra import CliffordAlgebra
+    from pose3d.models.clifford_flow import CliffordFlow
+
+    torch.manual_seed(0)
+    model = CliffordFlow(CliffordAlgebra((1, 1, 1)), hidden_dim=[8], pretrained_backbone=False,
+                         encoder_type="resnet50", conv_adapter=False, n_time_samples=2,
+                         vector_field="so3fourier", cond_tokens="spheregatr", condition_head="none",
+                         so3fourier=dict(c_s=8, c_f=4, lmax=4, hidden=16),
+                         gatr_encoder=dict(num_blocks=1, mv_channels=4, s_channels=8, num_heads=2)).to(dtype)
+    with torch.no_grad():
+        model.vector_field.out.weight.normal_(0, 0.5)
+        model.vector_field.out.bias.normal_(0, 0.5)
+        model.adapter.conv_adapter.radial_gain.normal_(1, 0.3)
+    return model.eval()
+
+
+def test_sphere_gatr_hybrid_turns_and_flips_with_the_map():
+    model = _hybrid_flow()
+    torch.manual_seed(3)
+    fmap = torch.randn(2, 2048, 7, 7, dtype=torch.float64)
+    R = rotor_to_matrix(random_rotor(2).double(), model.algebra)
+    t = torch.tensor([0.3, 0.7], dtype=torch.float64)
+    v = _velocity_from_map(model, fmap, R, t)
+    assert v.abs().max() > 1e-3
+    torch.testing.assert_close(_velocity_from_map(model, _rot90(fmap), R_Z_MINUS_90 @ R, t), v, atol=1e-8, rtol=1e-6)
+    torch.testing.assert_close(_velocity_from_map(model, _flip(fmap), FLIP @ R @ FLIP, t), S * v, atol=1e-8, rtol=1e-6)
+
+
+def test_sphere_gatr_hybrid_trains_and_samples():
+    torch.set_default_dtype(torch.float32)
+    model = _hybrid_flow(torch.float32).train()
+    img = torch.randn(2, 3, 224, 224)
+    loss = model.compute_loss(img, rotor_to_matrix(random_rotor(2), model.algebra))
+    loss.backward()
+    assert math.isfinite(loss.item())
+    assert any(p.grad is not None and p.grad.abs().max() > 0 for p in model.adapter.conv_adapter.encoder.parameters())
+    assert model.eval().predict(img, n_samples=2, steps=2).shape == (2, 3, 3)

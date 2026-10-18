@@ -74,8 +74,9 @@ class GATrVectorField(nn.Module):
 
     def __init__(self, n_cond_mv: int, mv_channels: int = 8, s_channels: int = 32,
                  num_blocks: int = 4, num_heads: int = 4, n_pose_tokens: int = 1,
-                 pose_channels: int = 1):
+                 pose_channels: int = 1, extra_scalars: int = 0):
         super().__init__()
+        self.extra_scalars = extra_scalars   # per-token scalars passed to forward (CliffordFlow's pose harmonics)
         # 1: the rotor token; 3: the frame R e1, R e2, R e3 (CliffordFlow pose_tokens='frame').
         # The time token follows the pose tokens; the query flag and the read-out stay on token 0.
         self.n_pose_tokens = n_pose_tokens
@@ -83,7 +84,7 @@ class GATrVectorField(nn.Module):
         GATr = _import_gatr()
         self.net = GATr(
             in_mv_channels=pose_channels, out_mv_channels=1, hidden_mv_channels=mv_channels,
-            in_s_channels=1 + n_pose_tokens, out_s_channels=None, hidden_s_channels=s_channels,
+            in_s_channels=1 + n_pose_tokens + extra_scalars, out_s_channels=None, hidden_s_channels=s_channels,
             attention={"num_heads": num_heads}, mlp={}, num_blocks=num_blocks,
         )
         self.register_buffer("_pga_index", torch.tensor(_PGA_INDEX), persistent=False)
@@ -91,7 +92,7 @@ class GATrVectorField(nn.Module):
         self.register_buffer("_vec_index", torch.tensor(_VECTOR), persistent=False)
         self.out = self.net.linear_out  # zeroed by CliffordFlow so the initial velocity is 0
 
-    def forward(self, x):
+    def forward(self, x, extra=None):
         if x.dim() == 3:
             x = x.unsqueeze(2)                     # (B, n, channels, 8)
         b, n, c, _ = x.shape
@@ -101,6 +102,8 @@ class GATrVectorField(nn.Module):
         scalars[..., 0] = x[:, self.n_pose_tokens, 0, 0].unsqueeze(1)  # t: scalar part of the time token
         for i in range(self.n_pose_tokens):
             scalars[:, i, 1 + i] = 1.0
+        if self.extra_scalars:
+            scalars = torch.cat([scalars, extra.to(scalars.dtype)], dim=-1)
         out_mv, _ = self.net(pga, scalars=scalars)  # (B, n, 1, 16)
         query = out_mv[:, 0, 0]  # (B, 16)
         result = x.new_zeros(b, 1, x.shape[-1])
@@ -114,6 +117,18 @@ class GATrVectorField(nn.Module):
             w = query[:, self._vec_index]
             result[:, 0, 4:7] = torch.stack([w[:, 2], -w[:, 1], w[:, 0]], dim=-1)
         return result
+
+
+class _NormThenLinear(nn.Module):
+    """EquiLayerNorm, then GATr's EquiLinear read-out, with the read-out's calling convention."""
+
+    def __init__(self, norm, linear):
+        super().__init__()
+        self.norm, self.linear = norm, linear
+
+    def forward(self, multivectors, scalars=None):
+        multivectors, scalars = self.norm(multivectors, scalars=scalars)
+        return self.linear(multivectors, scalars=scalars)
 
 
 class GATrCloudField(nn.Module):
@@ -133,10 +148,20 @@ class GATrCloudField(nn.Module):
     """
 
     def __init__(self, cond_scalars: int, mv_channels: int = 8, s_channels: int = 32,
-                 num_blocks: int = 4, num_heads: int = 4):
+                 num_blocks: int = 4, num_heads: int = 4, final_norm: bool = False, cond_mv: int = 8,
+                 pose_lmax: int = 0):
         super().__init__()
         GATr = _import_gatr()
         self.cond_scalars = cond_scalars
+        # pose_lmax = L > 0: every condition token also gets the (L+1)^2 real spherical harmonics Y_lm(u), l <= L, of
+        # its vector part expressed in the current pose's frame, u = R^T x / |R^T x| (49 numbers for L = 6). They
+        # are invariant under turning input and pose together, so the field stays exactly equivariant, and they give
+        # it every angular frequency up to L in the pose from the first step (reports/frequency_hypothesis_ru.md).
+        self.pose_lmax = int(pose_lmax)
+        n_harm = (self.pose_lmax + 1) ** 2 if self.pose_lmax else 0
+        self.n_harm = n_harm
+        cond_scalars = cond_scalars + n_harm
+        self.cond_mv = cond_mv   # 8: Cl(3,0) condition multivectors (embedded); 16: already PGA (PointGATrEncoder)
         self.net = GATr(
             in_mv_channels=3, out_mv_channels=1, hidden_mv_channels=mv_channels,
             in_s_channels=cond_scalars + 2, out_s_channels=None, hidden_s_channels=s_channels,
@@ -144,20 +169,81 @@ class GATrCloudField(nn.Module):
         )
         self.register_buffer("_pga_index", torch.tensor(_PGA_INDEX), persistent=False)
         self.register_buffer("_rot_index", torch.tensor(_ROTATION_BIVECTOR), persistent=False)
-        self.out = self.net.linear_out  # zeroed by CliffordFlow so the initial velocity is 0
+        if final_norm:
+            # GATr goes from its last block straight to linear_out, so a token's output can be switched off by
+            # shrinking its hidden state, which also shrinks its gradients. On SYMSOL P1 did exactly that to
+            # the polyhedra and never recovered (reports/symsol_p1_stall.md); DiT's read-out is normalised
+            # (norm_final). An equivariant LayerNorm before the read-out removes that route.
+            from gatr.layers.layer_norm import EquiLayerNorm
+            self.net.linear_out = _NormThenLinear(EquiLayerNorm(), self.net.linear_out)
+            self.out = self.net.linear_out.linear
+        else:
+            self.out = self.net.linear_out  # zeroed by CliffordFlow so the initial velocity is 0
 
-    def forward(self, pose, t, cond):
-        """pose (B, 3, 8) Cl(3,0), t (B,), cond (B, n, 8 + cond_scalars) -> (B, 3) e12, e13, e23."""
+    def forward(self, pose, t, cond, R=None):
+        """pose (B, 3, 8) Cl(3,0), t (B,), cond (B, n, 8 + cond_scalars) -> (B, 3) e12, e13, e23.
+        R (B, 3, 3), the pose as a matrix, is needed with pose_lmax."""
         b, n = cond.shape[:2]
+        if self.pose_lmax:
+            from e3nn import o3
+            vec = cond[..., 2:5] if self.cond_mv == 16 else cond[..., 1:4]      # the token's vector part
+            y = torch.einsum("bji,bnj->bni", R.to(vec.dtype), vec)               # R^T x: the pose's own frame
+            u = y / y.norm(dim=-1, keepdim=True).clamp(min=1e-6)
+            harm = o3.spherical_harmonics(list(range(self.pose_lmax + 1)), u, normalize=True,
+                                          normalization="component")
+            cond = torch.cat([cond, harm], dim=-1)
         mv = pose.new_zeros(b, 1 + n, 3, 16)
         mv[:, 0, :, self._pga_index] = pose
-        mv[:, 1:, 0, self._pga_index] = cond[..., :8]
-        scalars = pose.new_zeros(b, 1 + n, self.cond_scalars + 2)
-        scalars[:, 1:, :self.cond_scalars] = cond[..., 8:]
+        if self.cond_mv == 16:
+            mv[:, 1:, 0] = cond[..., :16]
+        else:
+            mv[:, 1:, 0, self._pga_index] = cond[..., :8]
+        scalars = pose.new_zeros(b, 1 + n, self.cond_scalars + self.n_harm + 2)
+        scalars[:, 1:, :self.cond_scalars + self.n_harm] = cond[..., self.cond_mv:]
         scalars[..., -2] = t.to(pose.dtype).unsqueeze(1)
         scalars[:, 0, -1] = 1.0
         out_mv, _ = self.net(mv, scalars=scalars)   # (B, 1 + n, 1, 16)
         return out_mv[:, 0, 0][:, self._rot_index]
+
+
+class PointGATrEncoder(nn.Module):
+    """A point cloud (B, N, 3) -> n_out condition tokens, GATr's own way (the 8.95 recipe's condition head on
+    real geometry): every point is a token with two multivector channels, the point itself as a PGA trivector
+    (gatr.interface.embed_point, how the GATr paper embeds positions) and x_i as a vector (the plane through the
+    centre normal to x_i, so inner products see where the point sits relative to the centre), plus |x_i| as a
+    scalar; n_out query tokens carry no geometry (zero multivectors) and a learned scalar embedding each. GATr runs
+    over points + queries; the queries' outputs are the condition, packed (B, n_out, 16 + out_scalars). Queries
+    and scalars are rotation invariant, so the encoder is exactly equivariant to turning the cloud.
+    """
+
+    def __init__(self, n_out: int = 32, mv_channels: int = 8, s_channels: int = 32, num_blocks: int = 2,
+                 num_heads: int = 4, query_dim: int = 8, out_scalars: int = 8):
+        super().__init__()
+        GATr = _import_gatr()
+        self.n_out, self.out_scalars = n_out, out_scalars
+        self.net = GATr(
+            in_mv_channels=2, out_mv_channels=1, hidden_mv_channels=mv_channels,
+            in_s_channels=1 + query_dim, out_s_channels=out_scalars, hidden_s_channels=s_channels,
+            attention={"num_heads": num_heads}, mlp={}, num_blocks=num_blocks,
+        )
+        self.query = nn.Parameter(torch.randn(n_out, query_dim))
+        self.register_buffer("_vec_index", torch.tensor(_VECTOR), persistent=False)
+
+    @property
+    def width(self) -> int:
+        return 16 + self.out_scalars
+
+    def forward(self, points):                      # (B, N, 3)
+        from gatr.interface import embed_point
+        b, n, _ = points.shape
+        mv = points.new_zeros(b, n + self.n_out, 2, 16)
+        mv[:, :n, 0] = embed_point(points)
+        mv[:, :n, 1, self._vec_index] = points
+        scalars = points.new_zeros(b, n + self.n_out, self.query.shape[1] + 1)
+        scalars[:, :n, 0] = points.norm(dim=-1)
+        scalars[:, n:, 1:] = self.query.to(points.dtype)
+        out_mv, out_s = self.net(mv, scalars=scalars)
+        return torch.cat([out_mv[:, n:, 0], out_s[:, n:]], dim=-1)
 
 
 class GATrConditionHead(nn.Module):
