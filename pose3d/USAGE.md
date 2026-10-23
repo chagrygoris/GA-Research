@@ -111,7 +111,7 @@ poetry run python -m pose3d --path_to_datasets ... --run_name i2s_symsol1_10pct_
   --i2s_eval_rec_level 5
 ```
 
-`notebooks/i2s-symsol-runner.ipynb` runs it on Kaggle (and the same model under the AdamW / cosine schedule
+`notebooks/i2s-symsol-runner.ipynb` runs it on Kaggle (one process, `--no-ddp`: two DDP ranks each holding the 7 GB of decoded images exceed a T4 x2 kernel's RAM) (and the same model under the AdamW / cosine schedule
 of the `symsol1_10pct_*_i2s_adamw` flow runs), online from a clone of the branch or offline from a repo
 snapshot; attach `syfry5suvzovvakmuj/symsol1-10pct-fulltest`. For reference, Image2Sphere's Table 3 gives
 log-likelihoods only: 2.98 on SYMSOL I with 10k views per shape, 3.41 with the full public set (50k); it
