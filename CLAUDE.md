@@ -22,3 +22,10 @@ Two types of GPU are available in our pool:
 * **Never introduce a new entity without explaining what it is.** This applies to code
   (modules, classes, flags, config options), reports and documentation alike.
 * **When writing mathematical formulas, define every symbol before it is used.**
+
+## 3. Monitoring launched operations
+
+After launching an operation, set up regular monitoring of it:
+
+* **Every 15 minutes at the beginning**, to make sure the process actually started.
+* **Then every 1 hour** for runs with a large ETA.
