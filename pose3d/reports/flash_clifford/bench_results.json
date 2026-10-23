@@ -1,0 +1,679 @@
+{
+ "run2": {
+  "env": {
+   "torch": "2.10.0+cu128",
+   "cuda": "12.8",
+   "triton": "3.6.0",
+   "device": "NVIDIA RTX PRO 6000 Blackwell Server Edition",
+   "capability": [
+    12,
+    0
+   ],
+   "tf32_matmul": false,
+   "tf32_cudnn": true
+  },
+  "hbm_copy_GBps": 1441.9,
+  "correctness": {
+   "flat": {
+    "fwd_max_abs": 3.814697265625e-06,
+    "ref_max": 23.747051239013672,
+    "gx_max_abs": 5.7220458984375e-06,
+    "gy_max_abs": 5.7220458984375e-06,
+    "grad_ref_max": 28.55597496032715
+   },
+   "chan": {
+    "fwd_max_abs": 3.814697265625e-06,
+    "ref_max": 24.682044982910156,
+    "gx_max_abs": 5.7220458984375e-06,
+    "gy_max_abs": 5.7220458984375e-06,
+    "grad_ref_max": 24.41629409790039
+   },
+   "bf16_rel_err": 0.012934000231325626
+  },
+  "correctness_ok": true,
+  "micro_train_vf": {
+   "gatr_einsum_eager": {
+    "fwd_ms": 0.5605,
+    "fwd_bwd_ms": 2.0627
+   },
+   "gatr_einsum_compiled": {
+    "fwd_ms": 0.5211,
+    "fwd_bwd_ms": 1.142
+   },
+   "flash_with_transposes": {
+    "fwd_ms": 0.063,
+    "fwd_bwd_ms": 0.114
+   },
+   "flash_chan8_with_transposes": {
+    "fwd_ms": 0.1031,
+    "fwd_bwd_ms": 0.2261
+   },
+   "flash_native_layout": {
+    "fwd_ms": 0.0435,
+    "fwd_bwd_ms": 0.0822
+   },
+   "hardcoded_torch_compiled_native": {
+    "fwd_ms": 0.0406,
+    "fwd_bwd_ms": 0.1845
+   },
+   "join_eager_fwd_ms": 0.5966,
+   "join_eager_fwd_bwd_ms": 2.1325,
+   "equilinear_8to8_fwd_ms": 0.1141,
+   "equilinear_8to8_fwd_bwd_ms": 0.3046
+  },
+  "micro_eval_epoch": {
+   "gatr_einsum_eager": {
+    "fwd_ms": 0.083,
+    "fwd_bwd_ms": 0.1937
+   },
+   "gatr_einsum_compiled": {
+    "fwd_ms": 0.0643,
+    "fwd_bwd_ms": 0.1054
+   },
+   "flash_with_transposes": {
+    "fwd_ms": 0.0197,
+    "fwd_bwd_ms": 0.0359
+   },
+   "flash_chan8_with_transposes": {
+    "fwd_ms": 0.0239,
+    "fwd_bwd_ms": 0.0484
+   },
+   "flash_native_layout": {
+    "fwd_ms": 0.0118,
+    "fwd_bwd_ms": 0.0206
+   },
+   "hardcoded_torch_compiled_native": {
+    "fwd_ms": 0.0126,
+    "fwd_bwd_ms": 0.0448
+   },
+   "join_eager_fwd_ms": 0.1086,
+   "join_eager_fwd_bwd_ms": 0.2303,
+   "equilinear_8to8_fwd_ms": 0.0642,
+   "equilinear_8to8_fwd_bwd_ms": 0.2503
+  },
+  "micro_eval_final": {
+   "gatr_einsum_eager": {
+    "fwd_ms": 2.0582,
+    "fwd_bwd_ms": 8.0321
+   },
+   "gatr_einsum_compiled": {
+    "fwd_ms": 1.9453,
+    "fwd_bwd_ms": 4.442
+   },
+   "flash_with_transposes": {
+    "fwd_ms": 0.4284,
+    "fwd_bwd_ms": 0.7943
+   },
+   "flash_chan8_with_transposes": {
+    "fwd_ms": 0.5291,
+    "fwd_bwd_ms": 1.0571
+   },
+   "flash_native_layout": {
+    "fwd_ms": 0.1577,
+    "fwd_bwd_ms": 0.3905
+   },
+   "hardcoded_torch_compiled_native": {
+    "fwd_ms": 0.1551,
+    "fwd_bwd_ms": 1.0004
+   },
+   "join_eager_fwd_ms": 2.122,
+   "join_eager_fwd_bwd_ms": 8.2198,
+   "equilinear_8to8_fwd_ms": 0.3464,
+   "equilinear_8to8_fwd_bwd_ms": 1.0921
+  },
+  "recipe": {
+   "vector_field": "gatr",
+   "condition_head": "clifford",
+   "batch": 64,
+   "n_time_samples": 8,
+   "ema": true,
+   "gatr": [
+    4,
+    8,
+    32,
+    4
+   ],
+   "eval_samples": 32,
+   "lr": 0.0001414213562373095
+  },
+  "params": {
+   "adapter": 42500160,
+   "condition_head": 1036048,
+   "vector_field": 97641
+  },
+  "vf_equivalence": {
+   "max_abs": 5.587935447692871e-09,
+   "ref_max": 0.02453935705125332
+  },
+  "train_breakdown": {
+   "step_ms": 175.38,
+   "backbone_cond_fwd_bwd_ms": 86.291,
+   "vf_fwd_bwd_ms": 82.283,
+   "opt_clip_ema_ms": 9.097,
+   "vf_gpu_busy_ms": 75.583,
+   "vf_kernels": 3287.0,
+   "step_gpu_busy_ms": 153.623,
+   "step_kernels": 6053.0
+  },
+  "vf_op_replay": {
+   "counts": {
+    "equilinear": 42,
+    "layernorm": 8,
+    "attention_core": 4,
+    "gated_gelu": 4,
+    "gp": 4,
+    "join": 4
+   },
+   "vf_fwd_ms": 14.666,
+   "fwd_ms": {
+    "equilinear": 5.285,
+    "layernorm": 2.2,
+    "attention_core": 3.18,
+    "gated_gelu": 0.4,
+    "gp": 2.191,
+    "join": 2.354
+   },
+   "fwd_bwd_ms": {
+    "equilinear": 44.146,
+    "layernorm": 10.999,
+    "attention_core": 15.158,
+    "gated_gelu": 1.926,
+    "gp": 8.469,
+    "join": 8.952
+   }
+  },
+  "train_variant_eager": {
+   "vf_fwd_bwd_ms": 83.768,
+   "step_ms": 180.311
+  },
+  "train_variant_flash_gp": {
+   "vf_fwd_bwd_ms": 76.448,
+   "step_ms": 171.735
+  },
+  "train_variant_eager_tf32": {
+   "vf_fwd_bwd_ms": 60.279,
+   "step_ms": 155.275
+  },
+  "train_variant_flash_gp_tf32": {
+   "vf_fwd_bwd_ms": 53.728,
+   "step_ms": 148.697
+  },
+  "train_variant_compiled_error": "TypeError: GATrVectorField does not support len()",
+  "train_variant_compiled_flash_gp_error": "TypeError: GATrVectorField does not support len()",
+  "train_variant_cudagraph_error": "AcceleratorError: CUDA error: operation failed due to a previous error during capture\nSearch for `cudaErrorStreamCaptureInvalidated' in https://docs.nvidia.com/cuda/cuda-runtime-api/group__CUDART__TYPES.html for more information.\nCUDA kernel errors might be asynchronously reported at some other API call, so the stacktrace below might be incorrect.\nFor debugging consider passing CUDA_LAUNCH_BLOCKING=1\nCompile with `TORCH_USE_CUDA_DSA` to enable device-side assertions.\n",
+  "train_variant_cudagraph_flash_gp_error": "AcceleratorError: CUDA error: operation failed due to a previous error during capture\nSearch for `cudaErrorStreamCaptureInvalidated' in https://docs.nvidia.com/cuda/cuda-runtime-api/group__CUDART__TYPES.html for more information.\nCUDA kernel errors might be asynchronously reported at some other API call, so the stacktrace below might be incorrect.\nFor debugging consider passing CUDA_LAUNCH_BLOCKING=1\nCompile with `TORCH_USE_CUDA_DSA` to enable device-side assertions.\n",
+  "train_variants": {
+   "eager": {
+    "vf_fwd_bwd_ms": 83.768,
+    "step_ms": 180.311
+   },
+   "flash_gp": {
+    "vf_fwd_bwd_ms": 76.448,
+    "step_ms": 171.735
+   },
+   "eager_tf32": {
+    "vf_fwd_bwd_ms": 60.279,
+    "step_ms": 155.275
+   },
+   "flash_gp_tf32": {
+    "vf_fwd_bwd_ms": 53.728,
+    "step_ms": 148.697
+   }
+  },
+  "infer_1_eager": {
+   "velocity_ms": 12.019,
+   "predict_ms": 224.83
+  },
+  "infer_1_flash_gp": {
+   "velocity_ms": 12.65,
+   "predict_ms": 236.68
+  },
+  "infer_1_eager_tf32": {
+   "velocity_ms": 11.851,
+   "predict_ms": 221.7
+  },
+  "infer_1_flash_gp_tf32": {
+   "velocity_ms": 12.459,
+   "predict_ms": 233.6
+  },
+  "infer_1_compiled_error": "BackendCompilerFailed: backend='inductor' raised:\nRuntimeError: Offset increment outside graph capture encountered unexpectedly.\n\nSet TORCHDYNAMO_VERBOSE=1 for the internal stack trace (please do this especially if you're reporting a bug to PyTorch). For even more developer context, set TORCH_LOGS=\"+dynamo\"\n",
+  "infer_1_compiled_flash_gp_error": "BackendCompilerFailed: backend='inductor' raised:\nRuntimeError: Offset increment outside graph capture encountered unexpectedly.\n\nSet TORCHDYNAMO_VERBOSE=1 for the internal stack trace (please do this especially if you're reporting a bug to PyTorch). For even more developer context, set TORCH_LOGS=\"+dynamo\"\n",
+  "infer_1_cudagraph_error": "AcceleratorError: CUDA error: operation failed due to a previous error during capture\nSearch for `cudaErrorStreamCaptureInvalidated' in https://docs.nvidia.com/cuda/cuda-runtime-api/group__CUDART__TYPES.html for more information.\nCUDA kernel errors might be asynchronously reported at some other API call, so the stacktrace below might be incorrect.\nFor debugging consider passing CUDA_LAUNCH_BLOCKING=1\nCompile with `TORCH_USE_CUDA_DSA` to enable device-side assertions.\n",
+  "infer_1_cudagraph_flash_gp_error": "AcceleratorError: CUDA error: operation failed due to a previous error during capture\nSearch for `cudaErrorStreamCaptureInvalidated' in https://docs.nvidia.com/cuda/cuda-runtime-api/group__CUDART__TYPES.html for more information.\nCUDA kernel errors might be asynchronously reported at some other API call, so the stacktrace below might be incorrect.\nFor debugging consider passing CUDA_LAUNCH_BLOCKING=1\nCompile with `TORCH_USE_CUDA_DSA` to enable device-side assertions.\n",
+  "infer_32_eager": {
+   "velocity_ms": 56.969,
+   "predict_ms": 1166.68
+  },
+  "infer_32_flash_gp": {
+   "velocity_ms": 50.531,
+   "predict_ms": 1037.27
+  },
+  "infer_32_eager_tf32": {
+   "velocity_ms": 54.034,
+   "predict_ms": 1108.36
+  },
+  "infer_32_flash_gp_tf32": {
+   "velocity_ms": 48.561,
+   "predict_ms": 997.1
+  },
+  "infer_32_compiled_error": "BackendCompilerFailed: backend='inductor' raised:\nRuntimeError: Offset increment outside graph capture encountered unexpectedly.\n\nSet TORCHDYNAMO_VERBOSE=1 for the internal stack trace (please do this especially if you're reporting a bug to PyTorch). For even more developer context, set TORCH_LOGS=\"+dynamo\"\n",
+  "infer_32_compiled_flash_gp_error": "BackendCompilerFailed: backend='inductor' raised:\nRuntimeError: Offset increment outside graph capture encountered unexpectedly.\n\nSet TORCHDYNAMO_VERBOSE=1 for the internal stack trace (please do this especially if you're reporting a bug to PyTorch). For even more developer context, set TORCH_LOGS=\"+dynamo\"\n",
+  "infer_32_cudagraph_error": "AcceleratorError: CUDA error: operation failed due to a previous error during capture\nSearch for `cudaErrorStreamCaptureInvalidated' in https://docs.nvidia.com/cuda/cuda-runtime-api/group__CUDART__TYPES.html for more information.\nCUDA kernel errors might be asynchronously reported at some other API call, so the stacktrace below might be incorrect.\nFor debugging consider passing CUDA_LAUNCH_BLOCKING=1\nCompile with `TORCH_USE_CUDA_DSA` to enable device-side assertions.\n",
+  "infer_32_cudagraph_flash_gp_error": "AcceleratorError: CUDA error: operation failed due to a previous error during capture\nSearch for `cudaErrorStreamCaptureInvalidated' in https://docs.nvidia.com/cuda/cuda-runtime-api/group__CUDART__TYPES.html for more information.\nCUDA kernel errors might be asynchronously reported at some other API call, so the stacktrace below might be incorrect.\nFor debugging consider passing CUDA_LAUNCH_BLOCKING=1\nCompile with `TORCH_USE_CUDA_DSA` to enable device-side assertions.\n",
+  "infer_variants": {
+   "backbone_cond_ms": 29.876,
+   "samples_1": {
+    "eager": {
+     "velocity_ms": 12.019,
+     "predict_ms": 224.83
+    },
+    "flash_gp": {
+     "velocity_ms": 12.65,
+     "predict_ms": 236.68
+    },
+    "eager_tf32": {
+     "velocity_ms": 11.851,
+     "predict_ms": 221.7
+    },
+    "flash_gp_tf32": {
+     "velocity_ms": 12.459,
+     "predict_ms": 233.6
+    },
+    "velocity_gpu_busy_ms": 2.667932666666671,
+    "velocity_kernels": 823.3333333333334
+   },
+   "samples_32": {
+    "eager": {
+     "velocity_ms": 56.969,
+     "predict_ms": 1166.68
+    },
+    "flash_gp": {
+     "velocity_ms": 50.531,
+     "predict_ms": 1037.27
+    },
+    "eager_tf32": {
+     "velocity_ms": 54.034,
+     "predict_ms": 1108.36
+    },
+    "flash_gp_tf32": {
+     "velocity_ms": 48.561,
+     "predict_ms": 997.1
+    },
+    "velocity_gpu_busy_ms": 54.33937666666663,
+    "velocity_kernels": 876.0
+   }
+  }
+ },
+ "run3": {
+  "equiv/flash": {
+   "out_max_abs": 9.313225746154785e-10,
+   "out_scale": 0.012858564965426922,
+   "worst_rel_err_over_out_and_all_grads": 0.14566126465797424
+  },
+  "equiv/dense": {
+   "out_max_abs": 9.313225746154785e-10,
+   "out_scale": 0.012858564965426922,
+   "worst_rel_err_over_out_and_all_grads": 0.34816592931747437
+  },
+  "equiv/fast": {
+   "out_max_abs": 9.313225746154785e-10,
+   "out_scale": 0.012858564965426922,
+   "worst_rel_err_over_out_and_all_grads": 0.24868996441364288
+  },
+  "train/eager": {
+   "vf_fwd_bwd_ms": 84.304,
+   "step_ms": 180.023,
+   "vf_gpu_busy_ms": 77.448,
+   "vf_kernels": 3287
+  },
+  "train/eager_tf32": {
+   "vf_fwd_bwd_ms": 61.187,
+   "step_ms": 157.007
+  },
+  "train/flash": {
+   "vf_fwd_bwd_ms": 76.726,
+   "step_ms": 173.667,
+   "vf_gpu_busy_ms": 67.65,
+   "vf_kernels": 3279
+  },
+  "train/flash_tf32": {
+   "vf_fwd_bwd_ms": 54.097,
+   "step_ms": 150.6
+  },
+  "train/dense": {
+   "vf_fwd_bwd_ms": 68.426,
+   "step_ms": 164.38,
+   "vf_gpu_busy_ms": 61.133,
+   "vf_kernels": 3124
+  },
+  "train/dense_tf32": {
+   "vf_fwd_bwd_ms": 58.978,
+   "step_ms": 155.364
+  },
+  "train/fast": {
+   "vf_fwd_bwd_ms": 61.989,
+   "step_ms": 158.327,
+   "vf_gpu_busy_ms": 53.633,
+   "vf_kernels": 3124
+  },
+  "train/fast_tf32": {
+   "vf_fwd_bwd_ms": 51.994,
+   "step_ms": 146.99
+  },
+  "train/fast_bf16_autocast_step": {
+   "step_ms": 115.756
+  },
+  "train/backbone_cond_fwd_bwd_ms": 88.975,
+  "train/op_replay_fast": {
+   "attention_core_fwd": 3.148,
+   "attention_core_fwd_bwd": 15.155,
+   "equilinear_fwd": 6.582,
+   "equilinear_fwd_bwd": 23.816,
+   "gated_gelu_fwd": 0.401,
+   "gated_gelu_fwd_bwd": 1.919,
+   "gp_fwd": 0.339,
+   "gp_fwd_bwd": 0.72,
+   "join_fwd": 2.343,
+   "join_fwd_bwd": 8.956,
+   "layernorm_fwd": 2.208,
+   "layernorm_fwd_bwd": 11.138
+  },
+  "infer/backbone_cond_ms": 29.463,
+  "infer/ns1_eager": {
+   "velocity_ms": 9.638,
+   "predict_ms": 181.969,
+   "velocity_gpu_busy_ms": 2.706,
+   "velocity_kernels": 825
+  },
+  "infer/ns1_eager_tf32": {
+   "velocity_ms": 10.926,
+   "predict_ms": 208.521
+  },
+  "infer/ns1_flash": {
+   "velocity_ms": 11.84,
+   "predict_ms": 223.267,
+   "velocity_gpu_busy_ms": 2.528,
+   "velocity_kernels": 829
+  },
+  "infer/ns1_flash_tf32": {
+   "velocity_ms": 11.778,
+   "predict_ms": 221.991
+  },
+  "infer/ns1_dense": {
+   "velocity_ms": 11.375,
+   "predict_ms": 218.083,
+   "velocity_gpu_busy_ms": 2.973,
+   "velocity_kernels": 842
+  },
+  "infer/ns1_dense_tf32": {
+   "velocity_ms": 11.231,
+   "predict_ms": 216.389
+  },
+  "infer/ns1_fast": {
+   "velocity_ms": 11.893,
+   "predict_ms": 228.647,
+   "velocity_gpu_busy_ms": 2.795,
+   "velocity_kernels": 846
+  },
+  "infer/ns1_fast_tf32": {
+   "velocity_ms": 11.786,
+   "predict_ms": 227.107
+  },
+  "infer/ns1_fast_frozen": {
+   "velocity_ms": 6.992,
+   "predict_ms": 157.296,
+   "velocity_gpu_busy_ms": 2.296,
+   "velocity_kernels": 438
+  },
+  "infer/ns1_fast_frozen_tf32": {
+   "velocity_ms": 6.815,
+   "predict_ms": 152.841
+  },
+  "infer/ns32_eager": {
+   "velocity_ms": 56.768,
+   "predict_ms": 1163.305,
+   "velocity_gpu_busy_ms": 54.395,
+   "velocity_kernels": 878
+  },
+  "infer/ns32_eager_tf32": {
+   "velocity_ms": 53.781,
+   "predict_ms": 1104.562
+  },
+  "infer/ns32_flash": {
+   "velocity_ms": 50.402,
+   "predict_ms": 1034.703,
+   "velocity_gpu_busy_ms": 47.956,
+   "velocity_kernels": 874
+  },
+  "infer/ns32_flash_tf32": {
+   "velocity_ms": 48.399,
+   "predict_ms": 995.189
+  },
+  "infer/ns32_dense": {
+   "velocity_ms": 58.304,
+   "predict_ms": 1195.824,
+   "velocity_gpu_busy_ms": 55.868,
+   "velocity_kernels": 957
+  },
+  "infer/ns32_dense_tf32": {
+   "velocity_ms": 51.585,
+   "predict_ms": 1059.882
+  },
+  "infer/ns32_fast": {
+   "velocity_ms": 51.897,
+   "predict_ms": 1066.773,
+   "velocity_gpu_busy_ms": 49.357,
+   "velocity_kernels": 951
+  },
+  "infer/ns32_fast_tf32": {
+   "velocity_ms": 46.055,
+   "predict_ms": 949.723
+  },
+  "infer/ns32_fast_frozen": {
+   "velocity_ms": 50.423,
+   "predict_ms": 1039.324,
+   "velocity_gpu_busy_ms": 48.847,
+   "velocity_kernels": 542
+  },
+  "infer/ns32_fast_frozen_tf32": {
+   "velocity_ms": 44.635,
+   "predict_ms": 923.036
+  },
+  "compile_eager/eager_train": {
+   "compile_s": 27.2,
+   "vf_fwd_bwd_ms": 56.89,
+   "step_ms": 150.685
+  },
+  "compile_eager/eager_ns1": {
+   "compile_s": 14.1,
+   "velocity_ms": 6.146,
+   "predict_ms": 129.291
+  },
+  "compile_eager/eager_ns32": {
+   "compile_s": 10.7,
+   "velocity_ms": 48.419,
+   "predict_ms": 1031.333
+  },
+  "compile_fast/fast_train_error": "InternalTorchDynamoError: ModuleNotFoundError: No module named 'fc_p3m0n1'",
+  "compile_fast/fast_infer_error": "InternalTorchDynamoError: ModuleNotFoundError: No module named 'fc_p3m0n1'",
+  "graph_infer_eager/sanity_capture_ok": true,
+  "graph_infer_eager/eager_thread_local_error": "AcceleratorError: CUDA error: operation failed due to a previous error during capture\nSearch for `cudaErrorStreamCaptureInvalidated' in https://docs.nvidia.com/cuda/cuda-runtime-api/group__CUDART__TYPES.html for more information.\nCUDA kernel errors might be asynchronously reported at some other API call, so the stacktrace below might be incorrect.\nFor debugging consider passing CUDA_LAUNCH_BLOCKING=1\nCompile with `TORCH_USE_CUDA_DSA` to enable device-side assertions.\n",
+  "graph_infer_eager/eager_relaxed_error": "AcceleratorError: CUDA error: operation failed due to a previous error during capture\nSearch for `cudaErrorStreamCaptureInvalidated' in https://docs.nvidia.com/cuda/cuda-runtime-api/group__CUDART__TYPES.html for more information.\nCUDA kernel errors might be asynchronously reported at some other API call, so the stacktrace below might be incorrect.\nFor debugging consider passing CUDA_LAUNCH_BLOCKING=1\nCompile with `TORCH_USE_CUDA_DSA` to enable device-side assertions.\n",
+  "graph_infer_fast/sanity_capture_ok": true,
+  "graph_infer_fast/fast_thread_local_error": "AcceleratorError: CUDA error: operation failed due to a previous error during capture\nSearch for `cudaErrorStreamCaptureInvalidated' in https://docs.nvidia.com/cuda/cuda-runtime-api/group__CUDART__TYPES.html for more information.\nCUDA kernel errors might be asynchronously reported at some other API call, so the stacktrace below might be incorrect.\nFor debugging consider passing CUDA_LAUNCH_BLOCKING=1\nCompile with `TORCH_USE_CUDA_DSA` to enable device-side assertions.\n",
+  "graph_infer_fast/fast_relaxed_error": "AcceleratorError: CUDA error: operation failed due to a previous error during capture\nSearch for `cudaErrorStreamCaptureInvalidated' in https://docs.nvidia.com/cuda/cuda-runtime-api/group__CUDART__TYPES.html for more information.\nCUDA kernel errors might be asynchronously reported at some other API call, so the stacktrace below might be incorrect.\nFor debugging consider passing CUDA_LAUNCH_BLOCKING=1\nCompile with `TORCH_USE_CUDA_DSA` to enable device-side assertions.\n",
+  "graph_train_eager/eager_error": "AcceleratorError: CUDA error: operation failed due to a previous error during capture\nSearch for `cudaErrorStreamCaptureInvalidated' in https://docs.nvidia.com/cuda/cuda-runtime-api/group__CUDART__TYPES.html for more information.\nCUDA kernel errors might be asynchronously reported at some other API call, so the stacktrace below might be incorrect.\nFor debugging consider passing CUDA_LAUNCH_BLOCKING=1\nCompile with `TORCH_USE_CUDA_DSA` to enable device-side assertions.\n",
+  "graph_train_fast/fast_error": "AcceleratorError: CUDA error: operation failed due to a previous error during capture\nSearch for `cudaErrorStreamCaptureInvalidated' in https://docs.nvidia.com/cuda/cuda-runtime-api/group__CUDART__TYPES.html for more information.\nCUDA kernel errors might be asynchronously reported at some other API call, so the stacktrace below might be incorrect.\nFor debugging consider passing CUDA_LAUNCH_BLOCKING=1\nCompile with `TORCH_USE_CUDA_DSA` to enable device-side assertions.\n"
+ },
+ "run4": {
+  "compile_fast/fast_train": {
+   "compile_s": 35.6,
+   "vf_fwd_bwd_ms": 38.055,
+   "step_ms": 132.386
+  },
+  "compile_fast/fast_ns1": {
+   "compile_s": 21.8,
+   "velocity_ms": 5.912,
+   "predict_ms": 121.538
+  },
+  "compile_fast/fast_ns32": {
+   "compile_s": 10.5,
+   "velocity_ms": 39.217,
+   "predict_ms": 972.404
+  },
+  "constfix_infer/ns1_eager": {
+   "velocity_ms": 9.566,
+   "predict_ms": 182.024,
+   "velocity_gpu_busy_ms": 2.709,
+   "velocity_kernels": 817
+  },
+  "constfix_infer/ns1_fast_frozen": {
+   "velocity_ms": 6.939,
+   "predict_ms": 157.04,
+   "velocity_gpu_busy_ms": 2.301,
+   "velocity_kernels": 430
+  },
+  "constfix_infer/ns32_eager": {
+   "velocity_ms": 56.731,
+   "predict_ms": 1164.617,
+   "velocity_gpu_busy_ms": 54.532,
+   "velocity_kernels": 871
+  },
+  "constfix_infer/ns32_fast_frozen": {
+   "velocity_ms": 50.425,
+   "predict_ms": 1042.623,
+   "velocity_gpu_busy_ms": 48.983,
+   "velocity_kernels": 537
+  },
+  "graph_infer_eager/eager_ns1_error": "AcceleratorError: CUDA error: operation failed due to a previous error during capture\nSearch for `cudaErrorStreamCaptureInvalidated' in https://docs.nvidia.com/cuda/cuda-runtime-api/group__CUDART__TYPES.html for more information.\nCUDA kernel errors might be asynchronously reported at some other API call, so the stacktrace below might be incorrect.\nFor debugging consider passing CUDA_LAUNCH_BLOCKING=1\nCompile with `TORCH_USE_CUDA_DSA` to enable device-side assertions.\n",
+  "graph_infer_eager/eager_ns32_error": "AcceleratorError: CUDA error: operation failed due to a previous error during capture\nSearch for `cudaErrorStreamCaptureInvalidated' in https://docs.nvidia.com/cuda/cuda-runtime-api/group__CUDART__TYPES.html for more information.\nCUDA kernel errors might be asynchronously reported at some other API call, so the stacktrace below might be incorrect.\nFor debugging consider passing CUDA_LAUNCH_BLOCKING=1\nCompile with `TORCH_USE_CUDA_DSA` to enable device-side assertions.\n",
+  "graph_infer_fast/fast_ns1_error": "AcceleratorError: CUDA error: operation failed due to a previous error during capture\nSearch for `cudaErrorStreamCaptureInvalidated' in https://docs.nvidia.com/cuda/cuda-runtime-api/group__CUDART__TYPES.html for more information.\nCUDA kernel errors might be asynchronously reported at some other API call, so the stacktrace below might be incorrect.\nFor debugging consider passing CUDA_LAUNCH_BLOCKING=1\nCompile with `TORCH_USE_CUDA_DSA` to enable device-side assertions.\n",
+  "graph_infer_fast/fast_ns32_error": "AcceleratorError: CUDA error: operation failed due to a previous error during capture\nSearch for `cudaErrorStreamCaptureInvalidated' in https://docs.nvidia.com/cuda/cuda-runtime-api/group__CUDART__TYPES.html for more information.\nCUDA kernel errors might be asynchronously reported at some other API call, so the stacktrace below might be incorrect.\nFor debugging consider passing CUDA_LAUNCH_BLOCKING=1\nCompile with `TORCH_USE_CUDA_DSA` to enable device-side assertions.\n",
+  "graph_infer_fast_frozen/fast_frozen_ns1_error": "AcceleratorError: CUDA error: operation failed due to a previous error during capture\nSearch for `cudaErrorStreamCaptureInvalidated' in https://docs.nvidia.com/cuda/cuda-runtime-api/group__CUDART__TYPES.html for more information.\nCUDA kernel errors might be asynchronously reported at some other API call, so the stacktrace below might be incorrect.\nFor debugging consider passing CUDA_LAUNCH_BLOCKING=1\nCompile with `TORCH_USE_CUDA_DSA` to enable device-side assertions.\n",
+  "graph_infer_fast_frozen/fast_frozen_ns32_error": "AcceleratorError: CUDA error: operation failed due to a previous error during capture\nSearch for `cudaErrorStreamCaptureInvalidated' in https://docs.nvidia.com/cuda/cuda-runtime-api/group__CUDART__TYPES.html for more information.\nCUDA kernel errors might be asynchronously reported at some other API call, so the stacktrace below might be incorrect.\nFor debugging consider passing CUDA_LAUNCH_BLOCKING=1\nCompile with `TORCH_USE_CUDA_DSA` to enable device-side assertions.\n",
+  "graph_train_eager/eager_error": "AcceleratorError: CUDA error: operation failed due to a previous error during capture\nSearch for `cudaErrorStreamCaptureInvalidated' in https://docs.nvidia.com/cuda/cuda-runtime-api/group__CUDART__TYPES.html for more information.\nCUDA kernel errors might be asynchronously reported at some other API call, so the stacktrace below might be incorrect.\nFor debugging consider passing CUDA_LAUNCH_BLOCKING=1\nCompile with `TORCH_USE_CUDA_DSA` to enable device-side assertions.\n",
+  "graph_train_fast/fast_error": "AcceleratorError: CUDA error: operation failed due to a previous error during capture\nSearch for `cudaErrorStreamCaptureInvalidated' in https://docs.nvidia.com/cuda/cuda-runtime-api/group__CUDART__TYPES.html for more information.\nCUDA kernel errors might be asynchronously reported at some other API call, so the stacktrace below might be incorrect.\nFor debugging consider passing CUDA_LAUNCH_BLOCKING=1\nCompile with `TORCH_USE_CUDA_DSA` to enable device-side assertions.\n",
+  "compile_ro_eager/eager_ns1": {
+   "compile_s": 15.7,
+   "velocity_ms": 390.817,
+   "predict_ms": 6937.281
+  },
+  "compile_ro_eager/eager_ns32": {
+   "compile_s": 15.4,
+   "velocity_ms": 505.8,
+   "predict_ms": 12871.921
+  },
+  "compile_ro_fast/fast_ns1": {
+   "compile_s": 16.8,
+   "velocity_ms": 146.733,
+   "predict_ms": 4854.95
+  },
+  "compile_ro_fast/fast_ns32": {
+   "compile_s": 18.1,
+   "velocity_ms": 378.908,
+   "predict_ms": 9779.777
+  }
+ },
+ "run5": {
+  "patch_graphsafe/replacements": {
+   "layers/mlp/nonlinearities.py:multivectors[..., [0]]": 1,
+   "primitives/attention.py:tri[..., [3]]": 1,
+   "primitives/dual.py:reference[..., [14]]": 2,
+   "primitives/invariants.py:x[..., [0]]": 1
+  },
+  "constfix_infer/ns1_eager": {
+   "velocity_ms": 8.85,
+   "predict_ms": 169.463,
+   "velocity_gpu_busy_ms": 2.82,
+   "velocity_kernels": 769
+  },
+  "constfix_infer/ns1_fast_frozen": {
+   "velocity_ms": 5.928,
+   "predict_ms": 137.669,
+   "velocity_gpu_busy_ms": 2.38,
+   "velocity_kernels": 382
+  },
+  "constfix_infer/ns32_eager": {
+   "velocity_ms": 55.89,
+   "predict_ms": 1150.856,
+   "velocity_gpu_busy_ms": 54.422,
+   "velocity_kernels": 823
+  },
+  "constfix_infer/ns32_fast_frozen": {
+   "velocity_ms": 49.356,
+   "predict_ms": 1028.15,
+   "velocity_gpu_busy_ms": 48.815,
+   "velocity_kernels": 489
+  },
+  "graphsafe_train/eager": {
+   "vf_fwd_bwd_ms": 78.078,
+   "step_ms": 172.797
+  },
+  "graphsafe_train/fast": {
+   "vf_fwd_bwd_ms": 56.316,
+   "step_ms": 149.727
+  },
+  "graph_infer_eager/eager_ns1": {
+   "max_abs_vs_eager": 0.0,
+   "velocity_ms": 2.738,
+   "predict_ms": 89.361
+  },
+  "graph_infer_eager/eager_ns1_tf32": {
+   "velocity_ms": 2.094,
+   "predict_ms": 76.322
+  },
+  "graph_infer_eager/eager_ns32": {
+   "max_abs_vs_eager": 0.0,
+   "velocity_ms": 53.9,
+   "predict_ms": 1113.348
+  },
+  "graph_infer_eager/eager_ns32_tf32": {
+   "velocity_ms": 51.028,
+   "predict_ms": 1055.724
+  },
+  "graph_infer_fast/fast_ns1": {
+   "max_abs_vs_eager": 0.0,
+   "velocity_ms": 2.797,
+   "predict_ms": 90.709
+  },
+  "graph_infer_fast/fast_ns1_tf32": {
+   "velocity_ms": 1.968,
+   "predict_ms": 73.869
+  },
+  "graph_infer_fast/fast_ns32": {
+   "max_abs_vs_eager": 0.0,
+   "velocity_ms": 49.205,
+   "predict_ms": 1019.497
+  },
+  "graph_infer_fast/fast_ns32_tf32": {
+   "velocity_ms": 43.285,
+   "predict_ms": 900.987
+  },
+  "graph_infer_fast_frozen/fast_frozen_ns1": {
+   "max_abs_vs_eager": 9.628012776374817e-06,
+   "velocity_ms": 2.246,
+   "predict_ms": 79.981
+  },
+  "graph_infer_fast_frozen/fast_frozen_ns1_tf32": {
+   "velocity_ms": 1.419,
+   "predict_ms": 62.651
+  },
+  "graph_infer_fast_frozen/fast_frozen_ns32": {
+   "max_abs_vs_eager": 6.333738565444946e-05,
+   "velocity_ms": 48.473,
+   "predict_ms": 1004.729
+  },
+  "graph_infer_fast_frozen/fast_frozen_ns32_tf32": {
+   "velocity_ms": 42.614,
+   "predict_ms": 887.312
+  },
+  "graph_train_eager/eager": {
+   "vf_fwd_bwd_ms": 75.27,
+   "step_ms": 167.925
+  },
+  "graph_train_fast/fast": {
+   "vf_fwd_bwd_ms": 51.827,
+   "step_ms": 145.706
+  }
+ }
+}

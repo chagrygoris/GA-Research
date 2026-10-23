@@ -27,7 +27,7 @@ runner notebook) so `pip` does not replace torch.
 ## Run
 
 Run from the `pose3d/` folder. The defaults are the reference recipe (8.95° on Pascal3D+, see
-`pose3d/config.py`). It needs the GATr package (below) and trains on Image2Sphere's data, read from
+`pose3d/config.py`), with the speed options of the GATr section on. It needs the GATr package (below) and trains on Image2Sphere's data, read from
 the Kaggle dataset `syfry5suvzovvakmuj/pascal3d-synth-pack` when it is mounted:
 
 ```bash
@@ -74,6 +74,56 @@ poetry run python -m pose3d --path_to_datasets ... --vector_field clifford     #
 Install GATr with `--no-deps`: its `setup.py` pins `numpy<1.25` and `xformers`, which would replace
 the preinstalled torch. `xformers` is only needed for attention masks, which the flow never passes,
 so a stub stands in when it is missing.
+
+Three speed options are on by default. The first two compute the same function with the same
+weights, so checkpoints load either way:
+
+- `--gatr_dense_linear` runs every GATr `EquiLinear` as one dense matmul. GATr's own einsum over the
+  9 basis maps has a slow backward.
+- `--gatr_compile` runs the GATr modules, the EMA copy included, through `torch.compile`. It uses
+  compile-friendly versions of GATr's primitives from `models/gatr_fast_ops.py`: the products are
+  unrolled from GATr's own tables, and attention is no longer excluded from compilation. The
+  whole network traces as one graph. On a fresh machine, compilation takes about 5 minutes per
+  run: the first training steps, validation and the 32-sample final evaluation. A warm inductor
+  cache brings this down to well under a minute.
+
+`--backbone_bf16` runs only the ResNet backbone under bf16 autocast with channels_last. GATr and the
+CGENN head stay fp32. Unlike the two flags above, it changes the numerics; a full run of the recipe
+with it scores the same as without (the second table). GPUs without native bf16 (before sm_80, e.g.
+the T4) run the backbone in fp32 anyway.
+
+`--no-gatr_dense_linear`, `--no-gatr_compile` and `--no-backbone_bf16` turn them off;
+`--no-gatr_compile` skips the compilation for quick debugging.
+
+Measured on one RTX Pro 6000 with the trainer's own epoch and evaluation functions, batch 64,
+synthetic images. The evaluation columns are for 360 images.
+
+| options on | train step | 1-sample evaluation | 32-sample evaluation |
+|---|---|---|---|
+| none | 176 ms | 1.11 s | 6.54 s |
+| `gatr_dense_linear` | 160 ms | 1.14 s | 6.72 s |
+| `gatr_dense_linear`, `gatr_compile` | 120 ms | 0.51 s | 3.48 s |
+| all three (default) | 80 ms | 0.44 s | 3.41 s |
+
+Full 100-epoch runs of the default recipe on the same GPU, final 32-sample evaluation of the EMA
+weights:
+
+| options on | epoch | run | median | class-mean |
+|---|---|---|---|---|
+| none (reference, unseeded) | 215 s | 6.1 h | 7.85 deg | 8.95 deg |
+| `gatr_dense_linear`, `gatr_compile`; `--seed 1` | 148 s | 4.5 h | 7.83 deg | 9.20 deg |
+| all three (default); `--seed 1` | 103 s | 3.2 h | 7.88 deg | 9.28 deg |
+
+The two seeded runs agree within 0.1 deg. The class-mean gap to 8.95 is the same with and without
+bf16, and the first of them computes the reference's function, so the gap is most likely the seed:
+the class-mean is noisy (diningtable has 7 validation images).
+
+Details are in `reports/flash_clifford/`.
+
+```bash
+poetry run python -m pose3d --path_to_datasets ... --no-backbone_bf16   # exact fp32, still compiled
+poetry run python -m pose3d --path_to_datasets ... --no-gatr_dense_linear --no-gatr_compile --no-backbone_bf16  # as before
+```
 
 ## Flow-trajectory visualizations
 
