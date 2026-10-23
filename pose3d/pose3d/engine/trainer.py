@@ -234,8 +234,13 @@ def final_evaluation(model, val_loader, run, cfg, raw_model=None):
         # The SYMSOL metric (IPDF / Image2Sphere / Howell et al.): mean log-likelihood over each image's
         # equivalent poses, averaged per shape and then over shapes.
         d = cfg.data
-        ll, ll_cls = symsol_log_likelihood(model, val_loader, cfg.device, n_equivalents=d.symsol_ll_equivalents,
-                                           steps=d.symsol_ll_steps)
+        if hasattr(model, "grid_logits"):
+            # A distribution over Image2Sphere's grid (I2SReal): read off the histogram, as upstream does.
+            from pose3d.engine.grid_model_likelihood import grid_model_log_likelihood
+            ll, ll_cls = grid_model_log_likelihood(model, val_loader, cfg.device, n_equivalents=d.symsol_ll_equivalents)
+        else:
+            ll, ll_cls = symsol_log_likelihood(model, val_loader, cfg.device, n_equivalents=d.symsol_ll_equivalents,
+                                               steps=d.symsol_ll_steps)
         per_shape = {int(c): float(ll[ll_cls == c].mean()) for c in np.unique(ll_cls)}
         metrics["final_log_likelihood"] = float(np.mean(list(per_shape.values())))
         for c, v in per_shape.items():

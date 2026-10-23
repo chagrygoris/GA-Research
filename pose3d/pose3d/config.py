@@ -407,7 +407,9 @@ class I2SConfig:
     n_mv: int = 8
     ga_pool_hw: Tuple[int, int] = (28, 28)
     temperature: float = 1.0
-    # i2s_real: eval grid level (upstream's 5 needs a 4.3 GB Wigner matrix).
+    # i2s_real: SO(3) HEALPix level of the evaluation grid (argmax and SYMSOL log-likelihood). 3 is upstream's
+    # default (36,864 rotations, 7.5 deg); the paper evaluates on 5 (2.36M rotations, 1.875 deg), a 4.3 GB
+    # Wigner matrix that is built in chunks on the GPU, so it needs a card with room for it.
     i2s_eval_rec_level: int = 3
     # i2s_real: apply ImageNet normalisation to the [0, 1] inputs.
     i2s_normalize: bool = True

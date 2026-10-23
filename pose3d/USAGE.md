@@ -89,6 +89,34 @@ mounted Pascal3D+ (no image is decoded) and checked against the cache's ground-t
 Pascal3D+ is not mounted, or the check fails, macro metrics are skipped with a message and the
 run goes on. Other loaders pass the labels through as before.
 
+## SYMSOL and the Image2Sphere baseline
+
+`--dataset symsol` reads `symsol/{train,test}/rotations.npz + images/` under `--path_to_datasets`
+(datasets/symsol.py). Every test image carries all of its equivalent poses, so the rotation error is to the
+**nearest equivalent** (a cube has 24 right answers), and the final evaluation also reports the SYMSOL
+log-likelihood. `--symsol_train_views 4500` is the 10 % protocol of the `symsol1_10pct_*` runs (4,500 of
+45,000 views per shape); `--symsol_test_views` caps the test views per shape (default: all 5,000).
+
+The published Image2Sphere model is `--model i2s_real` (models/i2s_real.py, upstream's code under this
+harness). On SYMSOL it reports the same median rotation error as the flows plus upstream's grid
+log-likelihood (engine/grid_model_likelihood.py: `log(softmax(grid)[nearest cell] * N / pi^2)`, no cap). Its
+evaluation grid is built lazily on the GPU, so the paper's level-5 grid (2.36M rotations, a 4.3 GB Wigner
+matrix) is usable: `--i2s_eval_rec_level 5`. The paper's recipe on SYMSOL I with 10 % of the data:
+
+```bash
+poetry run python -m pose3d --path_to_datasets ... --run_name i2s_symsol1_10pct_sgd \
+  --model i2s_real --encoder resnet50 --dataset symsol --symsol_set 1 --symsol_train_views 4500 \
+  --no-use_warp --no-use_synth --no-ema --no-fixed_val_noise --batch_size 64 --n_epochs 40 \
+  --optimizer sgd --lr 1e-3 --lr_scaling none --lr_schedule step --lr_step_epochs 15 --warmup_epochs 0 \
+  --i2s_eval_rec_level 5
+```
+
+`notebooks/i2s-symsol-runner.ipynb` runs it on Kaggle (and the same model under the AdamW / cosine schedule
+of the `symsol1_10pct_*_i2s_adamw` flow runs), online from a clone of the branch or offline from a repo
+snapshot; attach `syfry5suvzovvakmuj/symsol1-10pct-fulltest`. For reference, Image2Sphere's Table 3 gives
+log-likelihoods only: 2.98 on SYMSOL I with 10k views per shape, 3.41 with the full public set (50k); it
+reports no rotation error on SYMSOL.
+
 ## Multi-GPU
 
 Training uses every visible GPU by default (torch DistributedDataParallel, `--ddp`). The run relaunches
