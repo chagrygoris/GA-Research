@@ -107,7 +107,7 @@ matrix) is usable: `--i2s_eval_rec_level 5`. The paper's recipe on SYMSOL I with
 poetry run python -m pose3d --path_to_datasets ... --run_name i2s_symsol1_10pct_sgd \
   --model i2s_real --encoder resnet50 --dataset symsol --symsol_set 1 --symsol_train_views 4500 \
   --no-use_warp --no-use_synth --no-ema --no-fixed_val_noise --batch_size 64 --n_epochs 40 \
-  --optimizer sgd --lr 1e-3 --lr_scaling none --lr_schedule step --lr_step_epochs 15 --warmup_epochs 0 \
+  --optimizer sgd --lr 1e-3 --lr_scaling none --lr_schedule step --lr_step_epochs 15 --warmup_epochs 0 --grad_clip 0 \
   --i2s_eval_rec_level 5
 ```
 
