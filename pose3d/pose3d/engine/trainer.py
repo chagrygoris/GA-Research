@@ -102,13 +102,15 @@ def train_epoch(model, loader, optimizer, criterion, cfg, step=None, ema=None):
         if scaler is not None:
             scaler.scale(loss).backward()
             scaler.unscale_(optimizer)
-            torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=1.0)
+            if cfg.train.grad_clip > 0:
+                torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=cfg.train.grad_clip)
 
             scaler.step(optimizer)
             scaler.update()
         else:
             loss.backward()
-            torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=1.0)
+            if cfg.train.grad_clip > 0:
+                torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=cfg.train.grad_clip)
             optimizer.step()
         if ema is not None:
             ema.update_parameters(model)

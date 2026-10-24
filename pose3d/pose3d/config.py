@@ -125,6 +125,9 @@ class TrainConfig:
     lr_schedule: Literal["cosine", "step"] = "cosine"
     lr_step_epochs: int = 15
     lr_step_gamma: float = 0.1
+    # Global gradient-norm clip; 0 turns it off. 1.0 is part of the flow recipes; Image2Sphere trains unclipped,
+    # and with SGD at lr 1e-3 the clip starves its updates (loss stuck near uniform after 40 epochs).
+    grad_clip: float = 1.0
 
 
 @dataclass
