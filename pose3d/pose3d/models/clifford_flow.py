@@ -104,6 +104,7 @@ class ImageToMultivectors(nn.Module):
         if cond_tokens in ("points", "pointsphere", "pointcloud", "pointgatrsphere"):
             # The input is a point cloud (B, N, 3), not an image: no backbone (datasets/modelnet_points.py).
             self.backbone, self.frozen_backbone, self.use_conv_adapter = nn.Identity(), False, False
+            self.bf16 = False   # nothing to run in bf16 without a backbone
             self.cond_tokens = cond_tokens
             if cond_tokens == "pointcloud":
                 # The raw cloud, for the GATr condition head (PointGATrEncoder) to compress.
