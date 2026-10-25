@@ -88,6 +88,15 @@ def rotation_error_with_projection(input, target):
     return err.cpu().numpy()
 
 
+def nearest_equivalent_error(pred, rots_eq, n_eq):
+    """Degrees from each prediction (B, 3, 3) to the nearest of its equivalent poses (B, K, 3, 3), the first
+    n_eq of which are valid (SYMSOL: a symmetric object has no single right answer)."""
+    cos = ((pred.unsqueeze(1).transpose(-1, -2) @ rots_eq).diagonal(dim1=-2, dim2=-1).sum(-1) - 1) / 2
+    err = torch.rad2deg(torch.arccos(cos.clamp(-1.0, 1.0)))
+    valid = torch.arange(rots_eq.shape[1], device=err.device)[None] < n_eq.to(err.device)[:, None]
+    return err.masked_fill(~valid, float("inf")).min(1).values.cpu().numpy()
+
+
 def _supports_class_argument(method) -> bool:
     # Only positional parameters can receive the class tensor; keyword-only
     # options such as n_samples must not be mistaken for one.
