@@ -7,8 +7,11 @@ Euler ODE integration with an optional multi-sample geodesic medoid.
 
 Experimental variants are all off by default and selected in `pose3d.config.Features`
 and `FlowConfig`: `adapter_grid`, `adapter_channels`, `conv_adapter`, `vector_field_hidden_dim`,
-`mlp_heads` and `fisher_prior`.
+`mlp_heads`, `fisher_prior` and `stf_track` (the two-tower model, see `StfCondition` below and
+pose3d/models/stf_track.py).
 """
+
+from typing import NamedTuple, Tuple
 
 import torch
 import torch.nn as nn
@@ -29,6 +32,28 @@ from pose3d.models.encoders import (
     is_dense_backbone,
 )
 from pose3d.models.ga_layers import TralaleroTralala
+from pose3d.models.stf_track import StfTower, stf_feature_blocks, stf_invariants
+
+
+class StfCondition(NamedTuple):
+    """The condition of the two-tower model (`stf_track`): what the condition side hands the vector field.
+
+    `mv`: the (B, n_cond_mv, 8) condition multivectors, with the STF tower's feedback already added
+    to their grade-1 part. `stf`: the symmetric traceless tensors of ranks 2..stf_lmax, `stf[i]` of
+    shape (B, stf_channels, 3, ..., 3) with i + 2 index axes. Without `stf_track` the condition is
+    the plain multivector tensor, as before.
+    """
+
+    mv: torch.Tensor
+    stf: Tuple[torch.Tensor, ...]
+
+
+def _repeat_condition(cond, k):
+    """repeat_interleave(k, dim=0) on a condition, which is a tensor or an `StfCondition`."""
+    if isinstance(cond, StfCondition):
+        return StfCondition(cond.mv.repeat_interleave(k, dim=0),
+                            tuple(s.repeat_interleave(k, dim=0) for s in cond.stf))
+    return cond.repeat_interleave(k, dim=0)
 
 
 def _native_bf16(device):
@@ -180,8 +205,15 @@ class CliffordFlow(nn.Module):
                  condition_head: str = "clifford",
                  gatr: dict = None,
                  fisher_checkpoint: str = None,
-                 backbone_bf16: bool = False):
+                 backbone_bf16: bool = False,
+                 stf_track: bool = False,
+                 stf_lmax: int = 3,
+                 stf_channels: int = 8,
+                 stf_inject: str = "gram"):
         super().__init__()
+        if stf_track and (vector_field != "gatr" or mlp_heads or fisher_checkpoint):
+            raise ValueError("stf_track needs vector_field='gatr' and cannot be combined with "
+                             "mlp_heads or fisher_prior")
         if mlp_heads and fisher_checkpoint:
             raise ValueError("mlp_heads and fisher_prior cannot be combined")
         if vector_field not in ("clifford", "gatr"):
@@ -233,7 +265,8 @@ class CliffordFlow(nn.Module):
                 out_features=self.n_cond_mv)
         if vector_field == "gatr":
             from pose3d.models.gatr_denoiser import GATrVectorField
-            self.vector_field = GATrVectorField(self.n_cond_mv, **(gatr or {}))
+            stf_blocks = stf_feature_blocks(stf_lmax, stf_channels, stf_inject) if stf_track else None
+            self.vector_field = GATrVectorField(self.n_cond_mv, stf_blocks=stf_blocks, **(gatr or {}))
         else:
             self.vector_field = TralaleroTralala(
                 algebra, in_features=2 + self.n_cond_mv, hidden_dim=vf_hidden_dim, out_features=1)
@@ -258,10 +291,35 @@ class CliffordFlow(nn.Module):
             nn.init.zeros_(self.vector_field.out.weight)
             nn.init.zeros_(self.vector_field.out.linear_left.weight)
 
+        # The STF tower is built last so that, without stf_track, no parameter and no random draw
+        # of the reference model changes.
+        self.stf_tower = None
+        self.stf_inject = stf_inject
+        if stf_track:
+            # Vectors in: the grade-1 parts of the n_cond_mv condition multivectors. Invariant
+            # scalars for the gates: their grade-0 and grade-3 parts.
+            self.stf_tower = StfTower(self.n_cond_mv, lmax=stf_lmax, channels=stf_channels,
+                                      n_scalars=2 * self.n_cond_mv)
+
+    def _couple(self, cond_mv):
+        """The two-tower step on the condition side (identity without stf_track).
+
+        The grade-1 parts of the condition multivectors (vectors, l = 1) go into the STF tower, which
+        builds the l = 2..stf_lmax tensors from them; the tower's feedback vectors are added back
+        onto the grade-1 parts (CliffordSTF's downward cross-track coupling). Returns an
+        `StfCondition`.
+        """
+        if self.stf_tower is None:
+            return cond_mv
+        invariants = torch.cat([cond_mv[..., 0], cond_mv[..., 7]], dim=-1)   # grades 0 and 3
+        out = self.stf_tower(cond_mv[..., 1:4], invariants)
+        mv = torch.cat([cond_mv[..., :1], cond_mv[..., 1:4] + out.feedback, cond_mv[..., 4:]], dim=-1)
+        return StfCondition(mv, out.stf)
+
     def _features(self, img, cls):
         """Condition multivectors, plus the Fisher head's matrix A (None without a prior)."""
         if self.fisher_net is None:
-            return self.condition_head(self.adapter(img)), None
+            return self._couple(self.condition_head(self.adapter(img))), None
 
         latent = self.fisher_net.base(img)
         mv = self.fisher_proj(latent).reshape(-1, self._fisher_n_mv, 2**self.algebra.dim)
@@ -276,11 +334,21 @@ class CliffordFlow(nn.Module):
         cond_mv, _ = self._features(x, cls)
         return cond_mv
 
-    def velocity(self, rotor, t, cond_mv):
+    def velocity(self, rotor, t, cond):
+        """Bivector velocity at the rotor `rotor` (B, 4) and time `t` (B,) given the condition
+        `cond`: the (B, n_cond_mv, 8) multivectors, or an `StfCondition` with stf_track."""
+        cond_mv, stf = (cond.mv, cond.stf) if isinstance(cond, StfCondition) else (cond, None)
         rotor_mv = embed_rotor(rotor, self.algebra).unsqueeze(1)
         t_mv = self.algebra.embed(t.reshape(-1, 1), (0,)).unsqueeze(1)
         inp = torch.cat([rotor_mv, t_mv, cond_mv], dim=1)
-        out = self.vector_field(inp)[:, 0]
+        if stf is None:
+            out = self.vector_field(inp)[:, 0]
+        else:
+            # The condition tensors against the CURRENT rotor: invariants of (S_l, R_t), see
+            # stf_track.stf_invariants. They enter the vector field as extra scalars of the rotor token.
+            matrix = rotor_to_matrix(rotor, self.algebra)
+            feats = stf_invariants(stf, matrix, self.stf_inject)
+            out = self.vector_field(inp, stf_features=feats)[:, 0]
         return self.algebra.get_grade(out, 2)
 
     def forward(self, x, rotor, t, cls=None):
@@ -301,7 +369,7 @@ class CliffordFlow(nn.Module):
         if k > 1:
             # Both are interleaved the same way, so index i * k + j stays paired
             # with image i.
-            cond_mv = cond_mv.repeat_interleave(k, dim=0)
+            cond_mv = _repeat_condition(cond_mv, k)
             r1 = r1.repeat_interleave(k, dim=0)
             if fisher_a is not None:
                 fisher_a = fisher_a.repeat_interleave(k, dim=0)
@@ -347,7 +415,7 @@ class CliffordFlow(nn.Module):
 
         cond_mv, fisher_a = self._features(x, cls)
         if n_samples > 1:
-            cond_mv = cond_mv.repeat_interleave(n_samples, dim=0)
+            cond_mv = _repeat_condition(cond_mv, n_samples)
             if fisher_a is not None:
                 fisher_a = fisher_a.repeat_interleave(n_samples, dim=0)
 

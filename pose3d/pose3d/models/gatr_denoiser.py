@@ -181,16 +181,31 @@ class GATrVectorField(_Compilable):
     Token 0 carries the noisy rotor R_t, tokens 1.. the conditioning multivectors (token 1 is
     the time embedding, which the flow builds as a scalar multivector). Scalar channels tell the
     tokens apart: the time t, broadcast to every token, and a query flag that is 1 on token 0.
+
+    `stf_blocks` (None: off, the reference recipe) switches on the STF track's input
+    (pose3d/models/stf_track.py): the forward then takes `stf_features` (B, sum(stf_blocks)),
+    rotation-invariant numbers built from the current rotor and the condition's symmetric
+    traceless tensors. A learned `StfEmbed` maps them to `s_channels` more scalar channels, which
+    are written onto the rotor token only (zero on every other token), the way the query flag is.
+    This is how the velocity gets a dependence of degree l >= 2 on the rotor, which the
+    multivector tokens alone cannot express. The velocity read-out is unchanged.
     """
 
     def __init__(self, n_cond_mv: int, mv_channels: int = 8, s_channels: int = 32,
                  num_blocks: int = 4, num_heads: int = 4, dense_linear: bool = False,
-                 compile: bool = False):
+                 compile: bool = False, stf_blocks=None):
         super().__init__()
         GATr = _import_gatr()
+        self.stf_embed = None
+        self._n_scalars = 2   # t, the query flag, then (with the STF track) s_channels embedded invariants
+        if stf_blocks:
+            from pose3d.models.stf_track import StfEmbed
+            self.stf_embed = StfEmbed(tuple(stf_blocks), s_channels)
+            self._n_scalars += s_channels
         self.net = GATr(
             in_mv_channels=1, out_mv_channels=1, hidden_mv_channels=mv_channels,
-            in_s_channels=2, out_s_channels=None, hidden_s_channels=s_channels,
+            in_s_channels=self._n_scalars, out_s_channels=None,
+            hidden_s_channels=s_channels,
             attention={"num_heads": num_heads}, mlp={}, num_blocks=num_blocks,
         )
         self.register_buffer("_pga_index", torch.tensor(_PGA_INDEX), persistent=False)
@@ -200,13 +215,17 @@ class GATrVectorField(_Compilable):
             use_dense_linears(self.net)
         self._set_compiled(compile)
 
-    def forward(self, x):
+    def forward(self, x, stf_features=None):
         b, n, _ = x.shape
+        if (stf_features is None) != (self.stf_embed is None):
+            raise ValueError("stf_features must be given exactly when the vector field was built with stf_blocks")
         pga = x.new_zeros(b, n, 16)
         pga[..., self._pga_index] = x
-        scalars = x.new_zeros(b, n, 2)
+        scalars = x.new_zeros(b, n, self._n_scalars)
         scalars[..., 0] = x[:, 1, 0].unsqueeze(1)  # t: the scalar part of token 1
         scalars[:, 0, 1] = 1.0
+        if self.stf_embed is not None:
+            scalars[:, 0, 2:] = self.stf_embed(stf_features)
         out_mv, _ = self.net(pga.unsqueeze(2), scalars=scalars)  # (B, n, 1, 16)
         query = out_mv[:, 0, 0]  # (B, 16)
         result = x.new_zeros(b, 1, x.shape[-1])
