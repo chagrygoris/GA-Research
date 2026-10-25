@@ -1,0 +1,57 @@
+name: Literature sweep
+
+# Weekly sweep of arXiv, OpenReview, Crossref and INSPIRE-HEP for new Clifford / geometric-algebra
+# machine-learning papers. New candidates land in the inbox of literature/papers.yaml and are proposed in a
+# pull request; nothing is accepted automatically. See literature/README.md.
+
+on:
+  schedule:
+    - cron: "17 6 * * 1"   # Mondays 06:17 UTC; use "17 6 * * *" for a daily sweep
+  workflow_dispatch:
+    inputs:
+      since:
+        description: "Start of the window (YYYY-MM-DD). Default: last run minus 7 days."
+        required: false
+      until:
+        description: "End of the window (YYYY-MM-DD). Default: today."
+        required: false
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  sweep:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install pyyaml
+      - name: Run the sweep
+        working-directory: literature
+        run: |
+          ARGS=""
+          if [ -n "${{ inputs.since }}" ]; then ARGS="$ARGS --since ${{ inputs.since }}"; fi
+          if [ -n "${{ inputs.until }}" ]; then ARGS="$ARGS --until ${{ inputs.until }}"; fi
+          python -m ga_lit update $ARGS
+          python -m ga_lit validate || true
+          python -m ga_lit inbox --markdown > /tmp/inbox.md
+          echo "new_items=$(python -c 'import yaml;print(sum(1 for r in yaml.safe_load(open("papers.yaml")) if r.get("status")=="inbox"))')" >> "$GITHUB_OUTPUT"
+        id: sweep
+      - name: Open a pull request with the inbox
+        uses: peter-evans/create-pull-request@v7
+        with:
+          branch: literature/sweep
+          delete-branch: true
+          title: "Literature sweep: ${{ steps.sweep.outputs.new_items }} items in the inbox"
+          commit-message: "Literature sweep: update inbox and rendered views"
+          body-path: /tmp/inbox.md
+          labels: literature
+          add-paths: |
+            literature/papers.yaml
+            literature/state.yaml
+            literature/site/index.html
+            literature/catalog.md
