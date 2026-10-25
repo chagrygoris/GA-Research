@@ -167,6 +167,16 @@ snapshot; attach `syfry5suvzovvakmuj/symsol1-10pct-fulltest`. For reference, Ima
 log-likelihoods only: 2.98 on SYMSOL I with 10k views per shape, 3.41 with the full public set (50k); it
 reports no rotation error on SYMSOL.
 
+## Two-tower model: the STF tensor track
+
+`--stf_track` (off by default) adds a second feature track of symmetric traceless Cartesian tensors of ranks
+2..`--stf_lmax` (default 3, up to 6), `--stf_channels` (8) per rank, to `clifford_flow` with the GATr vector
+field. They carry the SO(3) degrees l >= 2 that multivectors cannot, are built from the grade-1 parts of the
+condition multivectors and reach the vector field as rotor-dependent invariant scalars (`--stf_inject gram|frame`).
+Design, tests, the SYMSOL protocol, run commands and the time estimates: `reports/symsol_stf/README.md`; runner:
+`notebooks/symsol-stf-runner.ipynb` (offline mode for the RTX kernels; the repo snapshot comes from
+`scripts/make_snapshot.py`).
+
 ## Multi-GPU
 
 Training uses every visible GPU by default (torch DistributedDataParallel, `--ddp`). The run relaunches
