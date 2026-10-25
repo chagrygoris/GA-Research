@@ -7,3 +7,4 @@ Setup and how to run: [`USAGE.md`](USAGE.md). Results: [`reports/`](reports/). R
 
 | Status | Idea | Description |
 |---|---|---|
+| done | Image2Sphere baseline on SYMSOL I (10 %) | `--model i2s_real` under the `symsol1_10pct_*` protocol: **3.2 deg** mean of per-shape nearest-equivalent medians (AdamW/cosine; 4.5 deg with the paper's SGD recipe), log-likelihood 3.48, against 19.9 deg / 3.24 for the best flow run. The paper itself gives no rotation error on SYMSOL. [report](reports/i2s_symsol1_10pct.md) |
