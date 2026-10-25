@@ -232,6 +232,10 @@ class DataConfig:
     points_test_rotations: int = 4   # modelnet10_points: fixed test poses per model (ModelNet10-SO(3): 4 views)
     points_repeats: int = 1          # modelnet10_points / symsol_points: draws (poses) per model per epoch
     points_fixed_train: bool = False  # symsol_points: a fixed training set (symsol_train_views clouds per shape)
+    # Score the SYMSOL log-likelihood at the end of a flow run. Off: the final evaluation reports only the
+    # rotation errors (acc@15 as the primary metric, the median error as the auxiliary one); the ODE
+    # likelihood of a flow is not the quantity the IPDF / Image2Sphere papers report, so it is not compared.
+    symsol_likelihood: bool = True
     symsol_ll_equivalents: int = 8
     symsol_ll_steps: int = 50
     # Flow each training R0 to the nearest of the image's equivalent poses instead of a random one. With a random

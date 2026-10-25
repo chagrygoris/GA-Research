@@ -167,6 +167,8 @@ def train(model, train_loader, val_loader, optimizer, scheduler, criterion, run,
             "train_loss": train_loss,
             "val_loss": val_loss,
             "median_rotation_error": mre,
+            "acc@15": acc_at(err, 15),   # the share of validation images within 15 deg (primary metric on SYMSOL)
+            "acc@30": acc_at(err, 30),
             "learning_rate": scheduler.get_last_lr()[0],
             "gradient_norm": grad_norm(model),
             "epoch_time": time.time() - t0,
@@ -180,7 +182,8 @@ def train(model, train_loader, val_loader, optimizer, scheduler, criterion, run,
             print(
                 f"Training on {cfg.device} epoch {i + 1} / {n_epochs}. \n"
                 f"Train loss {train_loss}, val loss {val_loss}\n"
-                f"Median rotation error {mre} ({time.time() - t0:.0f}s)"
+                f"Median rotation error {mre}, acc@15 {metrics['acc@15']:.4f}, acc@30 {metrics['acc@30']:.4f} "
+                f"({time.time() - t0:.0f}s)"
             )
             if macro is not None:
                 print(f"Class-mean median rotation error {macro['class_mean_median_error']}")
@@ -232,7 +235,7 @@ def final_evaluation(model, val_loader, run, cfg, raw_model=None):
         if macro_raw is not None:
             metrics["final_class_mean_median_error_raw"] = macro_raw["class_mean_median_error"]
 
-    if cfg.run.dataset in ("symsol", "symsol_points"):
+    if cfg.run.dataset in ("symsol", "symsol_points") and cfg.data.symsol_likelihood:
         # The SYMSOL metric (IPDF / Image2Sphere / Howell et al.): mean log-likelihood over each image's
         # equivalent poses, averaged per shape and then over shapes.
         d = cfg.data
