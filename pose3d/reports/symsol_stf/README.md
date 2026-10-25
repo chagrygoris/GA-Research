@@ -108,7 +108,7 @@ Flags (all in `FlowConfig`): `stf_track` (False), `stf_lmax` (3, allowed 2..6), 
   (20 train / 10 test images; the branch's `tests/test_symsol.py` generator) for the control and for
   `--stf_track --stf_lmax 6`: training epoch, nearest-equivalent evaluation, 2-sample final evaluation, per-shape
   table and SYMSOL log-likelihood all complete.
-* Whole test suite after merging the SYMSOL branch: 198 passed, 1 skipped, 1 pre-existing failure deselected
+* Whole test suite after merging the SYMSOL branch: 206 passed, 1 skipped, 1 pre-existing failure deselected
   (`tests/test_macro_metrics.py::test_metrics_record_eval_classes_without_giving_them_to_the_model`: a
   `SimpleNamespace` config without `features`; fails the same way on `main`).
 
