@@ -43,3 +43,14 @@ has a scalar input (nothing geometric to exploit), both of his models have 330k 
 - optimist1938's `gatr-frequency-probe` (GATr flow field regressing a velocity of pure pose frequency l) finds GATr stalls for l >= 4 on fixed data and l >= 3 on fresh samples without the 49 harmonics, and learns every l <= 8 with them.
 
 A rerun of Task 2 with GATr and 3 seeds, and a batched lr sweep of Task 1 (`spectral_ens.py`, 10 seeds, MLP / MLP 6x256 / CGENN), were still running when this was written.
+
+
+## Update: the lr sweep with 10 seeds (MLP, MLP 6x256, CGENN), the pose-dependent task
+
+* The batched sweep (3 learning rates x 10 seeds per model, 1,000 training points, 80,000 steps for the MLPs, 12,000 for CGENN) is in
+  `sphere_sweep_his_format.md`, in the layout of optimist1938's tables, and in `figures/spectral_bias/sphere_lr_sweep.png`,
+  `compare_optimist.png` (side by side with his line experiment) and `compare_heatmap_his_style.png`. Every model recovers all eight
+  degrees at every learning rate, low degrees first; CGENN needs 1.4 to 4 times more steps than the MLP of its size, so his result
+  (MLP fails at high k for lr 1e-4, CGENN does not) does not reproduce on the sphere. His CGENN is also three times deeper (3 blocks of 104,
+  331k parameters) than ours (one block of 84, 99k).
+* The pose-dependent task and the effect of the pose encoding, width and depth: `pose_encoding_symmetry.md`.
