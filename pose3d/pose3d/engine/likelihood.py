@@ -87,7 +87,19 @@ def _velocity_and_divergence(model, states, s, t, cond):
 
 @torch.no_grad()
 def flow_log_likelihood(model, cond, R, steps: int = 50, states=None):
-    """log p(R | condition) for poses R (n, 3, 3), cond already repeated to n rows."""
+    """log p(R | condition) for poses R (n, 3, 3), cond already repeated to n rows.
+
+    The divergence takes three autograd passes with retain_graph through the velocity. A torch.compiled
+    vector field (FlowConfig.gatr_compile) refuses that: its backward "was compiled with non-empty donated
+    buffers", which killed the first SYMSOL RTX runs at the final evaluation. So the whole integration runs
+    with torch.compile forced to eager (`torch.compiler.set_stance("force_eager")`): same function, same
+    weights, no compiled graph.
+    """
+    with torch.compiler.set_stance("force_eager"):
+        return _flow_log_likelihood(model, cond, R, steps=steps, states=states)
+
+
+def _flow_log_likelihood(model, cond, R, steps, states):
     states = flow_states(model) if states is None else states
     s = states.from_matrix(R)
     div_integral = torch.zeros(R.shape[0], device=R.device)

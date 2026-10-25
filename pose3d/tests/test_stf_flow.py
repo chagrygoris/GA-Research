@@ -231,3 +231,22 @@ def test_two_tower_model_runs_the_symsol_evaluation_and_likelihood(tmp_path):
     assert err.shape == (5,) and np.isfinite(err).all() and cls.tolist() == [0, 1, 2, 3, 4]
     ll, _ = symsol_log_likelihood(model, loader, "cpu", n_equivalents=2, steps=2)
     assert ll.shape == (5,) and np.isfinite(ll).all()
+
+
+def test_symsol_likelihood_runs_through_the_compiled_vector_field(tmp_path):
+    """The log-likelihood differentiates the velocity three times with retain_graph (the divergence); a
+    torch.compiled vector field refuses that ("compiled with non-empty donated buffers"), which killed the
+    first SYMSOL RTX runs at the final evaluation. The likelihood must run the compiled model eagerly."""
+    import numpy as np
+    from torch.utils.data import DataLoader
+
+    from test_symsol import _fake_symsol
+    from pose3d.datasets.symsol import Symsol
+    from pose3d.engine.likelihood import symsol_log_likelihood
+
+    loader = DataLoader(Symsol(_fake_symsol(str(tmp_path), n_views=1), train=False), batch_size=5)
+    model = flow(stf=False, gatr=dict(GATR, dense_linear=True, compile=True))
+    randomize_heads(model)
+    model.eval()
+    ll, _ = symsol_log_likelihood(model, loader, "cpu", n_equivalents=2, steps=2)
+    assert ll.shape == (5,) and np.isfinite(ll).all()

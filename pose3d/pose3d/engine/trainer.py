@@ -241,8 +241,14 @@ def final_evaluation(model, val_loader, run, cfg, raw_model=None):
             from pose3d.engine.grid_model_likelihood import grid_model_log_likelihood
             ll, ll_cls = grid_model_log_likelihood(model, val_loader, cfg.device, n_equivalents=d.symsol_ll_equivalents)
         else:
-            ll, ll_cls = symsol_log_likelihood(model, val_loader, cfg.device, n_equivalents=d.symsol_ll_equivalents,
-                                               steps=d.symsol_ll_steps)
+            try:
+                ll, ll_cls = symsol_log_likelihood(model, val_loader, cfg.device, n_equivalents=d.symsol_ll_equivalents,
+                                                   steps=d.symsol_ll_steps)
+            except Exception:   # the rotation errors above and the checkpoint must survive a likelihood failure
+                import traceback
+                traceback.print_exc()
+                print("SYMSOL log-likelihood failed (see the traceback above); final_log_likelihood is NaN")
+                ll, ll_cls = np.full(1, np.nan), np.zeros(1, dtype=int)
         per_shape = {int(c): float(ll[ll_cls == c].mean()) for c in np.unique(ll_cls)}
         metrics["final_log_likelihood"] = float(np.mean(list(per_shape.values())))
         for c, v in per_shape.items():
