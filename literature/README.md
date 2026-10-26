@@ -7,7 +7,7 @@ in machine learning, plus the pipeline that keeps it fresh. Everything lives in 
 |---|---|
 | `papers.yaml` | **The database.** One YAML record per paper (schema below). This is the only file you edit by hand. |
 | `topics.yaml` | The topic taxonomy: id, display name and a one-line description of each shelf. |
-| `site/index.html` | **The browser.** A self-contained page with full-text search, topic / relevance / venue / year filters and an inbox tab. Open it locally, serve it with GitHub Pages, or share it as an artifact. Generated. |
+| `site/index.html` | **The browser.** A self-contained page with full-text search, topic / relevance / venue / year filters and an inbox tab. Live copy: <https://chagrygoris.github.io/GA-Research/> (GitHub Pages, redeployed on every change to `main`); also works opened locally. Generated. |
 | `catalog.md` | A Markdown catalogue of accepted papers grouped by year and topic, for reading on GitHub. Generated. |
 | `ga_lit/` | The Python package: `config.py` (search terms and keyword vocabularies), `fetch.py` (arXiv, OpenReview, Crossref, INSPIRE-HEP), `triage.py` (scoring), `db.py` (load / dedupe / validate), `render.py`, `cli.py`. |
 | `state.yaml` | When the last sweep ran and what it found. Generated. |
@@ -55,6 +55,10 @@ The browser (`site/index.html`) has an **Inbox** tab. Each inbox card shows the 
 4. **Render.** `render.py` regenerates the browser page and the Markdown catalogue.
 
 ## Automation
+
+`.github/workflows/pages.yml` publishes `literature/site/` to GitHub Pages at
+<https://chagrygoris.github.io/GA-Research/> on every push to `main` that touches the page. One-time repository
+setting: *Settings -> Pages -> Build and deployment -> Source: GitHub Actions*.
 
 `.github/workflows/literature-update.yml` runs every Monday at 06:17 UTC (change the `cron` line for a
 daily cadence) and on manual dispatch with optional `since` / `until` inputs. It runs `python -m ga_lit

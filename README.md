@@ -8,7 +8,7 @@ Geometric-algebra (Clifford) research experiments, one folder per experiment fam
 | [`dpd/`](dpd/) | dpd | new |
 
 Cross-experiment literature lives in [`literature/`](literature/): a YAML paper database of Clifford / geometric-algebra
-deep-learning papers, a browsable [search page](literature/site/index.html), a generated [catalogue](literature/catalog.md)
+deep-learning papers, a browsable [search page](https://chagrygoris.github.io/GA-Research/) (GitHub Pages; source `literature/site/index.html`), a generated [catalogue](literature/catalog.md)
 and a weekly sweep that files new candidates into an inbox (see [`literature/README.md`](literature/README.md)).
 
 Each experiment folder is a self-contained Poetry project. `main` always holds the reference recipe
