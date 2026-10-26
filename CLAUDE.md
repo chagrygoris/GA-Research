@@ -29,3 +29,26 @@ After launching an operation, set up regular monitoring of it:
 
 * **Every 15 minutes at the beginning**, to make sure the process actually started.
 * **Then every 1 hour** for runs with a large ETA.
+
+## 4. Literature database
+
+Papers on Clifford / geometric-algebra machine learning are catalogued in [`literature/`](literature/)
+(full guide: [`literature/README.md`](literature/README.md)).
+
+* **`literature/papers.yaml` is the only source of truth.** `literature/site/index.html` (the searchable
+  browser page), `literature/catalog.md` (the Markdown catalogue) and `literature/state.yaml` are
+  generated; never edit them by hand. After any change to the YAML run `python -m ga_lit render`
+  from `literature/` and commit the regenerated files together with it.
+* **Use the CLI, not ad-hoc edits**, so records stay valid: `python -m ga_lit update` (sweep the
+  sources for a date window), `inbox` (what awaits a decision), `accept ID --relevance core|adjacent|context
+  --topics a,b --summary "..."`, `reject ID --note "..."`, `validate`, `stats`. Topic ids come from
+  `literature/topics.yaml`; add a topic there before using it.
+* **Before citing or surveying literature in a report**, search the database first (the browser page or
+  `grep` on the YAML) and add any paper you use that is missing, with a one-line summary.
+* **Triage rules.** Relevance *core* means geometric algebra is inside the model or method; *adjacent*
+  means GA-related machine learning or a GA method next to a learned component; *context* means the
+  paper cites or benchmarks against GA models without using one. Rejected items stay in the YAML with a
+  `notes` reason so the sweep never proposes them again. Nothing is accepted automatically.
+* **The weekly sweep** (`.github/workflows/literature-update.yml`) opens a pull request with the inbox
+  as a checklist. Reviewing that inbox is a task for a human or an agent asked to do it; merge the pull
+  request only after every item is accepted or rejected.

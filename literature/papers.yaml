@@ -300,19 +300,11 @@
     doi: https://doi.org/10.1145/3858612
   topics:
   - hypercomplex
-  status: inbox
-  relevance: null
-  summary: Physics-Informed Machine Learning (PIML) integrates physical laws into neural network training to solve
-    complex problems governed by differential equations. A critical component in PIML is computing derivatives of
-    models to ensure compliance with the governing equations. A common approach is to use automatic differentiation
-    (AD) methods available in machine learning frameworks such as PyTorch, whi
-  triage:
-    score: 3
-    ga_terms:
-    - hypercomplex
-    ml_context: true
-    excluded_terms: []
-    title_hit: true
+  - scientific-ml
+  status: accepted
+  relevance: adjacent
+  summary: 'HYPAD: hypercomplex-number automatic differentiation that speeds up derivative computation when training
+    physics-informed neural networks.'
   found_by:
   - crossref:hypercomplex neural network
   added: '2026-10-25'
@@ -327,23 +319,12 @@
   links:
     doi: https://doi.org/10.18822/byusu20260372-76
   topics:
-  - scientific-ml
   - robotics
-  status: inbox
-  relevance: null
-  summary: "Subject of research: automated synthesis of workable kinematic schemes and mechanisms from a given discrete\
-    \ set of functional components.\r\nPurpose of research: to overcome the fundamental limitations of modern generative\
-    \ design and topological optimization methods, which are unable to operate with discrete components and guarantee\
-    \ kinematic closure, by developing a new hybrid design architecture.\r"
-  triage:
-    score: 5
-    ga_terms:
-    - clifford algebra
-    - geometric algebra
-    - projective geometric
-    ml_context: true
-    excluded_terms: []
-    title_hit: true
+  - other-ml
+  status: accepted
+  relevance: adjacent
+  summary: Synthesises kinematic mechanisms from a discrete set of components by searching projective-geometric-algebra
+    representations with a genetic algorithm.
   found_by:
   - crossref:conformal geometric algebra learning
   - crossref:geometric algebra attention

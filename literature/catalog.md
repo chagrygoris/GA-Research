@@ -2,7 +2,7 @@
 
 Generated from `literature/papers.yaml` on 2026-10-26 by `python -m ga_lit render`. Do not edit by hand; edit the YAML or use the CLI.
 
-**143 accepted papers** (50 core, 41 adjacent, 52 context), 2 waiting in the inbox. Browse interactively: `literature/site/index.html`.
+**145 accepted papers** (50 core, 43 adjacent, 52 context), 0 waiting in the inbox. Browse interactively: `literature/site/index.html`.
 
 Relevance: **core** = geometric algebra inside the model or method; **adjacent** = GA-related machine learning or a GA method next to a learned component; **context** = cites or benchmarks against GA models without using one.
 
@@ -245,6 +245,8 @@ Graph neural networks, sheaves, binding / vector-symbolic representations with C
 
 Policies, scene models and pose pipelines built on projective or conformal GA.
 
+- **Synthesis of discrete mechanisms: a hybrid approach based on geometric algebra and genetic algorithms** *(adjacent)* — Kadan, Petrov. *Yugra State University Bulletin, 2026-10-13.* [doi](https://doi.org/10.18822/byusu20260372-76)
+  Synthesises kinematic mechanisms from a discrete set of components by searching projective-geometric-algebra representations with a genetic algorithm. — also: Other machine-learning uses of GA
 - **Screw Attention: Rigid-Body Algebra Inside a Transformer** *(context)* — anonymous. *arXiv, 2026-10-01.* [arxiv](https://arxiv.org/abs/2610.00904)
   Uses screw theory and spatial transforms, not Clifford algebra; listed because it is the closest non-GA competitor for rigid-body-aware attention.
 - **From Language to Task Maps: Compiling Semantic Relations While Preserving Task-Relevant Freedom** *(adjacent)* — Park, Lee, Lee, Hwang. *arXiv, 2026-09-28.* [arxiv](https://arxiv.org/abs/2609.34412)
@@ -331,6 +333,8 @@ Quaternion, biquaternion and general hypercomplex layers framed as Clifford alge
 
 - **Fully tensorial approach to hypercomplex-valued neural networks** *(adjacent)* — Niemczynowicz, Kycia. *Information Sciences (arXiv 2407.00449), 2026-11-01.* [arxiv](https://arxiv.org/abs/2407.00449) · [doi](https://doi.org/10.1016/j.ins.2026.123796)
   Unified tensor implementation of hypercomplex (including Clifford) layers. — also: Software and resources
+- **Performance Increases in Physics-Informed Machine Learning using Hypercomplex-based Automatic Differentiation (HYPAD)** *(adjacent)* — Roberts, Aristizabal, Millwater. *ACM Transactions on Mathematical Software, 2026-10-16.* [doi](https://doi.org/10.1145/3858612)
+  HYPAD: hypercomplex-number automatic differentiation that speeds up derivative computation when training physics-informed neural networks. — also: Scientific machine learning
 - **Ghost Features and Spooky Transfer Learning for Hypercomplex-Valued Neural Networks** *(adjacent)* — Vieira, Valle. *arXiv, 2026-08-07.* [arxiv](https://arxiv.org/abs/2608.07735) · [code](https://github.com/mevalle/v-nets/)
   Hypercomplex layers whose real part reproduces a trained real layer; the imaginary parts add "ghost features" that can be transferred into trained networks. — also: New GA / Clifford architectures
 - **Global Fixed-Time Synchronization of Fractional-Order Dual-Split-Quaternion Valued Memristive Neural Networks: Full Proofs and 6D Relativistic Image Encryption** *(adjacent)* — Rajchakit. *Complex Systems Stability & Control, 2026-07-07.* [doi](https://doi.org/10.53941/cssc.2026.100013)
