@@ -1,4 +1,4 @@
-last_run: '2026-10-25'
+last_run: '2026-10-26'
 runs:
 - date: '2026-10-25'
   window:
@@ -28,3 +28,17 @@ runs:
   known_updated: 0
   inbox_new: 2
   below_threshold: 691
+- date: '2026-10-26'
+  window:
+  - '2026-10-24'
+  - '2026-10-26'
+  sources:
+  - arxiv
+  - openreview
+  - crossref
+  - inspire
+  candidates: 521
+  known: 0
+  known_updated: 0
+  inbox_new: 0
+  below_threshold: 521
