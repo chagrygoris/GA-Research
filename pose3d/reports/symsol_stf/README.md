@@ -1,9 +1,10 @@
 # Two-tower Clifford Flow (multivector track + STF tensor track) on SYMSOL I, 10 % of the data
 
-Status: code, tests and runner are done; **no run has been launched** (each run is over the 30-minute limit of
-`CLAUDE.md` and needs a human's approval; the container that wrote this has no Kaggle credentials either).
-Design note written October 2026. Every number marked *estimate* is a calculation from earlier timings, not a
-measurement on a GPU.
+Status: **run, 25–26 October 2026.** Three arms trained for 40 epochs under the protocol of section 3 (acc@15 primary,
+median nearest-equivalent error auxiliary, no log-likelihood). Results in section 6. The control ran on one RTX Pro 6000
+(kernel `syfry5suvzovvakmuj/symsol-stf-control-rtx`), the two STF arms on one Tesla T4 each (`saudic/symsol-stf-stf-l3-t4`,
+`ivangorodtver/symsol-stf-stf-l6-t4`) after several RTX sessions on other accounts were allocated but never executed.
+Every number marked *estimate* below is a calculation from earlier timings, not a measurement on a GPU.
 
 ## 1. The question
 
@@ -219,3 +220,60 @@ dependency datasets contain the wheels listed above; the decision about the `_nc
 Not done: any GPU measurement (step time of the STF arms, compile with the STF module on a GPU, memory), a
 `--vector_field clifford` implementation, an STF4+ parity (O(3)) treatment (like CliffordSTF the tower is SO(3)
 only).
+
+## 6. Results
+
+Symbols: **median** is the median over the 5,000 scored test views (first 1,000 per shape) of the rotation error to the
+nearest equivalent pose, in degrees; **class-mean** is the mean over the five shapes of the per-shape medians; **acc@15**
+(**acc@30**) is the share of test views whose nearest-equivalent error is below 15 (30) degrees. Per-epoch numbers use
+one sample per image with a fixed noise seed, so every arm is scored on the same start rotations; the final numbers use
+the 32-sample geodesic medoid. The control's final evaluation crashed in the (since removed) log-likelihood, so only its
+per-epoch numbers exist; its acc@15 was not logged yet at that commit, but at epoch 1 all three arms produce the same
+predictions (see below), and that value is 0.028.
+
+Per epoch (1-sample): median / class-mean / acc@15
+
+| epoch | control (RTX) | stf_l3 (T4) | stf_l6 (T4) |
+|---|---|---|---|
+| 1 | 47.26 / 55.27 / – | 47.26 / 55.26 / 0.028 | 47.26 / 55.26 / 0.028 |
+| 10 | 47.26 / 55.31 / – | 47.31 / 55.24 / 0.028 | 47.25 / 55.28 / 0.028 |
+| 20 | 47.29 / 55.23 / – | 47.22 / 55.29 / 0.028 | 46.92 / 55.04 / 0.029 |
+| 30 | 47.28 / 55.24 / – | 46.54 / 54.39 / 0.032 | 45.57 / 52.98 / 0.036 |
+| 40 | 47.22 / 55.27 / – | 44.99 / 51.25 / 0.040 | 44.98 / 51.22 / 0.039 |
+
+Final (32-sample medoid):
+
+| arm | median | class-mean | acc@15 | acc@30 | tet | cube | icosa | cone | cyl |
+|---|---|---|---|---|---|---|---|---|---|
+| control | – (crashed) | – | – | – | | | | | |
+| stf_l3 | 43.65 | 48.32 | **0.046** | 0.224 | 54.4 / 0.005 | 42.4 / 0.022 | 31.4 / 0.059 | 54.2 / 0.113 | 59.2 / 0.033 |
+| stf_l6 | 44.91 | 50.92 | 0.037 | 0.205 | 54.3 / 0.011 | 42.0 / 0.022 | 31.3 / 0.059 | 71.0 / 0.044 | 56.0 / 0.047 |
+
+Per-shape cells: median error / acc@15. Training loss: control 5.30 → 5.29 (flat), stf_l3 5.29 → 5.21, stf_l6 5.30 → 5.20.
+
+### Reading
+
+* **The control never trains.** Loss, median and class-mean are constant to the second decimal from epoch 1 to 40.
+  All three arms report the identical median 47.26 at epoch 1: with the fixed validation noise this is the error of the
+  untouched start rotation, i.e. the velocity field is zero. This is the stall `symsol_p1_stall.md` describes for GATr
+  flows started from a uniform rotation (the equivalent targets of a symmetric shape cancel), here in its complete form
+  for the pooled reference model, on every shape including cone and cylinder.
+* **Both STF arms leave the stall, late and slowly.** Nothing moves for ~20 epochs, then the loss starts to fall and
+  keeps falling to the end of the cosine schedule; acc@15 goes 0.028 → 0.040 (1-sample) and reaches 0.046 (stf_l3) /
+  0.037 (stf_l6) with 32 samples. The icosahedron gains most (31 deg median, acc@30 0.42), the cone and cylinder stay
+  poor. L = 6 is not better than L = 3 at this budget (its only per-shape win is the cylinder; the cone is worse).
+* **Against the published scale** the effect is small: Image2Sphere reaches acc@15 = 1.00 and 3.2 deg class-mean under
+  the same protocol, the best previous flow 19.9 deg (`i2s_symsol1_10pct.md`). The STF track changes *whether* the
+  reference flow starts learning on SYMSOL, not yet *how well*; a 40-epoch cosine schedule ends ~20 epochs after it
+  starts moving.
+* Cost: a CPU training step is +6 % (L = 3) and +14 % (L = 6) over the control; on the T4 both arms ran 420 s per epoch.
+
+### Open follow-ups
+
+1. `--symsol_nearest_coupling` for both arms (`control_nc`, `stf_l3_nc` in the runner): removes the cancelling targets
+   that cause the stall, so the comparison measures the STF track's effect on a flow that learns. Not launched (needs
+   approval; the runner bundles are ready).
+2. A longer or restarted schedule for the STF arms, since they were still improving at epoch 40.
+3. Infrastructure: RTX Pro 6000 sessions on accounts 3 and 5 were allocated, consumed quota and never executed any
+   cell (empty log, no output files); the runner now has a GPU-dependent watchdog (90 min RTX / 330 min T4) and tees
+   its output to `/kaggle/working/<run_name>.log`.
