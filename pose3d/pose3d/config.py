@@ -93,6 +93,12 @@ class RunConfig:
     wandb_project: str = "3D Pose Estimation"
     wandb_entity: str = "clifforders"
     wandb_group: Optional[str] = None
+    # Log flow-trajectory visualizations to W&B (needs --run_name and a flow model): every viz_every epochs a predictions table
+    # (image, true / predicted rotation, error, share of noise samples within 15 deg) and the paths-in-SO(3) figure for viz_images fixed
+    # validation images, and after the last epoch also a film strip and an animation. See engine/flow_viz.py.
+    log_viz: bool = False
+    viz_every: int = 10          # 0: only after the last epoch
+    viz_images: int = 6
     # Base seed for the run. None: torch's default. Under --ddp every rank adds its rank,
     # so the flow's (t, r0) noise differs between GPUs.
     seed: Optional[int] = None
@@ -458,6 +464,13 @@ class I2SConfig:
     i2s_eval_rec_level: int = 3
     # i2s_real: apply ImageNet normalisation to the [0, 1] inputs.
     i2s_normalize: bool = True
+    # wignerd: weights w_l of the frequency-domain MSE (paper eq. 4; the paper does not spell them out).
+    # "unit": 1 / (2l+1)^2, so every degree's block of the target has unit squared norm (flat_wigner scales
+    # degree l by sqrt(2l+1)); "uniform": all 1, which lets the high degrees dominate.
+    wigner_loss_weights: Literal["unit", "uniform"] = "unit"
+    # wignerd: "sum" adds the weighted squared errors of the 455 coefficients, "mean" divides that by 455 (torch's MSELoss default).
+    # The paper writes the sum (eq. 4) and calls it MSE, and its lr 0.1 only makes sense against one of the two scales.
+    wigner_loss_reduction: Literal["sum", "mean"] = "sum"
 
 
 @dataclass
