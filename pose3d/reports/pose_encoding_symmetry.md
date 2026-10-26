@@ -70,4 +70,41 @@ later. These runs say nothing about capacity, because the encoding caps them.
 
 ## 5. SYMSOL I images, default CliffordFlow, `--pose_tokens frame_ch`
 
-(filled in when the run finishes: `syfry5suvzovvakmuj/symsol-framech-rtx`.)
+What was run. The default CliffordFlow (a Clifford-MLP condition head turns the pooled ResNet-50 features into 64 multivectors; a GATr
+vector field reads them together with the pose and the flow time) with `--pose_tokens frame_ch`: the pose enters as the three vectors
+`R e1, R e2, R e3` (the columns of the rotation matrix `R`) in three channels of one GATr token, instead of one rotor token, and the
+velocity is read out in the camera frame (encoding 5 of section 2). Protocol of the repo's `symsol-stf-runner` (`notebooks/symsol-stf-runner.ipynb`,
+variant `frame_ch`): SYMSOL I, 10 % of the training data (4,500 views per shape), the first 1,000 test views per shape, ResNet-50,
+AdamW lr 1e-4 x sqrt(2), 5 warmup epochs + cosine, no EMA, batch 64, 40 epochs. `--no-symsol_likelihood` switches the flow log-likelihood off,
+so the metrics are the rotation error to the nearest equivalent pose (acc@15 / acc@30: the share of test images whose error is below 15 /
+30 degrees; acc@15 is the primary one). One seed, one RTX Pro 6000, 2,045 s. Kernel `syfry5suvzovvakmuj/symsol-framech-rtx2`, code
+`04352e9` of this branch.
+
+Result (final evaluation, 32 flow samples per image):
+
+| | median error (deg) | mean of per-shape medians (deg) | acc@15 | acc@30 |
+|---|---|---|---|---|
+| `frame_ch` (this run) | 27.38 | 26.06 | 0.410 | 0.537 |
+
+| shape | tetrahedron | cube | icosahedron | cone | cylinder |
+|---|---|---|---|---|---|
+| median error (deg) | 54.45 | 42.28 | 31.51 | 0.66 | 1.38 |
+| acc@15 | 0.013 | 0.027 | 0.053 | 1.000 | 0.956 |
+
+Reading. The cone and cylinder are learned to about a degree; the three polyhedra are not (acc@15 between 1 and 5 %), which is the
+pattern of the older flow runs on these images. For reference, `reports/i2s_symsol1_10pct.md` lists the earlier runs on the same protocol:
+the spherecloud GATr flow (`frame_pin`, the bivector for `R e1`): 26.63 deg / 25.62 deg / acc@15 0.418; the same with 49 pose harmonics
+(`harm6`): 16.97 / 19.88 / 0.481; Image2Sphere: 3.07 / 3.21 / 1.000. So the all-vectors pose frame neither helps nor hurts here.
+
+Caveats. (1) There is no matched control: a run with the default rotor token on this code, protocol and encoder was not made (the team's
+`symsol1_10pct_gatr_control` was still running when this was written), so the comparison above is against different models. (2) One seed.
+(3) The all-vectors frame matches the symmetry of our synthetic benchmark (section 1), not the symmetries of single-view pose estimation
+(section 4); the image-flip symmetry, for instance, is what the bivector in `frame_pin` is built for. (4) The same encoding on SYMSOL
+point clouds, run by another team member (`avgurpetrovich/pts2-gflow-sp10s-polar`, flag `--pin_polar`, 512 points, GATr flow), gave log-likelihood
+1.412 against 1.47 for the bivector frame, with the tetrahedron, cube and icosahedron still at the uniform value -2.29: also no change.
+
+History of the run (for the record). Two earlier launches (an RTX kernel and a T4 kernel) crashed at the end of their first epoch with
+`AttributeError: 'RunConfig' object has no attribute 'viz_every'`: the merge of `origin/main` into this branch had dropped
+`RunConfig.log_viz / viz_every / viz_images` and `I2SConfig.wigner_loss_*`. Kaggle kept reporting the crashed kernels as running for hours.
+The fields were restored (commit `04352e9`) and `tests/test_config_fields.py` now checks that every `cfg.<group>.<field>` the code reads
+exists. A duplicate of the final run on another account (`grig0ryz/symsol-framech-rtx2`) could not be cancelled and is expected to give the same numbers.
