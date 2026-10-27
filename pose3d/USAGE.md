@@ -144,10 +144,12 @@ are two speed options, the same function and checkpoints either way:
   the eager step is elementwise work (the normalization after every layer, the attention scores), not
   matmuls; fused, a CPU forward + backward of 512 samples goes from 12.6 s to 5.7 s. Compilation takes about
   3 minutes on the CPU; not yet timed on a GPU.
-- `--versor_linear dense|matrix`: `dense` (default) runs every Versor linear as one real matmul; `matrix` is
-  the reference's own fast path for Cl(4,1), one complex matmul in the 4x4 complex matrix representation
-  (4x fewer multiply-adds, but two changes of basis per multivector): 17.4 s against 12.6 s for `dense` on
-  the CPU, eager.
+- `--versor_linear matrix|dense`: `matrix` (default) is the reference's own fast path for Cl(4,1), one
+  complex matmul in the 4x4 complex matrix representation (4x fewer multiply-adds, but two changes of basis per
+  multivector); `dense` runs every Versor linear as one real matmul. On the CPU, eager, `dense` is faster
+  (12.6 s against 17.4 s), but `dense` with `--versor_compile` fails on a T4 in the compiled backward (a
+  gradient of a [8, 32] parameter comes back with shape [256]; not investigated further), so `matrix` is the
+  default.
 
 The reference's Triton kernels are not used: the bit-masked linear's backward clamps the gradients and only
 takes 3-dimensional inputs, and the Triton normalization rescales in place outside autograd.
@@ -156,6 +158,20 @@ takes 3-dimensional inputs, and the Triton normalization rescales in place outsi
 32-sample evaluation on synthetic images, no dataset needed, from the same flags as `python -m pose3d`
 (`python scripts/bench_step.py -- --vector_field versor`). `notebooks/versor-bench-runner.ipynb` runs it offline on
 a Kaggle GPU for the Versor variants, under a 22-minute watchdog.
+
+One Tesla T4 (Kaggle kernel `grig0ryz/versor-bench-t4`, snapshot `02333d7`), the default recipe with
+`--vector_field versor`, batch 64, EMA on, ResNet-101 in fp32 (the T4 has no bf16), synthetic images; the
+evaluation columns are for 320 images, after the first (compiling) pass:
+
+| variant | train step | peak memory | 1-sample evaluation | 32-sample evaluation |
+|---|---|---|---|---|
+| `matrix`, compiled (default) | 1536 ms | 12.2 GB | 5.1 s | 69.6 s |
+| `dense`, eager (`--versor_linear dense --no-versor_compile`) | 1743 ms | 13.1 GB | 4.6 s | 76.9 s |
+| `dense`, compiled | fails in the backward (above) | | | |
+
+With ~1,200 steps per epoch (USAGE's GATr timings: 215 s per epoch at 176 ms per step) and 1,309 validation
+images, one epoch takes ~32 min on a T4 and the 100-epoch recipe ~53 h, beyond Kaggle's 12-hour session. The
+first compiled steps took 89 s.
 
 ```bash
 poetry run python -m pose3d --path_to_datasets ... --vector_field versor

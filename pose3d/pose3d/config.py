@@ -417,9 +417,11 @@ class FlowConfig:
     versor_channels: int = 8
     versor_heads: int = 4
     versor_expansion: int = 4
-    # Engine of every Versor linear: "dense" (one real matmul) or "matrix" (the reference's complex 4x4 matrix
-    # representation of Cl(4,1), 4x fewer multiply-adds, slower on CPU), the same function and checkpoints.
-    versor_linear: Literal["dense", "matrix"] = "dense"
+    # Engine of every Versor linear: "matrix" (the reference's complex 4x4 matrix representation of Cl(4,1), 4x fewer
+    # multiply-adds) or "dense" (one real matmul), the same function and checkpoints. "matrix" by default: on a T4,
+    # dense + versor_compile fails in the compiled backward (a gradient of a [8, 32] parameter comes back as [256]);
+    # it runs compiled on the CPU and eager everywhere (USAGE.md, Versor denoiser).
+    versor_linear: Literal["dense", "matrix"] = "matrix"
     # torch.compile of the Versor field, the EMA copy included: fuses the elementwise ops that dominate its step.
     versor_compile: bool = True
     # ---- the two-tower model (experimental, models/stf_track.py) -------------------------------------------------
