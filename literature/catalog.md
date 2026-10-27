@@ -1,8 +1,8 @@
 # Clifford / geometric algebra deep learning: paper catalogue
 
-Generated from `literature/papers.yaml` on 2026-10-26 by `python -m ga_lit render`. Do not edit by hand; edit the YAML or use the CLI.
+Generated from `literature/papers.yaml` on 2026-10-27 by `python -m ga_lit render`. Do not edit by hand; edit the YAML or use the CLI.
 
-**145 accepted papers** (50 core, 43 adjacent, 52 context), 0 waiting in the inbox. Browse interactively: `literature/site/index.html`.
+**145 accepted papers** (50 core, 43 adjacent, 52 context), 354 waiting in the inbox. Browse interactively: `literature/site/index.html`.
 
 Relevance: **core** = geometric algebra inside the model or method; **adjacent** = GA-related machine learning or a GA method next to a learned component; **context** = cites or benchmarks against GA models without using one.
 
@@ -16,7 +16,7 @@ Overviews of geometric-algebra (GA) neural networks and essays arguing for GA as
   First full survey of GA-native neural networks (Princeton / Stanford); its companion AwesomeGANN list is the best single starting point. — also: Software and resources
 - **A Comprehensive Review of CliffordNet: Geometric Algebra as the Foundation for Efficient Vision Architectures** *(context)* — Mamun. *Zenodo, 2026-09-01.* [url](https://zenodo.org/records/22992570)
   Secondary review of a single paper (CliffordNet); low weight. — also: Vision, remote sensing and medical imaging
-- **One algebra for all: geometric algebra methods for neurosymbolic XR scene authoring, animation and neural rendering** *(adjacent)* — Kamarianakis, Protopsaltis, Papagiannakis. *Philosophical Transactions of the Royal Society A, 2026-08-13.* [doi](https://doi.org/10.1098/rsta.2025.0109)
+- **One algebra for all: geometric algebra methods for neurosymbolic XR scene authoring, animation and neural rendering** *(adjacent)* — Kamarianakis, Protopsaltis, Papagiannakis. *Philosophical Transactions of the Royal Society A, 2026-08-13.* [arxiv](https://arxiv.org/abs/2511.15398) · [doi](https://doi.org/10.1098/rsta.2025.0109)
   Position paper on GA for neural rendering and generative-AI scene editing in extended reality.
 - **Merits of geometric algebra applied to cryptography and machine learning** — Silva. *Philosophical Transactions of the Royal Society A, 2026-08-13.* [doi](https://doi.org/10.1098/rsta.2025.0107)
   Clifford fully homomorphic encryption plus "geometric neural networks" that classify encrypted Cl(3,0) point clouds with multivector weights instead of matrices. — also: New GA / Clifford architectures
@@ -85,7 +85,7 @@ Expressivity, identifiability, group-theoretic and optimisation studies of GA ne
 
 Molecules, materials, PDE surrogates, fluids, geoscience and lattice field theory.
 
-- **Learning Low-Order Approximations of the Quark Propagator in Lattice QCD** *(adjacent)* — anonymous. *ICLR 2027 submission, 2026-09-16.* [openreview](https://openreview.net/forum?id=GuDDklAx8s)
+- **Learning Low-Order Approximations of the Quark Propagator in Lattice QCD** *(adjacent)* — anonymous. *ICLR 2027 submission, 2026-09-16.* [arxiv](https://arxiv.org/abs/2610.06612) · [openreview](https://openreview.net/forum?id=GuDDklAx8s)
   Gauge-equivariant networks expressed in the Clifford (gamma-matrix) basis for scientific discovery of propagator expansions. — also: High-energy physics
 - **A Geometric Algebra-Inspired Spatio-temporal Learning Model for Sea Level Variability Reconstruction Under Incomplete Observations** — Li, Huang, Huang, Luo et al.. *Advances in Applied Clifford Algebras, 2026-09-11.* [doi](https://doi.org/10.1007/s00006-026-01457-3)
   GA-inspired spatio-temporal learning model for reconstructing sea-level fields from incomplete observations. — also: Sequence models, language and LLM tooling
@@ -99,7 +99,7 @@ Molecules, materials, PDE surrogates, fluids, geoscience and lattice field theor
   Compares GATr-type equivariant surrogates with canonically aligned non-equivariant ones on vascular CFD meshes.
 - **Geometric deep learning for local growth prediction on abdominal aortic aneurysm surfaces** — Alblas, Rygiel, Suk, Kappe et al.. *Artificial Intelligence in Medicine 172:103323, 2026-02-01.* [doi](https://doi.org/10.1016/j.artmed.2025.103323)
   Projective-GA (GATr-based) model predicting local growth on aneurysm surface meshes. — also: Vision, remote sensing and medical imaging
-- **Design and Evaluation of a Geometric Algebra-Based Graph Neural Network for Molecular Property Prediction** — Petersen, Schmidt. *NLDL 2026 (PMLR 307), 2026-01-19.* [url](https://proceedings.mlr.press/v307/petersen26a.html)
+- **Design and Evaluation of a Geometric Algebra-Based Graph Neural Network for Molecular Property Prediction** — Petersen, Schmidt. *NLDL 2026 (PMLR 307), 2026-01-19.* [openreview](https://openreview.net/forum?id=aHHQByxsjB) · [url](https://proceedings.mlr.press/v307/petersen26a.html)
   GA-based graph neural network evaluated on molecular property prediction at the Northern Lights Deep Learning conference. — also: Graphs, multimodal and representation learning
 
 ### High-energy physics
@@ -118,95 +118,95 @@ The Lorentz-equivariant geometric algebra transformer (L-GATr) line and other sp
   Quantum transformer whose features are organised by the grades of the spacetime Clifford algebra. — also: Other machine-learning uses of GA
 - **MadNIS, Ready for Production at LO** *(context)* — Heimel. *arXiv, 2026-10-12.* [arxiv](https://arxiv.org/abs/2610.17177) · [inspire](https://inspirehep.net/literature/3214424)
   Cites L-GATr.
-- **RINO: Renormalization Group Distillation with No Labels** *(context)* — Hao. *arXiv, 2026-10-11.* [arxiv](https://arxiv.org/abs/2610.15919)
+- **RINO: Renormalization Group Distillation with No Labels** *(context)* — Hao. *arXiv, 2026-10-11.* [arxiv](https://arxiv.org/abs/2610.15919) · [inspire](https://inspirehep.net/literature/3214006)
   Cites L-GATr.
-- **A compact, interrogable Tree Tensor Network Jet Tagger on Lund declustering trees** *(context)* — Napolitano. *arXiv, 2026-10-08.* [arxiv](https://arxiv.org/abs/2610.12408)
+- **A compact, interrogable Tree Tensor Network Jet Tagger on Lund declustering trees** *(context)* — Napolitano. *arXiv, 2026-10-08.* [arxiv](https://arxiv.org/abs/2610.12408) · [inspire](https://inspirehep.net/literature/3213003)
   Cites L-GATr.
-- **A Unified Geometric Framework for Understanding Collider Event Manifolds** *(context)* — Cai. *arXiv, 2026-10-07.* [arxiv](https://arxiv.org/abs/2610.09320)
+- **A Unified Geometric Framework for Understanding Collider Event Manifolds** *(context)* — Cai. *arXiv, 2026-10-07.* [arxiv](https://arxiv.org/abs/2610.09320) · [inspire](https://inspirehep.net/literature/3212487)
   Cites L-GATr.
-- **How to scale your HEP ML models: A recipe for robust architecture comparisons at scale** *(context)* — Vigl. *arXiv, 2026-10-05.* [arxiv](https://arxiv.org/abs/2610.06784)
+- **How to scale your HEP ML models: A recipe for robust architecture comparisons at scale** *(context)* — Vigl. *arXiv, 2026-10-05.* [arxiv](https://arxiv.org/abs/2610.06784) · [inspire](https://inspirehep.net/literature/3211840)
   Cites L-GATr.
-- **Machine learning for the LHC physics program: a 2025-2026 stocktake** *(context)* — Thaler. *arXiv, 2026-09-26.* [arxiv](https://arxiv.org/abs/2609.32874)
+- **Machine learning for the LHC physics program: a 2025-2026 stocktake** *(context)* — Thaler. *arXiv, 2026-09-26.* [arxiv](https://arxiv.org/abs/2609.32874) · [inspire](https://inspirehep.net/literature/3208426)
   Review citing L-GATr.
-- **Towards Foundation Models on Hardware Accelerators for Particle Physics** *(context)* — Benyas. *arXiv, 2026-09-22.* [arxiv](https://arxiv.org/abs/2609.26899)
+- **Towards Foundation Models on Hardware Accelerators for Particle Physics** *(context)* — Benyas. *arXiv, 2026-09-22.* [arxiv](https://arxiv.org/abs/2609.26899) · [inspire](https://inspirehep.net/literature/3206686)
   Cites the economical (L-GATr-slim) taggers.
-- **More QCD Masterclass Lectures on Jet Physics and Machine Learning** *(context)* — Larkoski. *arXiv, 2026-09-09.* [arxiv](https://arxiv.org/abs/2609.09785)
+- **More QCD Masterclass Lectures on Jet Physics and Machine Learning** *(context)* — Larkoski. *arXiv, 2026-09-09.* [arxiv](https://arxiv.org/abs/2609.09785) · [inspire](https://inspirehep.net/literature/3201984)
   Lecture notes citing L-GATr and the GA input-language paper.
-- **A High- and Variable-Dimensional Measurement of the Z+jets Differential Cross Section with the ATLAS Experiment** *(context)* — Greif. *arXiv, 2026-08-28.* [arxiv](https://arxiv.org/abs/2608.28449)
+- **A High- and Variable-Dimensional Measurement of the Z+jets Differential Cross Section with the ATLAS Experiment** *(context)* — Greif. *arXiv, 2026-08-28.* [arxiv](https://arxiv.org/abs/2608.28449) · [inspire](https://inspirehep.net/literature/3197610)
   Cites L-GATr.
-- **Know What You Don't Flow** *(context)* — Butter. *arXiv, 2026-08-21.* [arxiv](https://arxiv.org/abs/2608.21509)
+- **Know What You Don't Flow** *(context)* — Butter. *arXiv, 2026-08-21.* [arxiv](https://arxiv.org/abs/2608.21509) · [inspire](https://inspirehep.net/literature/3195187)
   Cites L-GATr.
-- **Assessing Parameter Redundancy in Transformers for Jet Tagging** *(context)* — Cheng. *arXiv, 2026-08-17.* [arxiv](https://arxiv.org/abs/2608.16061)
+- **Assessing Parameter Redundancy in Transformers for Jet Tagging** *(context)* — Cheng. *arXiv, 2026-08-17.* [arxiv](https://arxiv.org/abs/2608.16061) · [inspire](https://inspirehep.net/literature/3191715)
   Benchmarks against L-GATr.
-- **Unknown Unknowns: Model Misspecification in Machine Learning for Physics** *(context)* — Cruz-Martinez. *arXiv, 2026-08-13.* [arxiv](https://arxiv.org/abs/2608.13633)
+- **Unknown Unknowns: Model Misspecification in Machine Learning for Physics** *(context)* — Cruz-Martinez. *arXiv, 2026-08-13.* [arxiv](https://arxiv.org/abs/2608.13633) · [inspire](https://inspirehep.net/literature/3191170)
   Cites L-GATr.
-- **Generative Amplification with Surrogate Monte Carlo** *(context)* — Bahl. *arXiv, 2026-08-06.* [arxiv](https://arxiv.org/abs/2608.06450)
+- **Generative Amplification with Surrogate Monte Carlo** *(context)* — Bahl. *arXiv, 2026-08-06.* [arxiv](https://arxiv.org/abs/2608.06450) · [inspire](https://inspirehep.net/literature/3188551)
   Cites L-GATr.
-- **Machine Learning is Good for Physics - and Vice Versa** *(context)* — Krämer. *arXiv, 2026-08-06.* [arxiv](https://arxiv.org/abs/2608.05812)
+- **Machine Learning is Good for Physics - and Vice Versa** *(context)* — Krämer. *arXiv, 2026-08-06.* [arxiv](https://arxiv.org/abs/2608.05812) · [inspire](https://inspirehep.net/literature/3188158)
   Essay citing L-GATr.
-- **Virtues and Vices of Equivariant Transformers** — Favaro, Plehn, Qu, Spinner. *arXiv, 2026-08-03.* [arxiv](https://arxiv.org/abs/2608.02735)
+- **Virtues and Vices of Equivariant Transformers** — Favaro, Plehn, Qu, Spinner. *arXiv, 2026-08-03.* [arxiv](https://arxiv.org/abs/2608.02735) · [inspire](https://inspirehep.net/literature/3187180)
   Lorentz-equivariant (spacetime-algebra) transformers for large-scale jet and flavour tagging, inference-optimised.
-- **Neural Control Variates at LO and NLO** *(context)* — Heimel. *arXiv, 2026-07-26.* [arxiv](https://arxiv.org/abs/2607.23591)
+- **Neural Control Variates at LO and NLO** *(context)* — Heimel. *arXiv, 2026-07-26.* [arxiv](https://arxiv.org/abs/2607.23591) · [inspire](https://inspirehep.net/literature/3183517)
   Cites L-GATr.
-- **Predict before you train: Scaling Laws for particle physics foundation models** *(context)* — Uslu. *arXiv, 2026-07-25.* [arxiv](https://arxiv.org/abs/2607.23377)
+- **Predict before you train: Scaling Laws for particle physics foundation models** *(context)* — Uslu. *arXiv, 2026-07-25.* [arxiv](https://arxiv.org/abs/2607.23377) · [inspire](https://inspirehep.net/literature/3183540)
   Cites L-GATr.
-- **Learning Standard Model structure from LHC data with Riemannian flow matching** *(context)* — Kato. *arXiv, 2026-07-17.* [arxiv](https://arxiv.org/abs/2607.16144)
+- **Learning Standard Model structure from LHC data with Riemannian flow matching** *(context)* — Kato. *arXiv, 2026-07-17.* [arxiv](https://arxiv.org/abs/2607.16144) · [inspire](https://inspirehep.net/literature/3181573)
   Cites L-GATr.
-- **Local Conformal Predictions for Calibrated Surrogates** *(context)* — Dubey. *arXiv, 2026-07-01.* [arxiv](https://arxiv.org/abs/2607.01354)
+- **Local Conformal Predictions for Calibrated Surrogates** *(context)* — Dubey. *arXiv, 2026-07-01.* [arxiv](https://arxiv.org/abs/2607.01354) · [inspire](https://inspirehep.net/literature/3176530)
   Cites L-GATr.
-- **Machine learning fully hadronic events with spectral functions** *(context)* — Altakach. *arXiv, 2026-06-25.* [arxiv](https://arxiv.org/abs/2606.27420)
+- **Machine learning fully hadronic events with spectral functions** *(context)* — Altakach. *arXiv, 2026-06-25.* [arxiv](https://arxiv.org/abs/2606.27420) · [inspire](https://inspirehep.net/literature/3174065)
   Cites L-GATr.
-- **Interpreting "Interpretability" and Explaining "Explainability" in Machine Learning in Physics** *(context)* — Gambhir. *arXiv, 2026-06-24.* [arxiv](https://arxiv.org/abs/2606.26228)
+- **Interpreting "Interpretability" and Explaining "Explainability" in Machine Learning in Physics** *(context)* — Gambhir. *arXiv, 2026-06-24.* [arxiv](https://arxiv.org/abs/2606.26228) · [inspire](https://inspirehep.net/literature/3172993)
   Cites L-GATr.
-- **One Generator, Any Process: LLM-Conditioning for the LHC** *(context)* — Bahl. *arXiv, 2026-06-22.* [arxiv](https://arxiv.org/abs/2606.23791)
+- **One Generator, Any Process: LLM-Conditioning for the LHC** *(context)* — Bahl. *arXiv, 2026-06-22.* [arxiv](https://arxiv.org/abs/2606.23791) · [inspire](https://inspirehep.net/literature/3171512)
   Cites L-GATr.
-- **What Do Lorentz-Equivariant Jet Taggers Learn?** — anonymous. *arXiv; ICML 2026 AI4Physics workshop, 2026-06-19.* [arxiv](https://arxiv.org/abs/2606.21790) · [openreview](https://openreview.net/forum?id=xr5xIic0Ei)
+- **What Do Lorentz-Equivariant Jet Taggers Learn?** — anonymous. *arXiv; ICML 2026 AI4Physics workshop, 2026-06-19.* [arxiv](https://arxiv.org/abs/2606.21790) · [openreview](https://openreview.net/forum?id=xr5xIic0Ei) · [inspire](https://inspirehep.net/literature/3170881)
   Probes, equivariance tests and grade ablations on L-GATr, L-GATr-slim and LLoCa-T jet taggers. — also: Theory and analysis of GA layers
-- **Event Generation with Parallel Langevin Sampling and Learned Stein Diagnostics** *(context)* — Verheyen. *arXiv, 2026-06-12.* [arxiv](https://arxiv.org/abs/2606.14854)
+- **Event Generation with Parallel Langevin Sampling and Learned Stein Diagnostics** *(context)* — Verheyen. *arXiv, 2026-06-12.* [arxiv](https://arxiv.org/abs/2606.14854) · [inspire](https://inspirehep.net/literature/3168737)
   Cites L-GATr.
-- **CaloTrilogy: Toward a Breakthrough in One-Step, End-to-End, Physics-Guided Shower Generation** *(context)* — Jiang. *arXiv, 2026-06-02.* [arxiv](https://arxiv.org/abs/2606.04165)
+- **CaloTrilogy: Toward a Breakthrough in One-Step, End-to-End, Physics-Guided Shower Generation** *(context)* — Jiang. *arXiv, 2026-06-02.* [arxiv](https://arxiv.org/abs/2606.04165) · [inspire](https://inspirehep.net/literature/3165001)
   Cites L-GATr.
-- **Particle-Lund Multimodality in Jet Taggers** *(context)* — Gouskos. *arXiv, 2026-05-26.* [arxiv](https://arxiv.org/abs/2605.26821)
+- **Particle-Lund Multimodality in Jet Taggers** *(context)* — Gouskos. *arXiv, 2026-05-26.* [arxiv](https://arxiv.org/abs/2605.26821) · [inspire](https://inspirehep.net/literature/3160227)
   Benchmarks against L-GATr.
-- **Pointwise Metrics Mislead: An Evaluation Protocol for Multimodal Inverse Problems** *(context)* — Baattrup. *arXiv, 2026-05-21.* [arxiv](https://arxiv.org/abs/2605.22891)
+- **Pointwise Metrics Mislead: An Evaluation Protocol for Multimodal Inverse Problems** *(context)* — Baattrup. *arXiv, 2026-05-21.* [arxiv](https://arxiv.org/abs/2605.22891) · [inspire](https://inspirehep.net/literature/3158979)
   Cites L-GATr.
-- **Patch Hierarchical Attention Transformer for Efficient Particle Jet Tagging** *(context)* — Wang. *arXiv, 2026-05-20.* [arxiv](https://arxiv.org/abs/2605.21789)
+- **Patch Hierarchical Attention Transformer for Efficient Particle Jet Tagging** *(context)* — Wang. *arXiv, 2026-05-20.* [arxiv](https://arxiv.org/abs/2605.21789) · [inspire](https://inspirehep.net/literature/3158529)
   Benchmarks against L-GATr.
-- **The Monte Carlo Ecosystem in High-Energy Physics: A Primer** *(context)* — Beekveld. *arXiv, 2026-05-15.* [arxiv](https://arxiv.org/abs/2605.16036)
+- **The Monte Carlo Ecosystem in High-Energy Physics: A Primer** *(context)* — Beekveld. *arXiv, 2026-05-15.* [arxiv](https://arxiv.org/abs/2605.16036) · [inspire](https://inspirehep.net/literature/3156741)
   Cites L-GATr.
 - **Geometric algebra as the input language of collider foundation models** — Abasov, Dudko, Markina, Perfilov et al.. *arXiv, 2026-05-15.* [arxiv](https://arxiv.org/abs/2605.15910) · [inspire](https://inspirehep.net/literature/3156709)
   A whole collider event as one Cl(1,3)⊗V_flav multivector; theorem on which Lorentz invariants higher grades add; L-GATr-type transformer.
-- **Open LHC Monte Carlo Event Generation** *(context)* — Bothmann. *arXiv, 2026-05-12.* [arxiv](https://arxiv.org/abs/2605.12229)
+- **Open LHC Monte Carlo Event Generation** *(context)* — Bothmann. *arXiv, 2026-05-12.* [arxiv](https://arxiv.org/abs/2605.12229) · [inspire](https://inspirehep.net/literature/3154664)
   Cites L-GATr.
-- **Generative models on phase space** *(context)* — Bogorad. *arXiv, 2026-04-02.* [arxiv](https://arxiv.org/abs/2604.02415)
+- **Generative models on phase space** *(context)* — Bogorad. *arXiv, 2026-04-02.* [arxiv](https://arxiv.org/abs/2604.02415) · [inspire](https://inspirehep.net/literature/3139160)
   Cites L-GATr.
-- **MadNIS at NLO** *(context)* — Crescenzo. *arXiv, 2026-03-23.* [arxiv](https://arxiv.org/abs/2603.22407)
+- **MadNIS at NLO** *(context)* — Crescenzo. *arXiv, 2026-03-23.* [arxiv](https://arxiv.org/abs/2603.22407) · [inspire](https://inspirehep.net/literature/3133845)
   Cites L-GATr.
-- **Explicit or Implicit? Encoding Physics at the Precision Frontier** — Bresó-Pla, Greif, Mikuni, Nachman et al.. *arXiv; Physical Review D 114, 036034 (2026), 2026-03-09.* [arxiv](https://arxiv.org/abs/2603.08802) · [openreview](https://openreview.net/forum?id=uhT0wi62Et)
+- **Explicit or Implicit? Encoding Physics at the Precision Frontier** — Bresó-Pla, Greif, Mikuni, Nachman et al.. *arXiv; Physical Review D 114, 036034 (2026), 2026-03-09.* [arxiv](https://arxiv.org/abs/2603.08802) · [doi](https://doi.org/10.1103/9hs2-prs5) · [openreview](https://openreview.net/forum?id=uhT0wi62Et) · [inspire](https://inspirehep.net/literature/3128074)
   Explicit symmetry (L-GATr) versus large-scale pre-training at the precision frontier of collider physics.
 - **End-to-end event reconstruction for precision physics at future colliders** — Garcia, Herrmann, Krzmanc, Selvaggi. *arXiv, 2026-03-04.* [arxiv](https://arxiv.org/abs/2603.04084)
   Geometric algebra transformer networks combined with object-condensation clustering for particle-flow reconstruction.
-- **The Latent Information Geometry of Jet Classification** *(context)* — Kuntz. *arXiv, 2026-03-02.* [arxiv](https://arxiv.org/abs/2603.02310)
+- **The Latent Information Geometry of Jet Classification** *(context)* — Kuntz. *arXiv, 2026-03-02.* [arxiv](https://arxiv.org/abs/2603.02310) · [inspire](https://inspirehep.net/literature/3125370)
   Cites L-GATr.
-- **Unfolding without Iterations, Adversaries, or Surrogates** *(context)* — Ore. *arXiv, 2026-02-27.* [arxiv](https://arxiv.org/abs/2602.24282)
+- **Unfolding without Iterations, Adversaries, or Surrogates** *(context)* — Ore. *arXiv, 2026-02-27.* [arxiv](https://arxiv.org/abs/2602.24282) · [doi](https://doi.org/10.21468/SciPostPhys.21.3.055) · [inspire](https://inspirehep.net/literature/3124240)
   Cites L-GATr.
-- **Neural Scaling Laws for Boosted Jet Tagging** *(context)* — Vigl. *arXiv, 2026-02-17.* [arxiv](https://arxiv.org/abs/2602.15781)
+- **Neural Scaling Laws for Boosted Jet Tagging** *(context)* — Vigl. *arXiv, 2026-02-17.* [arxiv](https://arxiv.org/abs/2602.15781) · [inspire](https://inspirehep.net/literature/3121009)
   Cites L-GATr.
-- **MadSpace - Event Generation for the Era of GPUs and ML** *(context)* — Heimel. *arXiv, 2026-02-06.* [arxiv](https://arxiv.org/abs/2602.06895)
+- **MadSpace - Event Generation for the Era of GPUs and ML** *(context)* — Heimel. *arXiv, 2026-02-06.* [arxiv](https://arxiv.org/abs/2602.06895) · [inspire](https://inspirehep.net/literature/3117326)
   Cites L-GATr.
-- **CoLLM: AI engineering toolbox for end-to-end deep learning in collider analyses** *(context)* — Esmail. *arXiv, 2026-02-06.* [arxiv](https://arxiv.org/abs/2602.06496)
+- **CoLLM: AI engineering toolbox for end-to-end deep learning in collider analyses** *(context)* — Esmail. *arXiv, 2026-02-06.* [arxiv](https://arxiv.org/abs/2602.06496) · [inspire](https://inspirehep.net/literature/3117348)
   Cites L-GATr.
-- **Modern Machine Learning and Particle Physics Phenomenology at the LHC** *(context)* — Ubiali. *arXiv, 2026-02-03.* [arxiv](https://arxiv.org/abs/2602.03728)
+- **Modern Machine Learning and Particle Physics Phenomenology at the LHC** *(context)* — Ubiali. *arXiv, 2026-02-03.* [arxiv](https://arxiv.org/abs/2602.03728) · [inspire](https://inspirehep.net/literature/3115097)
   Review citing L-GATr.
-- **PanopTag: Simultaneously Tagging All Jets in a Particle Collision Event** *(context)* — Qureshi. *arXiv, 2026-01-23.* [arxiv](https://arxiv.org/abs/2601.16417)
+- **PanopTag: Simultaneously Tagging All Jets in a Particle Collision Event** *(context)* — Qureshi. *arXiv, 2026-01-23.* [arxiv](https://arxiv.org/abs/2601.16417) · [inspire](https://inspirehep.net/literature/3110791)
   Cites L-GATr.
-- **Scaling laws for amplitude surrogates** *(context)* — Bahl. *arXiv, 2026-01-19.* [arxiv](https://arxiv.org/abs/2601.13308)
+- **Scaling laws for amplitude surrogates** *(context)* — Bahl. *arXiv, 2026-01-19.* [arxiv](https://arxiv.org/abs/2601.13308) · [inspire](https://inspirehep.net/literature/3109664)
   Cites L-GATr (amplitude surrogates).
-- **jBOT: Semantic Jet Representation Clustering Emerges from Self-Distillation** *(context)* — Tsoi. *arXiv, 2026-01-16.* [arxiv](https://arxiv.org/abs/2601.11719)
+- **jBOT: Semantic Jet Representation Clustering Emerges from Self-Distillation** *(context)* — Tsoi. *arXiv, 2026-01-16.* [arxiv](https://arxiv.org/abs/2601.11719) · [doi](https://doi.org/10.21468/SciPostPhys.21.3.053) · [inspire](https://inspirehep.net/literature/3109200)
   Cites L-GATr.
-- **AllShowers: One model for all calorimeter showers** *(context)* — Buss. *arXiv, 2026-01-16.* [arxiv](https://arxiv.org/abs/2601.11716)
+- **AllShowers: One model for all calorimeter showers** *(context)* — Buss. *arXiv, 2026-01-16.* [arxiv](https://arxiv.org/abs/2601.11716) · [doi](https://doi.org/10.21468/SciPostPhys.21.3.076) · [inspire](https://inspirehep.net/literature/3109187)
   Cites L-GATr.
-- **How to Trust Learned Loop Amplitudes** *(context)* — Bahl. *arXiv, 2026-01-02.* [arxiv](https://arxiv.org/abs/2601.00950)
+- **How to Trust Learned Loop Amplitudes** *(context)* — Bahl. *arXiv, 2026-01-02.* [arxiv](https://arxiv.org/abs/2601.00950) · [inspire](https://inspirehep.net/literature/3097829)
   Cites L-GATr (amplitude surrogates).
 
 ### Vision, remote sensing and medical imaging
@@ -339,7 +339,7 @@ Quaternion, biquaternion and general hypercomplex layers framed as Clifford alge
   Hypercomplex layers whose real part reproduces a trained real layer; the imaginary parts add "ghost features" that can be transferred into trained networks. — also: New GA / Clifford architectures
 - **Global Fixed-Time Synchronization of Fractional-Order Dual-Split-Quaternion Valued Memristive Neural Networks: Full Proofs and 6D Relativistic Image Encryption** *(adjacent)* — Rajchakit. *Complex Systems Stability & Control, 2026-07-07.* [doi](https://doi.org/10.53941/cssc.2026.100013)
   Dual-split-quaternion algebra (Clifford-adjacent hypercomplex) for synchronisation and image encryption. — also: Clifford-valued network dynamics
-- **Hypercomplex Phase Retrieval** *(context)* — anonymous. *arXiv, 2026-02-27.* [arxiv](https://arxiv.org/abs/2602.23946)
+- **Hypercomplex Phase Retrieval** *(context)* — anonymous. *arXiv, 2026-02-27.* [arxiv](https://arxiv.org/abs/2602.23946) · [doi](https://doi.org/10.1016/bs.host.2026.03.001)
   Clifford-algebra hypercomplex signal processing for phase retrieval; not a neural network.
 
 ### Other machine-learning uses of GA
@@ -350,7 +350,7 @@ Classifiers, filters, causal discovery and quantum machine learning built on GA.
   GA-valued adaptive filtering with a correntropy criterion.
 - **Machine Learning the Phase Structure and Algebraic Invariants of Clifford- and Grassmann-Valued Cellular Automata** *(adjacent)* — Mirza. *Research Square, 2026-07-31.* [doi](https://doi.org/10.21203/rs.3.rs-10394430/v1)
   Machine learning applied to discrete dynamical systems driven by Clifford and Grassmann algebras.
-- **Geometric Algebra Quantum Gate Decomposition** *(context)* — Amraoui, Toffano. *Axioms 15(7):523, 2026-07-13.* [doi](https://doi.org/10.3390/axioms15070523)
+- **Geometric Algebra Quantum Gate Decomposition** *(context)* — Amraoui, Toffano. *Axioms 15(7):523, 2026-07-13.* [arxiv](https://arxiv.org/abs/2606.12480) · [doi](https://doi.org/10.3390/axioms15070523) · [inspire](https://inspirehep.net/literature/3168001)
   Rotor-based quantum gate synthesis; GA-adjacent, not learning.
 - **Adaptive Sphere Classification via Conformal Geometric Algebra** — Athmani. *Research Square, 2026-03-31.* [doi](https://doi.org/10.21203/rs.3.rs-9244644/v1)
   Supervised classifier whose learning rule is the conformal-GA point-in-sphere inner product.
