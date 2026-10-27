@@ -152,6 +152,11 @@ are two speed options, the same function and checkpoints either way:
 The reference's Triton kernels are not used: the bit-masked linear's backward clamps the gradients and only
 takes 3-dimensional inputs, and the Triton normalization rescales in place outside autograd.
 
+`scripts/bench_step.py` times a model's training step (the trainer's `train_epoch`, EMA included) and its 1- and
+32-sample evaluation on synthetic images, no dataset needed, from the same flags as `python -m pose3d`
+(`python scripts/bench_step.py -- --vector_field versor`). `notebooks/versor-bench-runner.ipynb` runs it offline on
+a Kaggle GPU for the Versor variants, under a 22-minute watchdog.
+
 ```bash
 poetry run python -m pose3d --path_to_datasets ... --vector_field versor
 ```
