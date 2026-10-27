@@ -214,9 +214,42 @@ for line in filter_progress(handle.log(follow=True), keep_last=10):
 There is no cancel: neither the CLI nor the API exposes one, so `handle.cancel()` raises and
 points at the notebook page instead.
 
+## Moon Cluster page: `moon_cluster.py`
+
+The Moon Cluster page is a one-file HTML view of the pool drawn as a night-sky dial: accounts on
+the outer orbit with quota gauges, the competitions that grant premium GPUs on the inner orbit, and
+the hardware around a moon that shows the spare GPU-hours. It is published as an Artifact at
+https://claude.ai/artifact/Y7cgZp5Kdbe1or38mdDPZd.
+
+It is built in two steps so that an agent (or a person) can change anything in between:
+
+1. **Snapshot**: a plain JSON dict with the accounts (quota, active runs, competition routes and
+   whether each route was seen in a real run), competition deadlines and free-form notes. It never
+   contains credentials. `probe_snapshot(DIR)` builds one from a live probe.
+2. **Render**: `render(snapshot, previous)` fills `moon_cluster_template.html`. The dial layout
+   (account order, competition and hardware positions) is computed from the data. The page embeds
+   its snapshot, so the published page is the `previous` input of the next render, and the cards
+   under the dial (new account, new route, removed, awaiting token, hardware ending soon) come
+   from comparing the two.
+
+```bash
+python gpu_pool/moon_cluster.py --tokens-dir ~/pool_tokens --previous last.html --out moon_cluster.html
+python gpu_pool/moon_cluster.py --tokens-dir DIR --dump-snapshot snap.json   # probe only, then edit
+python gpu_pool/moon_cluster.py --from-snapshot snap.json --out moon_cluster.html
+```
+
+`--note "KICKER|Title|Text"` adds a card, `--removed account7=deleted` leaves an account out and
+shows it as removed, and `--title` / `--subtitle` rename the page. In the credentials directory, a
+folder without a `token` is shown as *awaiting token*, and a folder tagged like
+`account7_Name[suspended]` as removed.
+
+Agents follow the `moon-cluster` skill (`.claude/skills/moon-cluster/SKILL.md`) to refresh and
+republish the page.
+
 ## Tests
 
 ```bash
 python3 gpu_pool/test_gpu_pool.py     # 37 offline tests, no network or credentials
 python3 gpu_pool/test_rtx_monitor.py  # 11 offline tests for the no-internet W&B sync
+python3 gpu_pool/test_moon_cluster.py # 11 offline tests for the Moon Cluster page
 ```
