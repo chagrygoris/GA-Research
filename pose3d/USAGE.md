@@ -125,6 +125,25 @@ poetry run python -m pose3d --path_to_datasets ... --no-backbone_bf16   # exact 
 poetry run python -m pose3d --path_to_datasets ... --no-gatr_dense_linear --no-gatr_compile --no-backbone_bf16  # as before
 ```
 
+## Versor denoiser
+
+`--vector_field versor` replaces GATr with Versor (Truong & Hirst 2026, arXiv 2602.10195,
+[reference code](https://github.com/VersorAI/Versor)), a transformer over Cl(4,1) multivectors (the conformal
+algebra of 3D space, 32 components) with geometric-product attention. `models/versor_denoiser.py` ports its
+layers to plain torch, so nothing extra has to be installed. The tokens are the same as GATr's: rotor, time and
+the `n_cond_mv` condition multivectors, embedded as the Cl(3,0) subalgebra of Cl(4,1). The velocity is read from
+the rotor token's e12, e13, e23. Versor has no scalar channels, so the time and each token's role go into a
+second, learned input multivector. Unlike GATr, Versor's layers are not rotation equivariant. Only with
+`pose_tokens=rotor` and `cond_tokens=pooled` (the defaults); the condition head stays the Clifford MLP.
+
+Sizes: `--versor_blocks` (4), `--versor_channels` (8 multivector channels per token, 105k parameters for the
+field), `--versor_heads` (4, must divide the channels), `--versor_expansion` (4, the MLP's width factor). There
+is no compile or dense-linear option: every Versor linear is already a single dense matmul.
+
+```bash
+poetry run python -m pose3d --path_to_datasets ... --vector_field versor
+```
+
 ## Flow-trajectory visualizations
 
 `pose3d/visualize_flow.py` replays the flow's Euler loop from several random rotations and draws every step: each rotation relative

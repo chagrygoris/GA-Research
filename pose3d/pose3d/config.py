@@ -312,7 +312,10 @@ class FlowConfig:
     # `rc_hidden` correlations -> MLP (models/rotor_corr_head.py). Uses so3f_s2_channels / so3f_nside /
     # so3f_flip_symmetrize; needs cond_tokens=sphere, condition_head=none, pose_tokens=rotor.
     # Small (~0.25M after the backbone): s2 32 / templates 48 / hidden 103 (248,450).
-    vector_field: Literal["clifford", "gatr", "so3fourier", "rotorcorr"] = "gatr"
+    # "versor": Versor (Truong & Hirst 2026, arXiv 2602.10195) in place of GATr, a Cl(4,1) transformer with
+    # geometric-product attention, not rotation equivariant (models/versor_denoiser.py); sizes: versor_*.
+    # pose_tokens=rotor, cond_tokens=pooled only. Plain torch, no extra package.
+    vector_field: Literal["clifford", "gatr", "versor", "so3fourier", "rotorcorr"] = "gatr"
     rc_templates: int = 48
     rc_hidden: int = 103
     rc_kappa: float = 10.0
@@ -408,6 +411,12 @@ class FlowConfig:
     # gatr_enc_blocks blocks (gatr_mv/s_channels, gatr_heads) gives every point so3f_s2_channels invariant weights
     # for the harmonics at its own direction (models/so3fourier_head.py, PointGATrSphereHead).
     gatr_enc_blocks: int = 2
+    # Sizes of the Versor vector field (vector_field=versor): blocks, Cl(4,1) multivector channels per token
+    # (32 components each), attention heads (must divide the channels) and the MLP's width factor.
+    versor_blocks: int = 4
+    versor_channels: int = 8
+    versor_heads: int = 4
+    versor_expansion: int = 4
     # ---- the two-tower model (experimental, models/stf_track.py) -------------------------------------------------
     # Add a second feature track of symmetric traceless Cartesian tensors (STF) of ranks 2..stf_lmax next to the
     # multivectors. Multivectors only hold degree 0 and 1 of SO(3); an STF tensor of rank l is the degree-l irrep

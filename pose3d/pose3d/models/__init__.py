@@ -35,6 +35,8 @@ def _clifford_flow(cfg: Config, algebra) -> nn.Module:
         gatr=dict(num_blocks=fl.gatr_blocks, mv_channels=fl.gatr_mv_channels,
                   s_channels=fl.gatr_s_channels, num_heads=fl.gatr_heads,
                   dense_linear=fl.gatr_dense_linear, compile=fl.gatr_compile),
+        versor=dict(num_blocks=fl.versor_blocks, mv_channels=fl.versor_channels,
+                    num_heads=fl.versor_heads, expansion=fl.versor_expansion),
         gatr_zero_readout=fl.gatr_zero_readout,
         gatr_final_norm=fl.gatr_final_norm,
         mlp_heads=f.mlp_heads,

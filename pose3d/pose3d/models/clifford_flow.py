@@ -292,6 +292,7 @@ class CliffordFlow(nn.Module):
                  vector_field: str = "clifford",
                  condition_head: str = "clifford",
                  gatr: dict = None,
+                 versor: dict = None,
                  gatr_zero_readout: bool = True,
                  gatr_final_norm: bool = False,
                  fisher_checkpoint: str = None,
@@ -344,14 +345,16 @@ class CliffordFlow(nn.Module):
         if cond_tokens in clouds and condition_head != "none":
             raise ValueError(f"cond_tokens={cond_tokens!r} feeds the cloud straight to GATr: it needs "
                              "condition_head='none'")
+        if vector_field == "versor" and (pose_tokens != "rotor" or cond_tokens != "pooled" or mlp_heads):
+            raise ValueError("vector_field='versor' needs pose_tokens='rotor', cond_tokens='pooled' and no mlp_heads")
         if pose_tokens != "rotor" and (vector_field != "gatr" or mlp_heads):
             raise ValueError(f"pose_tokens={pose_tokens!r} needs the GATr vector field (and no mlp_heads)")
         if cond_tokens != "pooled" and fisher_checkpoint:
             raise ValueError("cond_tokens='so2' and fisher_prior cannot be combined")
         if mlp_heads and fisher_checkpoint:
             raise ValueError("mlp_heads and fisher_prior cannot be combined")
-        if vector_field not in ("clifford", "gatr", "so3fourier", "rotorcorr"):
-            raise ValueError(f"vector_field must be 'clifford', 'gatr', 'so3fourier' or 'rotorcorr', "
+        if vector_field not in ("clifford", "gatr", "versor", "so3fourier", "rotorcorr"):
+            raise ValueError(f"vector_field must be 'clifford', 'gatr', 'versor', 'so3fourier' or 'rotorcorr', "
                              f"got {vector_field!r}")
         if condition_head not in ("clifford", "gatr", "none"):
             raise ValueError(f"condition_head must be 'clifford', 'gatr' or 'none', got {condition_head!r}")
@@ -448,6 +451,9 @@ class CliffordFlow(nn.Module):
                 pose_channels=3 if pose_tokens == "frame_ch" else 1,
                 extra_scalars=(gatr_pose_harmonics + 1) ** 2 if gatr_pose_harmonics and pose_tokens == "rotor" else 0,
                 stf_blocks=stf_blocks, **(gatr or {}))
+        elif vector_field == "versor":
+            from pose3d.models.versor_denoiser import VersorVectorField
+            self.vector_field = VersorVectorField(self.n_cond_mv, **(versor or {}))
         else:
             self.vector_field = TralaleroTralala(
                 algebra, in_features=2 + self.n_cond_mv, hidden_dim=vf_hidden_dim, out_features=1)
@@ -465,6 +471,8 @@ class CliffordFlow(nn.Module):
             nn.init.zeros_(self.vector_field.net[-1].bias)
         elif vector_field in sphere_fields:
             pass   # SO3FourierVelocity / RotorCorrelationVelocity zero-initialise their own read-outs
+        elif vector_field == "versor":
+            nn.init.zeros_(self.vector_field.out.weight)   # zero initial velocity, as GATr's zeroed read-out
         elif vector_field == "gatr" and gatr_zero_readout:
             # Zero the output layer so training starts from a zero velocity field, as with the
             # Clifford MLP below (see FlowConfig.gatr_zero_readout for when this stalls P1).
