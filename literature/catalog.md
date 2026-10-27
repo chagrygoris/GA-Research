@@ -1,6 +1,6 @@
 # Clifford / geometric algebra deep learning: paper catalogue
 
-Generated from `literature/papers.yaml` on 2026-10-26 by `python -m ga_lit render`. Do not edit by hand; edit the YAML or use the CLI.
+Generated from `literature/papers.yaml` on 2026-10-27 by `python -m ga_lit render`. Do not edit by hand; edit the YAML or use the CLI.
 
 **145 accepted papers** (50 core, 43 adjacent, 52 context), 0 waiting in the inbox. Browse interactively: `literature/site/index.html`.
 
