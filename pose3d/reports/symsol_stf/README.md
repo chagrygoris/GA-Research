@@ -276,8 +276,10 @@ Per-shape cells: median error / acc@15. Training loss: control 5.30 → 5.29 (fl
 1. ~~`--symsol_nearest_coupling` for both arms~~: done, section 7.
 2. ~~A longer schedule for the STF arms~~: done (100 epochs), section 7.
 3. Infrastructure: RTX Pro 6000 sessions on accounts 3 and 5 were allocated, consumed quota and never executed any
-   cell (empty log, no output files); the runner now has a GPU-dependent watchdog (90 min RTX / 330 min T4) and tees
-   its output to `/kaggle/working/<run_name>.log`.
+   cell (empty log, no output files); the runner tees its output to `/kaggle/working/<run_name>.log`. (A watchdog that
+   killed the training process after a fixed time was removed on 27 October 2026: it could not stop a session whose
+   cells never run, and it would cut off long runs before their final evaluation. Dead sessions are caught by checking
+   the log ~15 minutes after launch and stopped by hand.)
 
 ## 7. Nearest coupling, L = 6 and 100 epochs (27 October 2026)
 
