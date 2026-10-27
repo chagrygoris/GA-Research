@@ -11,7 +11,7 @@ in machine learning, plus the pipeline that keeps it fresh. Everything lives in 
 | `catalog.md` | A Markdown catalogue of accepted papers grouped by year and topic, for reading on GitHub. Generated. |
 | `ga_lit/` | The Python package: `config.py` (search terms and keyword vocabularies), `fetch.py` (arXiv, OpenReview, Crossref, INSPIRE-HEP), `triage.py` (scoring), `db.py` (load / dedupe / validate), `render.py`, `cli.py`. |
 | `state.yaml` | When the last sweep ran and what it found. Generated. |
-| `../.github/workflows/literature-update.yml` | The weekly GitHub Actions job that runs the sweep and opens a pull request with new inbox items. |
+| `../.github/workflows/literature-update.yml` | The daily GitHub Actions job that runs the sweep, commits the result to `main` and redeploys the page. |
 
 ## Daily use
 
@@ -56,19 +56,20 @@ The browser (`site/index.html`) has an **Inbox** tab. Each inbox card shows the 
 
 ## Automation
 
-`.github/workflows/pages.yml` publishes `literature/site/` to GitHub Pages at
-<https://chagrygoris.github.io/GA-Research/> on every push to `main` that touches the page. One-time repository
-setting: *Settings -> Pages -> Build and deployment -> Source: GitHub Actions*.
+`.github/workflows/literature-update.yml` runs **every day at 05:23 UTC** (after arXiv's nightly
+announcement) and on manual dispatch with optional `since` / `until` inputs. It runs `python -m ga_lit
+update`, commits the updated database, page and catalogue straight to `main`, and redeploys the page to
+GitHub Pages at <https://chagrygoris.github.io/GA-Research/>. New papers only ever enter the **inbox**, so
+the automatic commit never changes what counts as accepted; the run summary in the Actions tab lists the
+inbox as a checklist. `.github/workflows/pages.yml` additionally redeploys the page when a human pushes a
+change to `literature/site/` on `main`. One-time repository setting for both: *Settings -> Pages -> Build
+and deployment -> Source: GitHub Actions*.
 
-`.github/workflows/literature-update.yml` runs every Monday at 06:17 UTC (change the `cron` line for a
-daily cadence) and on manual dispatch with optional `since` / `until` inputs. It runs `python -m ga_lit
-update`, and if the database changed it opens a pull request titled "Literature sweep: N new inbox items"
-whose body is the inbox checklist. Review the inbox in the page or in the YAML, accept or reject, re-render,
-and merge. The workflow runs on the default branch only, so it becomes active once this folder is merged.
-
-Reviewing the inbox is the one manual step. It can itself be delegated to an assistant session with a prompt
-such as "triage the literature inbox: open each candidate, decide core / adjacent / context or reject, and
-run the commands", which keeps the human in the loop at pull-request review.
+Reviewing the inbox is the one manual step: open the **Inbox** tab of the live page, decide, and run the
+copied `accept` / `reject` command (or edit the YAML), then `python -m ga_lit render` and commit. It can
+be delegated to an assistant session with a prompt such as "triage the literature inbox: open each
+candidate, decide core / adjacent / context or reject, run the commands and commit", which keeps a human in
+the loop at commit review.
 
 ## Record schema (`papers.yaml`)
 

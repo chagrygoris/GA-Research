@@ -49,6 +49,7 @@ Papers on Clifford / geometric-algebra machine learning are catalogued in [`lite
   means GA-related machine learning or a GA method next to a learned component; *context* means the
   paper cites or benchmarks against GA models without using one. Rejected items stay in the YAML with a
   `notes` reason so the sweep never proposes them again. Nothing is accepted automatically.
-* **The weekly sweep** (`.github/workflows/literature-update.yml`) opens a pull request with the inbox
-  as a checklist. Reviewing that inbox is a task for a human or an agent asked to do it; merge the pull
-  request only after every item is accepted or rejected.
+* **The daily sweep** (`.github/workflows/literature-update.yml`) commits new inbox candidates and the
+  regenerated page straight to `main` and redeploys the live page. The Inbox tab of the page is the review
+  queue; emptying it (accept or reject every item, then commit) is a task for a human or an agent asked to
+  do it. Pull the latest `main` before editing `papers.yaml`, since the bot may have committed overnight.
