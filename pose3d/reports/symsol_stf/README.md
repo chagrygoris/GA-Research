@@ -5,6 +5,9 @@ median nearest-equivalent error auxiliary, no log-likelihood). Results in sectio
 (kernel `syfry5suvzovvakmuj/symsol-stf-control-rtx`), the two STF arms on one Tesla T4 each (`saudic/symsol-stf-stf-l3-t4`,
 `ivangorodtver/symsol-stf-stf-l6-t4`) after several RTX sessions on other accounts were allocated but never executed.
 Every number marked *estimate* below is a calculation from earlier timings, not a measurement on a GPU.
+**Update, 27 October 2026:** the same arms with nearest coupling, L = 6 and 100-epoch schedules (section 7). With
+coupling and L = 6 for 100 epochs the flow reaches 13.6 deg class-mean / acc@15 0.59 and resolves the tetrahedron
+(8.4 deg); the icosahedron stays unresolved in every run.
 
 ## 1. The question
 
@@ -270,10 +273,102 @@ Per-shape cells: median error / acc@15. Training loss: control 5.30 → 5.29 (fl
 
 ### Open follow-ups
 
-1. `--symsol_nearest_coupling` for both arms (`control_nc`, `stf_l3_nc` in the runner): removes the cancelling targets
-   that cause the stall, so the comparison measures the STF track's effect on a flow that learns. Not launched (needs
-   approval; the runner bundles are ready).
-2. A longer or restarted schedule for the STF arms, since they were still improving at epoch 40.
+1. ~~`--symsol_nearest_coupling` for both arms~~: done, section 7.
+2. ~~A longer schedule for the STF arms~~: done (100 epochs), section 7.
 3. Infrastructure: RTX Pro 6000 sessions on accounts 3 and 5 were allocated, consumed quota and never executed any
    cell (empty log, no output files); the runner now has a GPU-dependent watchdog (90 min RTX / 330 min T4) and tees
    its output to `/kaggle/working/<run_name>.log`.
+
+## 7. Nearest coupling, L = 6 and 100 epochs (27 October 2026)
+
+**Nearest coupling** (`--symsol_nearest_coupling`, abbreviated **NC**): during training each start rotation R0 flows
+to the equivalent pose of the image that is nearest to R0, instead of to a randomly drawn one. The targets then no
+longer cancel for the symmetric shapes, so a velocity of zero is no longer the best a model can do early in
+training (zero-velocity loss about 1.15 instead of 5.29, `reports/symsol_p1_stall.md`); from a uniform R0 every
+equivalent is still chosen equally often, so the learned distribution keeps the symmetry. Run names below carry the
+suffix `_nc`. Symbols as in section 6 (median, class-mean, acc@15, acc@30); every final number uses the 32-sample
+geodesic medoid; one seed per run.
+
+### Runs
+
+Same protocol as section 3 (SYMSOL I, 4,500 training views per shape, the first 1,000 test views per shape, ResNet-50,
+AdamW lr 1e-4 x sqrt(64/32), 5 warmup epochs + cosine, global batch 64, no augmentation, no EMA, no likelihood), plus
+NC; code: commit `98bb873` (snapshot dataset `ga-research-snapshot-nc`). Two hardware set-ups were used:
+
+* **4 x L4, data parallel** (`--ddp --sync_bn`): one process per GPU with 16 images each, so the global batch and the
+  learning rate are those of the one-process runs; SyncBatchNorm makes the backbone's BatchNorm statistics use the
+  whole batch of 64 as in one process. Each process decodes its own copy of the images (4 x 4.1 GB; the machine has
+  188 GB of RAM). The DDP path on SYMSOL was checked first on CPU (2 processes, gloo, synthetic SYMSOL folder): training,
+  the sharded per-epoch evaluation and the per-shape final table run, and every test view is scored once.
+* **1 x RTX Pro 6000**, one process (`--no-ddp`), as in section 3.
+
+| run | flags beyond the protocol | hardware, kernel | s / epoch | wall time |
+|---|---|---|---|---|
+| `control_nc` | NC | 4 x L4, `arynabiaroza/symsol-control-nc-l4x4` | 92 | 89 min |
+| `stf_l3_nc` | `--stf_track --stf_lmax 3`, NC | 4 x L4, `grig0ryz/symsol-stf-l3-nc-l4x4` | 105 | ~93 min |
+| `stf_l6_nc` | `--stf_track --stf_lmax 6`, NC | 4 x L4, `arynabiaroza/symsol-stf-l6-nc-l4x4` | 116 | ~107 min |
+| `stf_l3_nc_100ep` | `--stf_track --stf_lmax 3`, NC, `--n_epochs 100` | RTX, `grig0ryz/symsol-stf-l3-nc-100ep-rtx` | 36 | 72 min |
+| `stf_l6_nc_100ep` | `--stf_track --stf_lmax 6`, NC, `--n_epochs 100` | RTX, `grig0ryz/symsol-stf-l6-nc-100ep-rtx` | 38 | 75 min |
+
+The first epoch of the L4 runs took ~880 s (torch.compile in 4 processes), of the RTX runs ~335 s. An RTX epoch is
+about 3x faster than a 4 x L4 epoch for this model. A first RTX launch of `stf_l3_nc` on account 5 again never executed a
+cell (empty log after 70 min) and was stopped by hand; the rerun on the same account ran normally.
+
+### Final results per shape (median / acc@15 / acc@30)
+
+| run | epochs | tet | cube | icosa | cone | cyl | class-mean | median | acc@15 | acc@30 |
+|---|---|---|---|---|---|---|---|---|---|---|
+| `control_nc` | 40 | 51.64 / 0.016 / 0.092 | 42.52 / 0.014 / 0.171 | 30.99 / 0.047 / 0.446 | 18.05 / 0.395 / 0.736 | 60.92 / 0.037 / 0.133 | 40.82 | 38.49 | 0.102 | 0.316 |
+| `stf_l3_nc` | 40 | 44.38 / 0.051 / 0.226 | 41.16 / 0.024 / 0.187 | 31.15 / 0.048 / 0.442 | 1.07 / 1.000 / 1.000 | 13.05 / 0.552 / 0.761 | 26.16 | 28.68 | 0.335 | 0.523 |
+| `stf_l6_nc` | 40 | 51.82 / 0.016 / 0.094 | 41.85 / 0.023 / 0.195 | 31.02 / 0.048 / 0.442 | 0.93 / 1.000 / 1.000 | 2.97 / 0.856 / 0.913 | 25.72 | 27.96 | 0.389 | 0.529 |
+| `stf_l3_nc_100ep` | 100 | 49.07 / 0.062 / 0.216 | 33.00 / 0.151 / 0.443 | 31.56 / 0.057 / 0.431 | 0.83 / 1.000 / 1.000 | 0.93 / 0.994 / 0.999 | 23.08 | 20.90 | 0.453 | 0.618 |
+| **`stf_l6_nc_100ep`** | 100 | **8.42 / 0.658 / 0.878** | **26.50 / 0.245 / 0.574** | 31.60 / 0.060 / 0.422 | 0.57 / 1.000 / 1.000 | 0.68 / 0.996 / 0.998 | **13.55** | **6.59** | **0.592** | **0.774** |
+
+Per-shape cells: median error in degrees / acc@15 / acc@30. For reference, under the same 40-epoch protocol without
+NC: `stf_l3` 54.4 / 42.4 / 31.4 / 54.2 / 59.2 deg per shape, class-mean 48.3, acc@15 0.046 (section 6); the best earlier
+flow, `symsol1_10pct_gatr_spherecloud_harm6_i2s_adamw` (spherecloud condition with 49 pose harmonics, step schedule,
+scored on all 5,000 test views per shape; per-shape numbers from its kernel log `grig0ryz/symsol-gatr-spherecloud-harm6`):
+tet 41.91 / 0.149 / 0.342, cube 24.67 / 0.287 / 0.627, icosa 31.19 / 0.059 / 0.451, cone 0.65 / 1.000 / 1.000,
+cyl 0.98 / 0.908 / 0.927, class-mean 19.88, acc@15 0.481; Image2Sphere (`reports/i2s_symsol1_10pct.md`): tet 4.44,
+cube 4.40, icosa 4.75, cone 1.34, cyl 1.14 deg, class-mean 3.21, acc@15 1.00.
+
+### Per epoch (1 sample per image): train loss / median / class-mean / acc@15
+
+| epoch | `control_nc` | `stf_l3_nc` | `stf_l6_nc` | `stf_l3_nc_100ep` | `stf_l6_nc_100ep` |
+|---|---|---|---|---|---|
+| 1 | 1.155 / 46.73 / 55.30 / 0.027 | 1.150 / 46.73 / 55.31 / 0.027 | 1.157 / 46.73 / 55.31 / 0.027 | 1.152 / 47.26 / 55.26 / 0.028 | 1.156 / 47.26 / 55.25 / 0.028 |
+| 10 | 1.152 / 46.73 / 55.30 / 0.027 | 0.778 / 35.21 / 35.68 / 0.142 | 0.858 / 37.18 / 38.32 / 0.120 | 1.155 / 47.26 / 55.23 / 0.029 | 0.570 / 30.88 / 29.39 / 0.282 |
+| 20 | 1.150 / 46.73 / 55.31 / 0.027 | 0.455 / 28.56 / 27.48 / 0.326 | 0.444 / 27.38 / 26.94 / 0.389 | 1.115 / 45.52 / 52.78 / 0.032 | 0.380 / 24.45 / 24.72 / 0.414 |
+| 30 | 1.153 / 46.73 / 55.29 / 0.027 | 0.386 / 25.67 / 24.90 / 0.395 | 0.397 / 26.49 / 25.97 / 0.412 | 0.697 / 34.02 / 32.45 / 0.197 | 0.318 / 20.61 / 21.84 / 0.450 |
+| 40 | 1.012 / 42.63 / 46.62 / 0.049 | 0.364 / 25.13 / 24.39 / 0.406 | 0.377 / 26.10 / 25.49 / 0.415 | 0.460 / 27.43 / 26.99 / 0.375 | 0.280 / 18.46 / 20.07 / 0.469 |
+| 60 | | | | 0.318 / 21.54 / 23.54 / 0.446 | 0.223 / 10.97 / 15.51 / 0.547 |
+| 80 | | | | 0.292 / 20.95 / 23.05 / 0.454 | 0.188 / 7.58 / 13.59 / 0.588 |
+| 100 | | | | 0.279 / 20.70 / 22.87 / 0.456 | 0.173 / 6.23 / 12.86 / 0.602 |
+
+The losses are not comparable with section 6: with NC the zero-velocity loss is ~1.15 instead of 5.29.
+
+### Reading
+
+* **NC alone does not free the reference model quickly.** `control_nc` sits at the zero-velocity loss for 30 epochs
+  and only then starts to learn (mostly the cone); its final class-mean is 40.8 deg.
+* **NC + STF track leaves the stall early.** The 40-epoch STF arms move at epoch ~6 (versus ~20 without NC, section 6)
+  and solve the cone (< 1.1 deg, acc@15 1.00); L = 6 adds the cylinder (13.1 -> 3.0 deg). The polyhedra do not move in
+  any 40-epoch run (tet 44–52, cube 41–42, icosa 31 deg). The 100-epoch L = 3 run on the RTX stalled until epoch ~20,
+  the 4 x L4 L = 3 run only until epoch ~6: one seed each, different hardware, so this difference is not attributed.
+* **100 epochs at L = 6 resolves the tetrahedron.** 8.4 deg median, acc@15 0.66, where 100 epochs at L = 3 (49.1 deg)
+  and 40 epochs at L = 6 (51.8 deg) do not. The cube improves partly (26.5 deg, acc@15 0.25; L = 3 / 100 epochs: 33.0).
+  So degree 4–6 content and a long enough schedule are both needed for the tetrahedron, consistent with section 1's
+  question. The L = 3 run plateaus from epoch ~60 at 23 deg class-mean; the L = 6 run is still improving at epoch 100.
+* **The icosahedron is unresolved in every run** (31–32 deg median, acc@15 ~0.06, also for harm6 and the no-NC arms).
+  Its 60 equivalent poses make a function on SO(3) whose peaks need degrees above 6; L = 6 does not reach it.
+* **Against the best earlier flow** (harm6, 40 epochs): `stf_l6_nc_100ep` has a lower class-mean (13.6 vs 19.9 deg)
+  and higher acc@15 (0.59 vs 0.48) with 2.5x the epochs; harm6 still has the better cube (24.7 vs 26.5 deg). Image2Sphere
+  remains far ahead (3.2 deg, acc@15 1.00, every polyhedron at 4–5 deg).
+* **32-sample medoid vs 1 sample.** For the 40-epoch L = 3 arm the final medoid acc@15 (0.335) is below the 1-sample
+  epoch-40 value (0.406); the medoid of samples spread over several equivalent modes need not lie near any of them.
+
+### Follow-ups
+
+1. harm6 + NC: the harm6 recipe with `--symsol_nearest_coupling` (`grig0ryz/symsol-harm6-nc-rtx`, running).
+2. `stf_l6_nc` beyond 100 epochs, and seeds: the L = 6 run is still improving, and every number above is one seed.
+3. The icosahedron: STF degrees above 6 (the tower allows `stf_lmax` <= 6 today) or a head that carries higher degrees.
