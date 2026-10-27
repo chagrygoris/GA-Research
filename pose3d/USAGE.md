@@ -138,7 +138,19 @@ second, learned input multivector. Unlike GATr, Versor's layers are not rotation
 
 Sizes: `--versor_blocks` (4), `--versor_channels` (8 multivector channels per token, 105k parameters for the
 field), `--versor_heads` (4, must divide the channels), `--versor_expansion` (4, the MLP's width factor). There
-is no compile or dense-linear option: every Versor linear is already a single dense matmul.
+are two speed options, the same function and checkpoints either way:
+
+- `--versor_compile` (on by default) runs the field, the EMA copy included, through `torch.compile`. Most of
+  the eager step is elementwise work (the normalization after every layer, the attention scores), not
+  matmuls; fused, a CPU forward + backward of 512 samples goes from 12.6 s to 5.7 s. Compilation takes about
+  3 minutes on the CPU; not yet timed on a GPU.
+- `--versor_linear dense|matrix`: `dense` (default) runs every Versor linear as one real matmul; `matrix` is
+  the reference's own fast path for Cl(4,1), one complex matmul in the 4x4 complex matrix representation
+  (4x fewer multiply-adds, but two changes of basis per multivector): 17.4 s against 12.6 s for `dense` on
+  the CPU, eager.
+
+The reference's Triton kernels are not used: the bit-masked linear's backward clamps the gradients and only
+takes 3-dimensional inputs, and the Triton normalization rescales in place outside autograd.
 
 ```bash
 poetry run python -m pose3d --path_to_datasets ... --vector_field versor

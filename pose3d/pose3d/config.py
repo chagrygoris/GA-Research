@@ -417,6 +417,11 @@ class FlowConfig:
     versor_channels: int = 8
     versor_heads: int = 4
     versor_expansion: int = 4
+    # Engine of every Versor linear: "dense" (one real matmul) or "matrix" (the reference's complex 4x4 matrix
+    # representation of Cl(4,1), 4x fewer multiply-adds, slower on CPU), the same function and checkpoints.
+    versor_linear: Literal["dense", "matrix"] = "dense"
+    # torch.compile of the Versor field, the EMA copy included: fuses the elementwise ops that dominate its step.
+    versor_compile: bool = True
     # ---- the two-tower model (experimental, models/stf_track.py) -------------------------------------------------
     # Add a second feature track of symmetric traceless Cartesian tensors (STF) of ranks 2..stf_lmax next to the
     # multivectors. Multivectors only hold degree 0 and 1 of SO(3); an STF tensor of rank l is the degree-l irrep

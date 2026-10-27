@@ -59,13 +59,44 @@ def test_linear_is_right_multiplication_by_the_weights():
     torch.testing.assert_close(lin(x), expected, atol=1e-5, rtol=1e-5)
 
 
+def test_matrix_engine_matches_dense():
+    torch.manual_seed(0)
+    dense = VersorLinear(3, 5, normalize=False)
+    matrix = VersorLinear(3, 5, normalize=False, method="matrix")
+    matrix.load_state_dict(dense.state_dict())
+    x = torch.randn(2, 7, 3, GA_DIM, requires_grad=True)
+    out_d, out_m = dense(x), matrix(x)
+    torch.testing.assert_close(out_m, out_d, atol=1e-4, rtol=1e-4)
+    g = torch.randn_like(out_d)
+    gx_d, gw_d = torch.autograd.grad(out_d, (x, dense.weight), g)
+    gx_m, gw_m = torch.autograd.grad(out_m, (x, matrix.weight), g)
+    torch.testing.assert_close(gx_m, gx_d, atol=1e-4, rtol=1e-4)
+    torch.testing.assert_close(gw_m, gw_d, atol=1e-4, rtol=1e-4)
+
+
+def test_vector_field_same_function_with_either_engine():
+    torch.manual_seed(0)
+    dense = VersorVectorField(n_cond_mv=4, mv_channels=8, num_blocks=2, num_heads=2)
+    with torch.no_grad():
+        dense.out.weight.normal_()
+        for block in dense.blocks:
+            block.gamma1.fill_(1.0)
+            block.gamma2.fill_(1.0)
+    matrix = VersorVectorField(n_cond_mv=4, mv_channels=8, num_blocks=2, num_heads=2, linear="matrix")
+    matrix.load_state_dict(dense.state_dict())
+    # float64: the manifold normalization divides by an indefinite norm that can nearly cancel, which
+    # magnifies float32 rounding by orders of magnitude after a few layers, the same in both engines
+    x = torch.randn(3, 6, 8, dtype=torch.float64)
+    torch.testing.assert_close(matrix.double()(x), dense.double()(x), atol=1e-5, rtol=1e-6)
+
+
 def test_manifold_normalization_unit_norm_and_zero_stays_zero():
     x = torch.randn(6, GA_DIM)
     x[0] = 0.0
     y = manifold_normalization(x)
     assert y[0].abs().max() == 0   # as in the reference: eps keeps the denominator >= 1e-3
-    from pose3d.models.versor_denoiser import _tables
-    norm = (y[1:] ** 2 * _tables()[1]).sum(-1).abs()
+    from pose3d.models.versor_denoiser import _NORM_SIGN
+    norm = (y[1:] ** 2 * _NORM_SIGN).sum(-1).abs()
     torch.testing.assert_close(norm, torch.ones(5), atol=1e-4, rtol=1e-4)
 
 
@@ -102,6 +133,21 @@ def test_vector_field_depends_on_time_and_rotor():
     x_r[:, 0] = torch.randn(2, 8)
     assert not torch.allclose(field(x), field(x_t))
     assert not torch.allclose(field(x), field(x_r))
+
+
+def test_compiled_field_matches_eager_and_survives_deepcopy():
+    import copy
+    torch.manual_seed(0)
+    eager = VersorVectorField(n_cond_mv=2, mv_channels=4, num_blocks=1, num_heads=2)
+    with torch.no_grad():
+        eager.out.weight.normal_()
+    compiled = VersorVectorField(n_cond_mv=2, mv_channels=4, num_blocks=1, num_heads=2, compile=True)
+    compiled.load_state_dict(eager.state_dict())
+    assert "_orig_mod" not in "".join(compiled.state_dict())
+    twin = copy.deepcopy(compiled)   # what the EMA does
+    assert twin._compiled_call_impl is not None
+    x = torch.randn(2, 4, 8)
+    torch.testing.assert_close(twin(x), eager(x), atol=1e-4, rtol=1e-4)
 
 
 def _flow(vector_field):
