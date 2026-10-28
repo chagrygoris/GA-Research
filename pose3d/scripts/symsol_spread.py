@@ -20,7 +20,7 @@ from pathlib import Path
 
 import numpy as np
 import torch
-from torch.utils.data import DataLoader
+from torch.utils.data import DataLoader, Subset
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
@@ -52,6 +52,7 @@ def main():
     p.add_argument("--checkpoint", required=True)
     p.add_argument("--path_to_datasets", required=True, help="directory holding symsol/test/{rotations.npz,images/}")
     p.add_argument("--views", type=int, default=None, help="first N test views per shape (default: all)")
+    p.add_argument("--shapes", default=None, help="comma-separated subset of tet,cube,icosa,cone,cyl (default: all)")
     p.add_argument("--samples", type=int, default=64, help="flow samples per image (K)")
     p.add_argument("--steps", type=int, default=20, help="Euler steps of the ODE (the trainer's default)")
     p.add_argument("--batch_size", type=int, default=16)
@@ -69,8 +70,10 @@ def main():
           f"device {device}", flush=True)
 
     data = Symsol(args.path_to_datasets, train=False, set_number=1, num_views=args.views)
-    loader = DataLoader(data, batch_size=args.batch_size, shuffle=False, num_workers=2)
     shapes = SHAPE_SETS[1]
+    keep = [shapes.index(s) for s in args.shapes.split(",")] if args.shapes else list(range(len(shapes)))
+    index = torch.nonzero(torch.isin(data.cls, torch.tensor(keep))).flatten().tolist()
+    loader = DataLoader(Subset(data, index), batch_size=args.batch_size, shuffle=False, num_workers=2)
     spread, first = [], []
     for n, batch in enumerate(loader):
         img = batch["img"].to(device)
@@ -83,15 +86,15 @@ def main():
         spread.append(err.mean(1))
         first.append(err[:, 0])
         if n % 20 == 0:
-            print(f"  {min((n + 1) * args.batch_size, len(data))}/{len(data)} views", flush=True)
+            print(f"  {min((n + 1) * args.batch_size, len(index))}/{len(index)} views", flush=True)
     spread, first = np.concatenate(spread), np.concatenate(first)
-    cls = data.cls.numpy()
+    cls = data.cls[index].numpy()
 
     summary = {}
     print(f"\nspread (deg), K = {args.samples} samples per view, {args.steps} Euler steps")
     print(f"{'shape':>6} {'views':>6} {'spread':>8} {'median of per-view':>19} {'1-sample median err':>20}")
-    for c, s in enumerate(shapes):
-        m = cls == c
+    for c in keep:
+        s, m = shapes[c], cls == c
         summary[s] = dict(views=int(m.sum()), spread=float(spread[m].mean()), spread_median=float(np.median(spread[m])),
                           one_sample_median_error=float(np.median(first[m])))
         print(f"{s:>6} {m.sum():>6} {spread[m].mean():>8.2f} {np.median(spread[m]):>19.2f} {np.median(first[m]):>20.2f}")
