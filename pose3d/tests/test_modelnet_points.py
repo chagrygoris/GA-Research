@@ -235,6 +235,28 @@ def test_gatr_with_pose_harmonics_is_invariant_and_sees_them():
     assert sum(p.numel() for p in model.parameters()) > sum(p.numel() for p in plain.parameters())
 
 
+def test_gatr_with_pose_fourier_is_invariant_and_sees_it():
+    """--gatr_pose_fourier 3: IPDF's sin / cos(2^k u) of the pose-frame direction instead of the harmonics, 18
+    scalars per token; still exactly equivariant, and it cannot be combined with the harmonics."""
+    from pose3d.models.gatr_denoiser import _ensure_xformers_stub
+    _ensure_xformers_stub()
+    pytest.importorskip("gatr")
+    model = _cfg_model(GATR + ["--gatr_pose_fourier", "3"]).double().eval()
+    assert model.vector_field.n_harm == 18
+    with torch.no_grad():
+        for p in model.vector_field.out.parameters():
+            p.normal_(0, 0.5)
+    gen = torch.Generator().manual_seed(8)
+    points = torch.randn(2, 30, 3, generator=gen, dtype=torch.float64)
+    R, Q = random_rotations(2, gen).double(), random_rotations(1, gen).double()[0]
+    t = torch.tensor([0.3, 0.8], dtype=torch.float64)
+    v = _velocity(model, points, R, t)
+    assert v.abs().max() > 1e-3
+    torch.testing.assert_close(_velocity(model, points @ Q.T, Q @ R, t), v, atol=1e-8, rtol=1e-6)
+    with pytest.raises(ValueError):
+        _cfg_model(GATR + ["--gatr_pose_fourier", "3", "--gatr_pose_harmonics", "6"])
+
+
 def test_gatr_895_with_pose_harmonics_on_points():
     from pose3d.models.gatr_denoiser import _ensure_xformers_stub
     _ensure_xformers_stub()

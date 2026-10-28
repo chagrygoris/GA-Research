@@ -307,6 +307,7 @@ class CliffordFlow(nn.Module):
                  rotorcorr: dict = None,
                  n_points: int = 256,
                  gatr_pose_harmonics: int = 0,
+                 gatr_pose_fourier: int = 0,
                  gatr_encoder: dict = None,
                  stf_track: bool = False,
                  stf_lmax: int = 3,
@@ -332,6 +333,8 @@ class CliffordFlow(nn.Module):
                                               or mlp_heads or fisher_checkpoint):
             raise ValueError(f"vector_field={vector_field!r} needs condition_head='none', pose_tokens='rotor', "
                              "no mlp_heads and no fisher_prior")
+        if gatr_pose_fourier and (pose_tokens != "frame_pin" or gatr_pose_harmonics):
+            raise ValueError("gatr_pose_fourier needs pose_tokens='frame_pin' and replaces gatr_pose_harmonics")
         if pose_tokens not in ("rotor", "frame", "frame_ch", "frame_pin"):
             raise ValueError(f"pose_tokens must be 'rotor', 'frame', 'frame_ch' or 'frame_pin', got {pose_tokens!r}")
         clouds = ("dircloud", "spherecloud", "points")
@@ -434,12 +437,14 @@ class CliffordFlow(nn.Module):
             from pose3d.models.gatr_denoiser import GATrCloudField
             # The 8.95 recipe on points: the GATr field over [pose, n_cond_mv PGA condition tokens].
             self.vector_field = GATrCloudField(self.condition_head.out_scalars, final_norm=gatr_final_norm,
-                                               cond_mv=16, pose_lmax=gatr_pose_harmonics, **gatr_plain)
+                                               cond_mv=16, pose_lmax=gatr_pose_harmonics,
+                                               pose_fourier=gatr_pose_fourier, **gatr_plain)
         elif pose_tokens == "frame_pin":
             from pose3d.models.gatr_denoiser import GATrCloudField
             # Scalar channels per condition token: the cell features plus the constant tokens' flags.
             self.vector_field = GATrCloudField(self.adapter.conv_adapter.width - 8, final_norm=gatr_final_norm,
-                                               pose_lmax=gatr_pose_harmonics, **gatr_plain)
+                                               pose_lmax=gatr_pose_harmonics,
+                                               pose_fourier=gatr_pose_fourier, **gatr_plain)
         elif vector_field == "gatr":
             from pose3d.models.gatr_denoiser import GATrVectorField
             stf_blocks = stf_feature_blocks(stf_lmax, stf_channels, stf_inject) if stf_track else None

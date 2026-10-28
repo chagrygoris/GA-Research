@@ -404,6 +404,12 @@ class FlowConfig:
     # the current pose's frame as extra invariant scalars (49 for L = 6): explicit high angular frequencies in the
     # pose for the GATr field (the test of reports/frequency_hypothesis_ru.md). 0 = off.
     gatr_pose_harmonics: int = 0
+    # The same slot with the IPDF positional encoding instead of the harmonics (Murphy et al., ICML 2021, supp. Table S5;
+    # google-research/implicit_pdf models.py): each of the 3 components u_j of the token's direction in the pose's
+    # frame goes in as sin(2^k u_j), cos(2^k u_j), k = 0..m-1 (6m scalars; IPDF uses m = 3 on SYMSOL, on the 9
+    # entries of R). Invariant like the harmonics, so the field stays exactly equivariant. 0 = off; excludes
+    # gatr_pose_harmonics; pose_tokens=frame_pin only.
+    gatr_pose_fourier: int = 0
     # cond_tokens=pointgatrsphere (GA-encoder + Fourier hybrid, vector_field=so3fourier): a GATr encoder of
     # gatr_enc_blocks blocks (gatr_mv/s_channels, gatr_heads) gives every point so3f_s2_channels invariant weights
     # for the harmonics at its own direction (models/so3fourier_head.py, PointGATrSphereHead).

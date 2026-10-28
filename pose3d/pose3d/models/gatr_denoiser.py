@@ -289,7 +289,7 @@ class GATrCloudField(nn.Module):
 
     def __init__(self, cond_scalars: int, mv_channels: int = 8, s_channels: int = 32,
                  num_blocks: int = 4, num_heads: int = 4, final_norm: bool = False, cond_mv: int = 8,
-                 pose_lmax: int = 0):
+                 pose_lmax: int = 0, pose_fourier: int = 0):
         super().__init__()
         GATr = _import_gatr()
         self.cond_scalars = cond_scalars
@@ -299,6 +299,15 @@ class GATrCloudField(nn.Module):
         # it every angular frequency up to L in the pose from the first step (reports/frequency_hypothesis_ru.md).
         self.pose_lmax = int(pose_lmax)
         n_harm = (self.pose_lmax + 1) ** 2 if self.pose_lmax else 0
+        # pose_fourier = m > 0: the same u, IPDF's positional encoding instead of the harmonics (Murphy et al. 2021):
+        # sin(2^k u), cos(2^k u), k = 0..m-1, per component of u (6m numbers, grouped by frequency as in IPDF).
+        if pose_lmax and pose_fourier:
+            raise ValueError("pose_lmax and pose_fourier are two encodings of the same input: pick one")
+        self.pose_fourier = int(pose_fourier)
+        if self.pose_fourier:
+            n_harm = 6 * self.pose_fourier
+            self.register_buffer("_freqs", 2.0 ** torch.arange(self.pose_fourier, dtype=torch.float32),
+                                 persistent=False)
         self.n_harm = n_harm
         cond_scalars = cond_scalars + n_harm
         self.cond_mv = cond_mv   # 8: Cl(3,0) condition multivectors (embedded); 16: already PGA (PointGATrEncoder)
@@ -322,8 +331,15 @@ class GATrCloudField(nn.Module):
 
     def forward(self, pose, t, cond, R=None):
         """pose (B, 3, 8) Cl(3,0), t (B,), cond (B, n, 8 + cond_scalars) -> (B, 3) e12, e13, e23.
-        R (B, 3, 3), the pose as a matrix, is needed with pose_lmax."""
+        R (B, 3, 3), the pose as a matrix, is needed with pose_lmax / pose_fourier."""
         b, n = cond.shape[:2]
+        if self.pose_fourier:
+            vec = cond[..., 2:5] if self.cond_mv == 16 else cond[..., 1:4]
+            y = torch.einsum("bji,bnj->bni", R.to(vec.dtype), vec)
+            u = y / y.norm(dim=-1, keepdim=True).clamp(min=1e-6)
+            ang = u.unsqueeze(-2) * self._freqs.to(u.dtype)[:, None]              # (B, n, m, 3)
+            enc = torch.cat([ang.sin(), ang.cos()], dim=-1).flatten(-2)           # (B, n, 6m)
+            cond = torch.cat([cond, enc], dim=-1)
         if self.pose_lmax:
             from e3nn import o3
             vec = cond[..., 2:5] if self.cond_mv == 16 else cond[..., 1:4]      # the token's vector part

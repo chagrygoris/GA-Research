@@ -54,6 +54,7 @@ def _clifford_flow(cfg: Config, algebra) -> nn.Module:
                        hidden=fl.rc_hidden, kappa=fl.rc_kappa, flip_symmetrize=fl.so3f_flip_symmetrize),
         n_points=cfg.data.points_n,
         gatr_pose_harmonics=fl.gatr_pose_harmonics,
+        gatr_pose_fourier=fl.gatr_pose_fourier,
         gatr_encoder=dict(num_blocks=fl.gatr_enc_blocks, mv_channels=fl.gatr_mv_channels,
                           s_channels=fl.gatr_s_channels, num_heads=fl.gatr_heads),
         stf_track=fl.stf_track, stf_lmax=fl.stf_lmax, stf_channels=fl.stf_channels,
