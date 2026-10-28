@@ -7,7 +7,9 @@ median nearest-equivalent error auxiliary, no log-likelihood). Results in sectio
 Every number marked *estimate* below is a calculation from earlier timings, not a measurement on a GPU.
 **Update, 27 October 2026:** the same arms with nearest coupling, L = 6 and 100-epoch schedules (section 7). With
 coupling and L = 6 for 100 epochs the flow reaches 13.6 deg class-mean / acc@15 0.59 and resolves the tetrahedron
-(8.4 deg); the icosahedron stays unresolved in every run.
+(8.4 deg); the icosahedron stays unresolved in every STF run. **Update, 28 October 2026:** the earlier spherecloud
+flow with 49 pose harmonics (harm6) plus nearest coupling resolves all five shapes: 1.55 deg class-mean, acc@15 0.95,
+icosahedron 2.7 deg (4 x L4 run; a one-GPU replicate reaches 4.99 deg, acc@15 0.84). Section 7, "harm6 + NC".
 
 ## 1. The question
 
@@ -329,7 +331,8 @@ cell (empty log after 70 min) and was stopped by hand; the rerun on the same acc
 Per-shape cells: median error in degrees / acc@15 / acc@30. For reference, under the same 40-epoch protocol without
 NC: `stf_l3` 54.4 / 42.4 / 31.4 / 54.2 / 59.2 deg per shape, class-mean 48.3, acc@15 0.046 (section 6); the best earlier
 flow, `symsol1_10pct_gatr_spherecloud_harm6_i2s_adamw` (spherecloud condition with 49 pose harmonics, step schedule,
-scored on all 5,000 test views per shape; per-shape numbers from its kernel log `grig0ryz/symsol-gatr-spherecloud-harm6`):
+trained **without** NC (`symsol_nearest_coupling=False` in its logged config), scored on all 5,000 test views per
+shape; per-shape numbers from its kernel log `grig0ryz/symsol-gatr-spherecloud-harm6`):
 tet 41.91 / 0.149 / 0.342, cube 24.67 / 0.287 / 0.627, icosa 31.19 / 0.059 / 0.451, cone 0.65 / 1.000 / 1.000,
 cyl 0.98 / 0.908 / 0.927, class-mean 19.88, acc@15 0.481; Image2Sphere (`reports/i2s_symsol1_10pct.md`): tet 4.44,
 cube 4.40, icosa 4.75, cone 1.34, cyl 1.14 deg, class-mean 3.21, acc@15 1.00.
@@ -361,16 +364,76 @@ The losses are not comparable with section 6: with NC the zero-velocity loss is 
   and 40 epochs at L = 6 (51.8 deg) do not. The cube improves partly (26.5 deg, acc@15 0.25; L = 3 / 100 epochs: 33.0).
   So degree 4–6 content and a long enough schedule are both needed for the tetrahedron, consistent with section 1's
   question. The L = 3 run plateaus from epoch ~60 at 23 deg class-mean; the L = 6 run is still improving at epoch 100.
-* **The icosahedron is unresolved in every run** (31–32 deg median, acc@15 ~0.06, also for harm6 and the no-NC arms).
-  Its 60 equivalent poses make a function on SO(3) whose peaks need degrees above 6; L = 6 does not reach it.
+* **The icosahedron is unresolved in every STF run** (31–32 deg median, acc@15 ~0.06, also for harm6 without NC and
+  the no-NC arms). The harm6 + NC runs below do resolve it, so degree <= 6 inputs are not the limit by themselves.
 * **Against the best earlier flow** (harm6, 40 epochs): `stf_l6_nc_100ep` has a lower class-mean (13.6 vs 19.9 deg)
   and higher acc@15 (0.59 vs 0.48) with 2.5x the epochs; harm6 still has the better cube (24.7 vs 26.5 deg). Image2Sphere
   remains far ahead (3.2 deg, acc@15 1.00, every polyhedron at 4–5 deg).
 * **32-sample medoid vs 1 sample.** For the 40-epoch L = 3 arm the final medoid acc@15 (0.335) is below the 1-sample
   epoch-40 value (0.406); the medoid of samples spread over several equivalent modes need not lie near any of them.
 
+### harm6 + NC (27–28 October 2026)
+
+The harm6 recipe exactly as in `grig0ryz/symsol-gatr-spherecloud-harm6` (`--vector_field gatr --cond_tokens
+spherecloud --pose_tokens frame_pin --condition_head none --dircloud_scalars 64 --gatr_mv_channels 8 --gatr_s_channels
+32 --no-gatr_zero_readout --gatr_pose_harmonics 6`, ResNet-50, AdamW lr 1e-4 x sqrt(64/32), step schedule without
+warmup, batch 64, 40 epochs, all 5,000 test views per shape) plus `--symsol_nearest_coupling`; the final log-likelihood
+pass is dropped (`--no-symsol_likelihood`), so NC is the only change in training. **spherecloud**: the 88 HEALPix
+hemisphere directions and the image axis as GATr tokens, their lifted image signal as scalars
+(`models/dircloud_head.py`); **pose harmonics**: the 49 real spherical harmonics of degree <= 6 of every token's
+direction in the current pose's frame, given as extra scalars (`--gatr_pose_harmonics 6`). Both runs were checked
+first on CPU (one process, and two processes with DDP, synthetic SYMSOL folder).
+
+| run | hardware, kernel | s / epoch | outcome |
+|---|---|---|---|
+| `harm6_nc` (4 x L4) | 4 x L4, `--ddp --sync_bn`, `arynabiaroza/symsol-harm6-nc-l4x4` | 386 | 40 epochs and the final evaluation completed; the old 240-min watchdog then killed the process during shutdown (kernel status ERROR, no checkpoint) |
+| `harm6_nc` (RTX) | 1 x RTX Pro 6000, `grig0ryz/symsol-harm6-nc-rtx-v3` | 145 | completed |
+
+Two earlier RTX launches on account 5 (`symsol-harm6-nc-rtx`, `-rtx-v2`) never executed a cell and were stopped by
+hand. Each epoch of these runs scores all 25,000 test images, which is most of the per-epoch time.
+
+Final, 32 samples per image (median / acc@15 / acc@30):
+
+| run | tet | cube | icosa | cone | cyl | class-mean | median | acc@15 | acc@30 |
+|---|---|---|---|---|---|---|---|---|---|
+| harm6, no NC (reference above) | 41.91 / 0.149 / 0.342 | 24.67 / 0.287 / 0.627 | 31.19 / 0.059 / 0.451 | 0.65 / 1.000 / 1.000 | 0.98 / 0.908 / 0.927 | 19.88 | 16.97 | 0.481 | 0.669 |
+| **harm6 + NC, 4 x L4** | **1.65 / 0.966 / 0.988** | **2.29 / 0.907 / 0.973** | **2.71 / 0.909 / 0.974** | 0.55 / 1.000 / 1.000 | 0.54 / 0.985 / 0.988 | **1.55** | **1.06** | **0.954** | **0.985** |
+| harm6 + NC, RTX | 9.48 / 0.677 / 0.895 | 7.40 / 0.738 / 0.935 | 7.03 / 0.782 / 0.971 | 0.50 / 1.000 / 1.000 | 0.52 / 1.000 / 1.000 | 4.99 | 2.66 | 0.839 | 0.960 |
+| `stf_l6_nc_100ep` (above) | 8.42 / 0.658 / 0.878 | 26.50 / 0.245 / 0.574 | 31.60 / 0.060 / 0.422 | 0.57 / 1.000 / 1.000 | 0.68 / 0.996 / 0.998 | 13.55 | 6.59 | 0.592 | 0.774 |
+| Image2Sphere (first 1,000 views per shape) | 4.44 | 4.40 | 4.75 | 1.34 | 1.14 | 3.21 | 3.07 | 1.000 | – |
+
+Per epoch, 1 sample per image (train loss / median / class-mean / acc@15):
+
+| epoch | harm6 + NC, 4 x L4 | harm6 + NC, RTX |
+|---|---|---|
+| 1 | 1.050 / 40.37 / 44.59 / 0.073 | 1.014 / 39.41 / 42.25 / 0.082 |
+| 5 | 0.291 / 14.27 / 17.46 / 0.510 | 0.255 / 11.17 / 15.99 / 0.555 |
+| 10 | 0.188 / 7.53 / 12.38 / 0.628 | 0.183 / 7.80 / 12.88 / 0.619 |
+| 15 | 0.127 / 3.10 / 4.90 / 0.856 | 0.160 / 5.97 / 10.89 / 0.667 |
+| 16 (lr x 0.1) | 0.096 / 1.86 / 3.50 / 0.889 | 0.141 / 5.34 / 10.16 / 0.681 |
+| 20 | 0.075 / 1.50 / 2.27 / 0.933 | 0.128 / 4.22 / 8.84 / 0.720 |
+| 30 | 0.058 / 1.07 / 1.41 / 0.973 | 0.094 / 2.38 / 4.79 / 0.853 |
+| 40 | 0.052 / 0.96 / 1.25 / 0.976 | 0.086 / 2.15 / 4.35 / 0.866 |
+
+Reading:
+
+* **NC is what the harm6 flow was missing.** With the same recipe, NC takes the polyhedra from 25–42 deg to 1.7–2.7 deg
+  (4 x L4) or 7–9.5 deg (RTX), and resolves the icosahedron for the first time (2.7 / 7.0 deg against ~31 deg in every
+  other run). Unlike the pooled reference model with NC (`control_nc`), it learns from the first epochs: the
+  spherecloud tokens plus the explicit degree-<= 6 pose harmonics give the field the angular resolution that NC's
+  partition of SO(3) into the |G| cells around the equivalent poses requires.
+* **Against Image2Sphere** (3.21 deg class-mean, every polyhedron at 4.4–4.8 deg): the 4 x L4 run has a lower median on
+  every shape (class-mean 1.55 deg) but a lower acc@15 (0.954 vs 1.000): smaller typical errors, a larger tail. The test
+  sets differ (all 5,000 views per shape here, the first 1,000 there).
+* **The two runs differ a lot** (class-mean 1.55 vs 4.99 deg). They share the recipe and differ in seed and in data
+  parallelism (4 x 16 images with SyncBatchNorm vs one process with 64). The curves part after the step decay at
+  epoch 16 at the latest (class-mean 3.50 vs 10.16); with one run per set-up the cause is not attributed. Seeds on
+  both set-ups are needed before quoting a single number.
+
 ### Follow-ups
 
-1. harm6 + NC: the harm6 recipe with `--symsol_nearest_coupling` (`grig0ryz/symsol-harm6-nc-rtx`, running).
-2. `stf_l6_nc` beyond 100 epochs, and seeds: the L = 6 run is still improving, and every number above is one seed.
-3. The icosahedron: STF degrees above 6 (the tower allows `stf_lmax` <= 6 today) or a head that carries higher degrees.
+1. ~~harm6 + NC~~: done, above.
+2. Seeds for harm6 + NC on both set-ups (1 x RTX and 4 x L4), to separate seed noise from the DDP / SyncBN effect.
+3. `stf_l6_nc` beyond 100 epochs, and seeds: the L = 6 run is still improving, and every number above is one seed.
+4. harm6 + NC for 100 epochs; harm6 + NC + STF needs the STF track ported to the spherecloud condition and the
+   `frame_pin` pose tokens first (it supports only `pooled` / `rotor` today, section 2).
