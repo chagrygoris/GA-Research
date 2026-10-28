@@ -77,6 +77,33 @@
   found_by:
   - crossref
   added: 2026-10-25
+- id: arxiv:2610.37226
+  title: Subspace Clifford Networks
+  authors:
+  - Zhongping Ji
+  date: '2026-10-27'
+  venue: arXiv
+  venue_type: arxiv
+  links:
+    arxiv: https://arxiv.org/abs/2610.37226
+  topics:
+  - vision
+  status: inbox
+  relevance: null
+  summary: In this work, we propose Subspace Clifford Networks, a reformulation that replaces global cyclic rolling
+    with grouped subspace interactions. Instead of sampling sparse cyclic diagonals across the entire $D$-dimensional
+    channel space, we project the features into an aligned space $\R^{\tilde{D}} = \bigoplus_{g=1}^{G} V_g$ partitioned
+    into $G$ low-dimensional groups $V_g \cong \R^k$ with $k \in \{2,
+  triage:
+    score: 3
+    ga_terms:
+    - clifford network
+    ml_context: true
+    excluded_terms: []
+    title_hit: true
+  found_by:
+  - arxiv:abs:clifford AND cat:cs.CV
+  added: '2026-10-28'
 - id: doi:10.53941/cssc.2026.100028
   title: 'Observer-Based Output-Feedback Synchronization of Fractional-Order Fuzzy Clifford-Valued Neural Networks:
     A Cascade Certificate and the Quantified Price of Output Feedback'
@@ -99,6 +126,7 @@
   - crossref:Clifford convolution
   - crossref:Clifford-valued neural networks
   - crossref:Clifford neural
+  - crossref:Clifford algebra transformer
   added: 2026-10-25
 - id: doi:10.1080/00207721.2026.2736095
   title: H-infinity synchronisation of fractional-order Clifford-valued reaction-diffusion neural networks with
@@ -263,6 +291,7 @@
   - crossref:Clifford convolution
   - crossref:Clifford-valued neural networks
   - crossref:Clifford neural
+  - crossref:Clifford algebra transformer
   added: 2026-10-25
 - id: arxiv:2610.27106
   title: 'This is SParTA: A modular, efficient and scalable transformer architecture for jet-tagging'
