@@ -386,8 +386,12 @@ first on CPU (one process, and two processes with DDP, synthetic SYMSOL folder).
 
 | run | hardware, kernel | s / epoch | outcome |
 |---|---|---|---|
-| `harm6_nc` (4 x L4) | 4 x L4, `--ddp --sync_bn`, `arynabiaroza/symsol-harm6-nc-l4x4` | 386 | 40 epochs and the final evaluation completed; the old 240-min watchdog then killed the process during shutdown (kernel status ERROR, no checkpoint) |
+| `harm6_nc` (4 x L4) | 4 x L4, `--ddp --sync_bn`, `arynabiaroza/symsol-harm6-nc-l4x4` | 386 | 40 epochs, the final evaluation and the checkpoint completed; the old 240-min watchdog then killed the process during shutdown (kernel status ERROR) |
 | `harm6_nc` (RTX) | 1 x RTX Pro 6000, `grig0ryz/symsol-harm6-nc-rtx-v3` | 145 | completed |
+
+Checkpoint of the 4 x L4 run (the best run): `symsol1_10pct_gatr_spherecloud_harm6_nc.pth` (272 MB; model, optimizer,
+scheduler and config) in the kernel output and in the private Kaggle dataset `arynabiaroza/symsol-harm6-nc-l4x4-ckpt`;
+`evaluate.py` rebuilds it strictly (23,741,589 parameters). Per-shape Typst table: `per_shape_nc.typ`.
 
 Two earlier RTX launches on account 5 (`symsol-harm6-nc-rtx`, `-rtx-v2`) never executed a cell and were stopped by
 hand. Each epoch of these runs scores all 25,000 test images, which is most of the per-epoch time.

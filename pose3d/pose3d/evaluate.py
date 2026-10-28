@@ -126,6 +126,7 @@ def build_model(checkpoint, device, eval_rec_level=None):
                         canonicalize=saved.get("so3f_canonicalize", True)),
         gatr=dict(num_blocks=saved.get("gatr_blocks", 4), mv_channels=saved.get("gatr_mv_channels", 8),
                   s_channels=saved.get("gatr_s_channels", 32), num_heads=saved.get("gatr_heads", 4)),
+        gatr_pose_harmonics=saved.get("gatr_pose_harmonics", 0),
         stf_track=saved.get("stf_track", False), stf_lmax=saved.get("stf_lmax", 3),
         stf_channels=saved.get("stf_channels", 8), stf_inject=saved.get("stf_inject", "gram"),
     )
