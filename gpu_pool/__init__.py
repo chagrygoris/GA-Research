@@ -1,6 +1,14 @@
-"""Fair sharing of a pool of shared accelerator accounts.
+"""Fair sharing of a pool of shared accelerators: Kaggle accounts and Slurm clusters (HSE cHARISMa).
 
-Ask which account can run a job right now, then send the job there:
+Ask where a job can run right now, then send it there:
+
+    from gpu_pool import ComputePool, RunSpec, PoolRouter, SlurmCluster, CHARISMA
+
+    pool = ComputePool(PoolRouter.from_dir("~/pool_tokens"), [SlurmCluster(CHARISMA)])
+    pool.probe()
+    print(pool.report())
+
+The Kaggle side alone:
 
     from gpu_pool import PoolRouter, PoolLauncher, git_run_spec
 
@@ -8,10 +16,11 @@ Ask which account can run a job right now, then send the job there:
     router.probe_all()
     print(router.report())
 
-The current backend is the official Kaggle CLI; see router.py for the commands used.
+Kaggle goes through the official Kaggle CLI (router.py); Slurm clusters through ssh (slurm.py).
 """
 
 from .launcher import ACCELERATORS, NotebookSpec, PoolLauncher, git_run_spec
+from .pool import ComputePool, Offer, RunHandle, RunSpec
 from .router import (
     AccountStatus,
     CliError,
@@ -21,11 +30,22 @@ from .router import (
     filter_progress,
     shape_label,
 )
+from .slurm import CHARISMA, ClusterStatus, SlurmCluster, SlurmConfig, SlurmError, SlurmJobSpec
 
 __all__ = [
     "ACCELERATORS",
     "AccountStatus",
+    "CHARISMA",
     "CliError",
+    "ClusterStatus",
+    "ComputePool",
+    "Offer",
+    "RunHandle",
+    "RunSpec",
+    "SlurmCluster",
+    "SlurmConfig",
+    "SlurmError",
+    "SlurmJobSpec",
     "NotebookSpec",
     "PoolAccount",
     "PoolLauncher",

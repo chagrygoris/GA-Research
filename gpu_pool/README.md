@@ -1,7 +1,14 @@
 # GPU Pool — fair sharing of shared accelerator quota
 
-A team shares several accelerator accounts. This answers **whose account can run this job right
-now**, and sends the job there.
+A team shares several accelerator accounts and a Slurm cluster. This answers **where can this job
+run right now**, and sends the job there.
+
+The pool has two kinds of compute behind one interface, [`pool.py`](#one-interface-poolpy):
+
+| Backend | Module | Hardware | Budget |
+|---|---|---|---|
+| Kaggle accounts | `router.py`, `launcher.py` | T4 / P100, competition-gated RTX Pro 6000 / 4xL4 / TPU | 30 GPU-h per account per week |
+| HSE cHARISMa (Slurm) | `slurm.py` | V100 32 GB; A100 / H100 / H200 on a preemptible backfill queue | ~5000 GPU-h for project `proj_1898` until 2026-12-31 |
 
 `router.py` reports each account's weekly accelerator quota, what it is already running, which
 GPU types it can reach, and picks the freest account. `launcher.py` pushes a notebook to the
@@ -238,6 +245,11 @@ python gpu_pool/moon_cluster.py --tokens-dir DIR --dump-snapshot snap.json   # p
 python gpu_pool/moon_cluster.py --from-snapshot snap.json --out moon_cluster.html
 ```
 
+Slurm clusters ride the outer orbit as hexagons with a project-budget gauge, linked straight to their
+hardware planets (V100; A100 · H100 · H200 dashed, since that queue is preemptible). `--cluster charisma`
+probes the cluster over SSH as part of the render; `--cluster-unprobed charisma` draws it from its config
+only, as *awaiting probe*, for a machine without the key.
+
 `--note "KICKER|Title|Text"` adds a card, `--removed account7=deleted` leaves an account out and
 shows it as removed, and `--title` / `--subtitle` rename the page. In the credentials directory, a
 folder without a `token` is shown as *awaiting token*, and a folder tagged like
@@ -246,10 +258,85 @@ folder without a `token` is shown as *awaiting token*, and a folder tagged like
 Agents follow the `moon-cluster` skill (`.claude/skills/moon-cluster/SKILL.md`) to refresh and
 republish the page.
 
+## One interface: `pool.py`
+
+`ComputePool` holds the Kaggle router and any number of Slurm clusters. It answers with **offers**
+(one place a run could go right now: backend, target, accelerator, GPUs, hours of budget left, free or
+busy) and launches a `RunSpec` (repo + command + expected hours) on the best one. A launched run is
+named by a **run reference**, `kaggle:owner/slug` or `charisma:<jobid>`, which `job`, `logs` and
+`cancel` take.
+
+```bash
+export KAGGLE_TOKENS_DIR=~/pool_tokens          # optional: without it only the clusters are used
+
+python gpu_pool/pool.py status                  # Kaggle table + cHARISMa budget/QOS/idle GPUs + what is free
+python gpu_pool/pool.py best --accelerator v100 --hours 2 --gpus 2
+python gpu_pool/pool.py launch --title clifford-v100 --repo https://github.com/optimist1938/Clifford-Flow-Matching.git \
+    --command "python -m src.main" --install "pip install --user -q -e ." \
+    --accelerator v100 --hours 0.4 --smoke          # 30-min debug partition first
+python gpu_pool/pool.py launch ... --accelerator v100 --hours 6 --approved
+python gpu_pool/pool.py job charisma:4467119
+python gpu_pool/pool.py logs charisma:4467119 --lines 60
+python gpu_pool/pool.py cancel charisma:4467119   # Slurm only; Kaggle has no cancel
+```
+
+The accelerator decides the backend (`t4`, `p100`, `l4`, `rtx6000` -> Kaggle; `v100`, `a100`, `h100`,
+`h200` -> cHARISMa); `--backend` pins one. `launch` needs the expected run time `--hours` (the ETA
+CLAUDE.md asks for), prints the ETA, and refuses anything over 30 minutes without `--approved`, the
+human approval CLAUDE.md requires. `--install` runs inside the Kaggle notebook, or on the cluster's
+login node before the job is submitted.
+
+```python
+from gpu_pool import ComputePool, RunSpec, PoolRouter, SlurmCluster, CHARISMA
+
+pool = ComputePool(PoolRouter.from_dir("~/pool_tokens"), [SlurmCluster(CHARISMA)])
+pool.probe()
+print(pool.report())
+handle = pool.launch(RunSpec(title="t", repo=URL, command="python train.py", hours=0.25,
+                             accelerator="v100", smoke=True))
+print(handle.ref, handle.status())
+```
+
+## Slurm clusters: `slurm.py`
+
+HSE cHARISMa is reached over SSH (`ssh -p 2222 ... sptsinman@cluster.hpc.hse.ru`) with the key
+`~/.ssh/charisma_auth_key.pem` loaded in ssh-agent; the code never handles the passphrase. The full
+operating guide, with the rules every agent follows on that cluster, is
+[`charisma/GUIDE.md`](charisma/GUIDE.md); [`charisma/gpu_test.sbatch`](charisma/gpu_test.sbatch) is the
+verified smoke test and [`charisma/connect.sh`](charisma/connect.sh) runs one command on the login node.
+
+```bash
+python gpu_pool/slurm.py            # budget left, GPUs in use under the QOS, idle GPUs per type, my jobs
+python gpu_pool/slurm.py --json
+```
+
+| Question | Command it runs on the login node |
+|---|---|
+| GPU-hours spent | `sacct -X -a -A proj_1898 -S <budget_start> -E now`, summing elapsed x allocated GPUs |
+| my queued / running jobs | `sacct -X -u sptsinman -s PD,R,CG,RQ,S` |
+| idle GPUs per type | `sinfo -N -O NodeHost,StateCompact,Gres,GresUsed,Features` |
+| submit | `git clone` + optional setup on the login node, then `sbatch --parsable run.sbatch` |
+| state / log / cancel | `sacct -j`, `tail gpu_pool/runs/*/slurm-<id>.out`, `scancel` |
+
+A submitted job lives in `~/gpu_pool/runs/<slug>-<UTC stamp>/` on the cluster: the clone in `src/`, the
+generated `run.sbatch`, and `slurm-<jobid>.out/.err`. The job script puts the ready-made torch
+environment on `PATH`, sets `WANDB_MODE=offline` (compute nodes have no internet; `wandb sync` from the
+login node later), and exits with the command's own status.
+
+Before submitting, `ClusterStatus.check` refuses a job that breaks a rule of the guide: no `--time`, more
+than the partition allows (`test` 30 min, `gpu-ef-quick` 3 h), more GPUs than the QOS cap (4) or one node,
+more GPU-hours than the budget has left, or more than `reserve_max_gpu_h` (4 GPU-h) overlapping the PI's
+reserve window **2026-11-05 to 2026-11-18** without `allow_reserve` / `--allow-reserve`.
+
+`SlurmConfig` holds everything cluster-specific (`CHARISMA` is the preset); a JSON file with any of its
+fields, passed as `--cluster path.json`, overrides it. `budget_start` (2026-01-01) is an assumption: the
+guide gives the budget's end but not its start, so set it when the project start is known.
+
 ## Tests
 
 ```bash
 python3 gpu_pool/test_gpu_pool.py     # 37 offline tests, no network or credentials
 python3 gpu_pool/test_rtx_monitor.py  # 11 offline tests for the no-internet W&B sync
-python3 gpu_pool/test_moon_cluster.py # 11 offline tests for the Moon Cluster page
+python3 gpu_pool/test_moon_cluster.py # 13 offline tests for the Moon Cluster page
+python3 gpu_pool/test_slurm_pool.py   # 12 offline tests for the Slurm backend and pool.py (fake ssh)
 ```

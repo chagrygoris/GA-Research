@@ -4,13 +4,15 @@ This list will be updated. Read it fully before starting any task.
 
 ## 1. GPU resources
 
-GPU resources in this project are managed with the Kaggle router in [`gpu_pool/`](gpu_pool/).
-Two types of GPU are available in our pool:
+GPU resources in this project are managed with the pool in [`gpu_pool/`](gpu_pool/): Kaggle accounts and the
+HSE cHARISMa Slurm cluster behind one interface, `python gpu_pool/pool.py` (see [`gpu_pool/README.md`](gpu_pool/README.md)).
+These types of GPU are available in our pool:
 
 | GPU | Use for |
 |---|---|
-| RTX cards | main experiments |
-| 2xT4 | side quests |
+| RTX cards (Kaggle) | main experiments |
+| 2xT4 (Kaggle) | side quests |
+| V100 32 GB (HSE cHARISMa) | runs that need long wall time or up to 4 GPUs; finite project budget, follow [`gpu_pool/charisma/GUIDE.md`](gpu_pool/charisma/GUIDE.md) |
 
 * **Always calculate an approximate ETA** of a GPU run before launching it, and state it.
 * **Any operation that takes more than 30 minutes in total must be approved by a human**

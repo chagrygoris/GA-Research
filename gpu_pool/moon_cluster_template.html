@@ -6,6 +6,7 @@
 <style>
 /* Layout: a night-sky instrument dial. Accounts ride the outer orbit with quota gauges, competitions
    sit on the inner orbit, hardware circles a silver moon at the hub; a readout panel beside it.
+   Slurm clusters ride the outer orbit as hexagons and link straight to their hardware.
    Deliberately single-theme: the subject is a night sky, so it stays dark on every host. */
 :root {
   --sky: #060a1a;
@@ -20,6 +21,8 @@
   --rtx: #5ee6c1;
   --l4: #f4c46b;
   --tpu: #b9a2ff;
+  --v100: #69b7ff;
+  --ef: #e48cff;
   --open: #8fa4cc;
   --hot: #ff8a6b;
   --x1: #ff9fd0;
@@ -127,13 +130,13 @@ svg.dim .link:not(.on), svg.dim .node:not(.on) { opacity: .12; }
   </header>
 
   <section class="stage">
-    <div class="dial"><svg id="dial" viewBox="0 0 1040 940" role="img" aria-labelledby="dial-title"><title id="dial-title">{{TITLE}} accounts on the outer ring, the competitions that grant GPUs on the inner ring, and the hardware at the hub</title></svg></div>
+    <div class="dial"><svg id="dial" viewBox="0 0 1040 940" role="img" aria-labelledby="dial-title"><title id="dial-title">{{TITLE}} accounts and clusters on the outer ring, the competitions that grant GPUs on the inner ring, and the hardware at the hub</title></svg></div>
     <aside class="readout" id="readout" aria-live="polite"></aside>
   </section>
 
 {{CHANGES}}
 
-  <p class="foot">Source: <code>python gpu_pool/router.py --competitions --accelerators</code> on the live cluster. Solid lines are routes seen in a real run; dashed lines come from the competition rules only. Each account has one weekly GPU budget that pays for every GPU type.{{FOOT}}</p>
+  <p class="foot">Source: <code>python gpu_pool/router.py --competitions --accelerators</code> on the live cluster. Solid lines are routes seen in a real run; dashed lines come from the competition rules only. Each account has one weekly GPU budget that pays for every GPU type. Hexagons are Slurm clusters (<code>python gpu_pool/slurm.py</code>): one project budget until its end date, linked straight to their hardware; dashed lines there are preemptible backfill queues.{{FOOT}}</p>
 </div>
 
 <script type="application/json" id="moon-data">{{DATA}}</script>
@@ -145,6 +148,9 @@ svg.dim .link:not(.on), svg.dim .node:not(.on) { opacity: .12; }
   const COMPS = DATA.competitions;
   // routes: "seen" = observed in a real run, "rules" = from the competition's rules only
   const ACCTS = DATA.accounts;
+  // Slurm clusters: project budget (left of budget GPU-h), QOS cap, hardware planets
+  const CLUS = DATA.clusters || [];
+  const liveClus = CLUS.filter(c => !c.pending);
   const HW_ANGLE = DATA.hardware_angles;
   const SLOTS = DATA.meta.max_concurrent;
   const comp = (id) => COMPS.find(c => c.id === id);
@@ -155,11 +161,15 @@ svg.dim .link:not(.on), svg.dim .node:not(.on) { opacity: .12; }
   // ---------- geometry ----------
   const CX = 520, CY = 470, R1 = 322, R2 = 212, R3 = 104;
   const pol = (r, deg) => { const t = deg * Math.PI / 180; return [CX + r * Math.cos(t), CY + r * Math.sin(t)]; };
-  ACCTS.forEach((a, i) => { a.angle = -90 + i * 360 / ACCTS.length; [a.x, a.y] = pol(R1, a.angle); });
+  ACCTS.forEach((a, i) => { if (a.angle == null) a.angle = -90 + i * 360 / ACCTS.length; [a.x, a.y] = pol(R1, a.angle); });
+  CLUS.forEach(c => { [c.x, c.y] = pol(R1, c.angle); });
   COMPS.forEach(c => { [c.x, c.y] = pol(R2, c.angle); });
   const reach = (hw) => hw === "open" ? live : live.filter(a => hwOf(a).includes(hw));
+  const clusAt = (hw) => CLUS.filter(c => hw in c.hw);
+  const isClusHw = (hw) => clusAt(hw).length > 0 && reach(hw).length === 0;
+  const kfmt = (h) => h >= 10000 ? (h / 1000).toFixed(0) + "k" : h.toFixed(0);
   const HWN = {};
-  Object.keys(HW_ANGLE).forEach(k => { const [x, y] = pol(R3, HW_ANGLE[k]); HWN[k] = { x, y, r: 24 + reach(k).length * 3.4 }; });
+  Object.keys(HW_ANGLE).forEach(k => { const [x, y] = pol(R3, HW_ANGLE[k]); HWN[k] = { x, y, r: 24 + (reach(k).length + clusAt(k).length * 2) * 3.4 }; });
 
   const NS = "http://www.w3.org/2000/svg";
   const svg = document.getElementById("dial");
@@ -221,6 +231,15 @@ svg.dim .link:not(.on), svg.dim .node:not(.on) { opacity: .12; }
     });
   });
 
+  // cluster -> hardware: no competition in between
+  CLUS.forEach(c => {
+    Object.entries(c.hw).forEach(([k, r]) => {
+      const keys = ["k:" + c.id, "h:" + k];
+      glowLine(curve(c.x, c.y, pol(R1 - 120, c.angle), pol(R3 + 60, HW_ANGLE[k]), HWN[k].x, HWN[k].y), HW[k].color,
+        c.pending ? 1.6 : 3, r.how === "preemptible" || c.pending, keys);
+    });
+  });
+
   // ---------- account nodes ----------
   ACCTS.forEach(a => {
     const hw = hwOf(a);
@@ -259,6 +278,42 @@ svg.dim .link:not(.on), svg.dim .node:not(.on) { opacity: .12; }
     el("text", { x: lx, y: y1 + 11, class: "t-meta halo", "text-anchor": anchor }, g, state);
   });
 
+  // ---------- cluster nodes: hexagons with a budget gauge ----------
+  const hex = (x, y, r) => Array.from({ length: 6 }, (_, i) => pol0(x, y, r, i * 60 - 90).join(",")).join(" ");
+  function pol0(x, y, r, deg) { const t = deg * Math.PI / 180; return [x + r * Math.cos(t), y + r * Math.sin(t)]; }
+  CLUS.forEach(c => {
+    const keys = ["k:" + c.id, ...Object.keys(c.hw).map(k => "h:" + k)];
+    const left = c.left == null ? null : c.left;
+    const g = reg(el("g", { class: "node", tabindex: 0, "data-key": "k:" + c.id,
+      "aria-label": c.pending ? `Cluster ${c.name}, ${c.unreachable ? "unreachable" : "awaiting probe"}` : `Cluster ${c.name}, ${left.toFixed(0)} of ${c.budget.toFixed(0)} GPU-hours left` }, nodes), keys);
+    el("polygon", { class: "focus-ring", points: hex(c.x, c.y, 36) }, g);
+    el("polygon", { points: hex(c.x, c.y, 29), fill: v("--surface"), stroke: v(c.pending ? "--muted" : "--v100"), "stroke-width": 1.5,
+      "stroke-dasharray": c.pending ? "3 4" : "" }, g);
+    if (!c.pending) {
+      el("circle", { cx: c.x, cy: c.y, r: 21, fill: "none", stroke: v("--faint"), "stroke-width": 5 }, g);
+      if (left > 0) el("circle", { cx: c.x, cy: c.y, r: 21, fill: "none", stroke: v(left < 0.1 * c.budget ? "--hot" : "--v100"), "stroke-width": 5,
+        "stroke-linecap": "round", pathLength: 100, "stroke-dasharray": `${Math.max(2, Math.min(100, left / c.budget * 100))} 100`,
+        transform: `rotate(-90 ${c.x} ${c.y})` }, g);
+      if (c.jobs.length) {
+        const orbit = el("g", { class: "orbit", style: `transform-origin:${c.x}px ${c.y}px` }, g);
+        c.jobs.forEach((j, k) => {
+          const t = (k / c.jobs.length) * 2 * Math.PI;
+          el("circle", { cx: c.x + 35 * Math.cos(t), cy: c.y + 35 * Math.sin(t), r: 4, fill: v(HW[j[0]].color), stroke: v("--surface"), "stroke-width": 1.5 }, orbit);
+        });
+      }
+    }
+    el("text", { x: c.x, y: c.y + 4, class: "t-gauge", "text-anchor": "middle", style: c.pending ? "fill:var(--muted)" : "" }, g,
+      c.pending ? "—" : kfmt(left));
+    const cos = Math.cos(c.angle * Math.PI / 180), sin = Math.sin(c.angle * Math.PI / 180);
+    const [lx, ly] = pol(R1 + 46, c.angle);
+    let anchor = "middle", y1 = ly + 4;
+    if (cos > 0.3) anchor = "start"; else if (cos < -0.3) anchor = "end";
+    if (anchor === "middle") y1 = sin < 0 ? ly - 8 : ly + 14;
+    const state = c.pending ? (c.unreachable ? "unreachable" : "awaiting probe") : `${kfmt(left)} h · ${c.cap - c.in_use}/${c.cap} free`;
+    el("text", { x: lx, y: y1 - 4, class: "t-acct halo", "text-anchor": anchor, style: "fill:var(--v100)" }, g, `${c.name} · ${c.site}`);
+    el("text", { x: lx, y: y1 + 11, class: "t-meta halo", "text-anchor": anchor }, g, state);
+  });
+
   // ---------- competition nodes ----------
   COMPS.forEach(c => {
     const keys = ["c:" + c.id, "h:" + c.hw, ...live.filter(a => c.id in a.routes).map(a => "a:" + a.n)];
@@ -275,14 +330,15 @@ svg.dim .link:not(.on), svg.dim .node:not(.on) { opacity: .12; }
 
   // ---------- hardware hub ----------
   Object.entries(HWN).forEach(([k, h]) => {
-    const hw = HW[k], n = reach(k).length;
-    const keys = ["h:" + k, ...COMPS.filter(c => c.hw === k).map(c => "c:" + c.id), ...reach(k).map(a => "a:" + a.n)];
+    const hw = HW[k], n = reach(k).length, nc = clusAt(k).length;
+    const keys = ["h:" + k, ...COMPS.filter(c => c.hw === k).map(c => "c:" + c.id), ...reach(k).map(a => "a:" + a.n), ...clusAt(k).map(c => "k:" + c.id)];
     const g = reg(el("g", { class: "node", tabindex: 0, "data-key": "h:" + k, "aria-label": hw.name }, nodes), keys);
     el("circle", { class: "focus-ring", cx: h.x, cy: h.y, r: h.r + 8 }, g);
     el("circle", { cx: h.x, cy: h.y, r: h.r + 6, fill: v(hw.color), "fill-opacity": .12 }, g);
     el("circle", { cx: h.x, cy: h.y, r: h.r, fill: v("--surface"), stroke: v(hw.color), "stroke-width": 2.5 }, g);
     el("text", { x: h.x, y: h.y + 2, class: "t-hw", "text-anchor": "middle", style: `fill:${v(hw.color)}` }, g, hw.short);
-    el("text", { x: h.x, y: h.y + 16, class: "t-hwc", "text-anchor": "middle" }, g, `${n} acct${n === 1 ? "" : "s"}`);
+    el("text", { x: h.x, y: h.y + 16, class: "t-hwc", "text-anchor": "middle" }, g,
+      isClusHw(k) ? `${nc} cluster${nc === 1 ? "" : "s"}` : `${n} acct${n === 1 ? "" : "s"}`);
   });
   // T4/P100 bus is selectable from the ring label
   const busHit = reg(el("g", { class: "node", tabindex: 0, "data-key": "h:open", "aria-label": "T4 / P100" }, nodes), ["h:open", ...live.map(a => "a:" + a.n)]);
@@ -304,30 +360,36 @@ svg.dim .link:not(.on), svg.dim .node:not(.on) { opacity: .12; }
   [[-22, -18, 9], [17, -26, 5], [24, 14, 11], [-14, 24, 6], [-34, 6, 4], [4, 34, 3.5]].forEach(([dx, dy, r]) =>
     el("circle", { cx: CX + dx, cy: CY + dy, r, fill: "#9aa2bd", "fill-opacity": .28 }, moon));
   el("text", { x: CX, y: CY + 7, class: "t-hub", "text-anchor": "middle" }, moon, spare.toFixed(1));
-  el("text", { x: CX, y: CY + 23, class: "t-hubs", "text-anchor": "middle" }, moon, "GPU-H SPARE");
+  el("text", { x: CX, y: CY + 23, class: "t-hubs", "text-anchor": "middle" }, moon, CLUS.length ? "KAGGLE GPU-H" : "GPU-H SPARE");
 
   // ---------- readout panel ----------
   const panel = document.getElementById("readout");
   const fmt = (h) => h.toFixed(1) + " h";
   const row = (color, label, small, num) =>
     `<div class="row"><span class="chip" style="background:${v(color)};color:${v(color)}"></span><span class="lbl">${label}${small ? `<small>${small}</small>` : ""}</span><span class="num">${num}</span></div>`;
-  const hint = `<div class="hint">Hover or tap a gauge, a diamond or a planet near the moon to trace it. Tap empty sky to return here.</div>`;
+  const hint = `<div class="hint">Hover or tap a gauge, a hexagon, a diamond or a planet near the moon to trace it. Tap empty sky to return here.</div>`;
 
   function renderPool() {
     const runs = live.flatMap(a => a.runs);
     const hwRows = [...Object.keys(HW_ANGLE).sort((x, y) => HW[x].rank - HW[y].rank), "open"].map(k => {
+      if (isClusHw(k)) {
+        const cs = clusAt(k), idle = cs.map(c => c.hw[k].idle).filter(Boolean);
+        return row(HW[k].color, HW[k].name, `${cs.map(c => c.name).join(", ")}${idle.length ? ` · ${idle.reduce((t, i) => t + i[0], 0)} of ${idle.reduce((t, i) => t + i[1], 0)} idle` : ""}${cs.some(c => c.hw[k].how === "preemptible") ? " · preemptible" : ""}`, "");
+      }
       const rs = reach(k), s = rs.reduce((t, a) => t + a.h, 0);
       const wall = HW[k].rate > 1 ? ` · ≈${(s / HW[k].rate).toFixed(1)} h of runtime` : "";
       return row(HW[k].color, HW[k].name, `${rs.length} account${rs.length === 1 ? "" : "s"} · ${fmt(s)} quota${wall}`, "");
     }).join("");
     panel.innerHTML = `
-      <div><div class="kicker">Cluster</div><div class="big"><b>${spare.toFixed(1)}</b><span>GPU-hours spare</span></div></div>
+      <div><div class="kicker">Cluster</div><div class="big"><b>${spare.toFixed(1)}</b><span>${CLUS.length ? "Kaggle GPU-hours spare this week" : "GPU-hours spare"}</span></div></div>
       <div class="rows">
         ${row("--ink", `${live.length} account${live.length === 1 ? "" : "s"} live`, DATA.meta.live_note, "")}
+        ${CLUS.map(c => row("--v100", `${c.name} · ${c.site}`, c.pending ? (c.unreachable ? "unreachable" : "awaiting probe") :
+          `${c.left.toFixed(0)} of ${c.budget.toFixed(0)} GPU-h until ${c.until} · ${c.in_use}/${c.cap} GPUs in use`, "")).join("")}
         ${row("--hot", `${runs.length} run${runs.length === 1 ? "" : "s"} active`, Object.keys(HW).filter(k => runs.some(r => r[0] === k)).map(k => `${runs.filter(r => r[0] === k).length} on ${HW[k].name}`).join(" · ") || "nothing running", "")}
       </div>
       <div><div class="kicker" style="margin-bottom:10px">Hardware reach</div><div class="rows">${hwRows}</div></div>
-      <p>Quota is one budget per account, so the hardware rows overlap: an hour spent on RTX is gone for 4xL4 too.</p>
+      <p>Quota is one budget per account, so the hardware rows overlap: an hour spent on RTX is gone for 4xL4 too.${CLUS.length ? " Clusters keep their own project budget." : ""}</p>
       ${hint}`;
   }
   function renderAccount(a) {
@@ -351,6 +413,26 @@ svg.dim .link:not(.on), svg.dim .node:not(.on) { opacity: .12; }
       <div><div class="kicker" style="margin-bottom:10px">Active runs</div><div class="rows">${runs}</div></div>
       ${hint}`;
   }
+  function renderCluster(c) {
+    const hwRows = Object.entries(c.hw).map(([k, r]) => row(HW[k].color, HW[k].name,
+      `${r.accels.join(", ")}${r.how === "preemptible" ? " · preemptible backfill" : ""}`, r.idle ? `${r.idle[0]}/${r.idle[1]} idle` : "")).join("");
+    const reserve = c.reserve ? `<p>${c.reserve.from} to ${c.reserve.to} is held for the PI's reviewer response${c.reserve.days > 0 ? ` (starts in ${c.reserve.days} d)` : ""}: ask before large runs.</p>` : "";
+    if (c.pending) {
+      panel.innerHTML = `<div><div class="kicker">Slurm cluster</div><h2>${c.name}</h2><div class="sub">${c.site} · ${c.account}</div></div>
+        <p>${c.unreachable ? `The SSH probe failed: <code>${(c.error || "").replace(/</g, "&lt;")}</code>` : "Drawn from its config; not probed yet."} Budget ${c.budget.toFixed(0)} GPU-h until ${c.until}, up to ${c.cap} GPUs at once.</p>
+        <div><div class="kicker" style="margin-bottom:10px">Hardware</div><div class="rows">${hwRows}</div></div>${reserve}${hint}`;
+      return;
+    }
+    const jobs = c.jobs.length ? c.jobs.map(j => row(HW[j[0]].color, `<code>${j[1]}</code>`, `${HW[j[0]].name} · ${j[3]} GPU`, j[2])).join("") : `<p>No jobs queued or running.</p>`;
+    panel.innerHTML = `
+      <div><div class="kicker">Slurm cluster</div><h2>${c.name}</h2><div class="sub">${c.site} · ${c.account}</div></div>
+      <div><div class="big"><b>${c.left.toFixed(0)}</b><span>of ${c.budget.toFixed(0)} GPU-h left · ${c.days} d to ${c.until}</span></div>
+        <div class="bar" style="margin-top:10px"><i style="width:${Math.min(100, c.left / c.budget * 100)}%;background:${v(c.left < 0.1 * c.budget ? "--hot" : "--v100")}"></i></div></div>
+      <div class="rows">${row("--ink", `${c.in_use} of ${c.cap} GPUs in use`, "QOS cap per user, queued jobs included", "")}</div>
+      <div><div class="kicker" style="margin-bottom:10px">Hardware</div><div class="rows">${hwRows}</div></div>
+      <div><div class="kicker" style="margin-bottom:10px">Jobs</div><div class="rows">${jobs}</div></div>
+      ${reserve}${hint}`;
+  }
   function renderComp(c) {
     const members = live.filter(a => c.id in a.routes);
     panel.innerHTML = `
@@ -363,6 +445,15 @@ svg.dim .link:not(.on), svg.dim .node:not(.on) { opacity: .12; }
   }
   function renderHw(k) {
     const hw = HW[k], rs = reach(k), s = rs.reduce((t, a) => t + a.h, 0);
+    if (isClusHw(k)) {
+      panel.innerHTML = `
+        <div><div class="kicker">Hardware</div><h2 style="color:${v(hw.color)}">${hw.name}</h2><div class="sub">${hw.spec}</div></div>
+        <p>${hw.note}</p>
+        <div><div class="kicker" style="margin-bottom:10px">Clusters</div><div class="rows">${clusAt(k).map(c => row(hw.color, `${c.name} · ${c.site}`,
+          c.pending ? "awaiting probe" : `${c.cap - c.in_use}/${c.cap} GPUs free under the QOS`, c.hw[k].idle ? `${c.hw[k].idle[0]}/${c.hw[k].idle[1]} idle` : "")).join("")}</div></div>
+        ${hint}`;
+      return;
+    }
     const via = COMPS.filter(c => c.hw === k);
     panel.innerHTML = `
       <div><div class="kicker">Hardware</div><h2 style="color:${v(hw.color)}">${hw.name}</h2><div class="sub">${hw.spec}</div></div>
@@ -379,6 +470,7 @@ svg.dim .link:not(.on), svg.dim .node:not(.on) { opacity: .12; }
     if (t === "a") renderAccount(ACCTS.find(a => String(a.n) === id));
     if (t === "c") renderComp(comp(id));
     if (t === "h") renderHw(id);
+    if (t === "k") renderCluster(CLUS.find(c => c.id === id));
   };
 
   // ---------- interaction ----------

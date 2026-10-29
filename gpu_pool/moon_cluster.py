@@ -2,7 +2,9 @@
 
 The page (``moon_cluster_template.html``) shows every account on an outer orbit with a quota gauge,
 the competitions that grant premium GPUs on an inner orbit, and the hardware around a moon that
-carries the pool's spare GPU-hours. This module fills it in.
+carries the pool's spare weekly Kaggle GPU-hours. Slurm clusters (``slurm.py``, e.g. HSE cHARISMa)
+ride the outer orbit too, drawn as hexagons with a project-budget gauge and linked straight to their
+hardware, since no competition gates them. This module fills it in.
 
 Two steps, so an agent can change anything in between:
 
@@ -24,6 +26,8 @@ CLI
     --note "KICKER|Title|Text"      add a card (repeatable)
     --removed account7=deleted      leave an account out and show it as removed (repeatable)
     --title / --subtitle            page name and the italic word after it
+    --cluster charisma              also probe this Slurm cluster over SSH (repeatable)
+    --cluster-unprobed charisma     show the cluster from its config only, as *awaiting probe*
 """
 
 from __future__ import annotations
@@ -46,6 +50,7 @@ try:  # package import
         PoolRouter,
         quota_rate,
     )
+    from .slurm import CLUSTERS, ClusterStatus, SlurmCluster, SlurmConfig, cluster_config
 except ImportError:  # run as a script
     sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
     from gpu_pool.router import (
@@ -55,6 +60,7 @@ except ImportError:  # run as a script
         PoolRouter,
         quota_rate,
     )
+    from gpu_pool.slurm import CLUSTERS, ClusterStatus, SlurmCluster, SlurmConfig, cluster_config
 
 SNAPSHOT_VERSION = 1
 TEMPLATE_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "moon_cluster_template.html")
@@ -70,6 +76,12 @@ HARDWARE_STYLE: Dict[str, Dict[str, Any]] = {
                 "extra": "The push API currently provisions a non-TPU image (kaggle-cli #1197)."},
     "tpu-v3": {"short": "TPU v3", "color": "--tpu", "rank": 3, "spec": "8 TPU v3 cores",
                "extra": "The push API currently provisions a non-TPU image (kaggle-cli #1197)."},
+    # Slurm cluster hardware; keys are the ``planet`` of ``slurm.Partition``.
+    "v100": {"short": "V100", "color": "--v100", "rank": 5, "spec": "V100 32 GB · 4 per node", "name": "V100 32GB",
+             "extra": "Slurm partition rocky: jobs up to 30 days, billed per allocated GPU-hour."},
+    "hpc-ef": {"short": "A100+", "color": "--ef", "rank": 6, "spec": "A100 80GB · H100 · H200",
+               "name": "A100 · H100 · H200",
+               "extra": "Backfill queue gpu-ef-quick: preemptible, 3 h per job, usually full, so checkpoint often."},
 }
 #: Colour tokens for accelerators missing from ``HARDWARE_STYLE``, handed out in order.
 SPARE_COLORS = ("--x1", "--x2", "--x3")
@@ -130,12 +142,43 @@ def account_entry(status: AccountStatus) -> Dict[str, Any]:
     return entry
 
 
+def cluster_entry(config: SlurmConfig, status: Optional[ClusterStatus] = None) -> Dict[str, Any]:
+    """One Slurm cluster as a snapshot row. Without ``status`` it is *pending* (not probed yet)."""
+    hardware: Dict[str, Dict[str, Any]] = {}
+    for label, part in config.accelerators.items():
+        if not part.planet:
+            continue
+        row = hardware.setdefault(part.planet, {"how": "preemptible" if part.preemptible else "queue",
+                                                "accels": [], "idle": None})
+        row["accels"].append(label)
+        if status is not None and label in status.idle:
+            idle, total = status.idle[label]
+            old = row["idle"] or [0, 0]
+            row["idle"] = [old[0] + idle, old[1] + total]
+    entry: Dict[str, Any] = {
+        "name": config.name, "title": config.title, "site": config.site, "account": config.account,
+        "status": "pending" if status is None else ("live" if status.ok else "unreachable"),
+        "budget": config.budget_gpu_h, "until": config.budget_end, "gpu_cap": config.gpu_cap,
+        "reserve": [list(w) for w in config.reserve_windows], "hardware": hardware,
+        "spent": None, "left": None, "in_use": None, "jobs": [],
+    }
+    if status is not None and status.ok:
+        planet = {label: part.planet for label, part in config.accelerators.items()}
+        entry.update(spent=round(status.spent_gpu_h, 1), left=round(status.remaining_gpu_h, 1),
+                     in_use=status.gpus_in_use,
+                     jobs=[[planet.get(j.accelerator(config)) or "", j.name, j.state, j.gpus] for j in status.active_jobs])
+    elif status is not None:
+        entry["error"] = status.error
+    return entry
+
+
 def snapshot_from_statuses(
     statuses: Iterable[AccountStatus],
     pending: Sequence[str] = (),
     removed: Optional[Dict[str, str]] = None,
     taken_at: Optional[datetime] = None,
     max_concurrent: int = 2,
+    clusters: Sequence[Dict[str, Any]] = (),
 ) -> Dict[str, Any]:
     """Build a snapshot from probe results (``probe_all(..., with_competitions=True)``)."""
     statuses = list(statuses)
@@ -161,6 +204,7 @@ def snapshot_from_statuses(
         "quota_reset": _iso(_parse_iso(refresh)) if refresh else None,
         "max_concurrent": max_concurrent,
         "accounts": accounts,
+        "clusters": list(clusters),
         "competitions": competitions,
         "notes": [],
     }
@@ -203,15 +247,25 @@ def scan_tokens_dir(directory: str, removed: Optional[Dict[str, str]] = None
     return accounts, pending, removed
 
 
-def probe_snapshot(directory: str, removed: Optional[Dict[str, str]] = None, **router_kwargs: Any) -> Dict[str, Any]:
+def probe_clusters(names: Sequence[str] = (), unprobed: Sequence[str] = ()) -> List[Dict[str, Any]]:
+    """Snapshot rows for Slurm clusters: ``names`` probed over SSH, ``unprobed`` from config only."""
+    rows = [cluster_entry(c.config, c.probe()) for c in (SlurmCluster(cluster_config(n)) for n in names)]
+    return rows + [cluster_entry(cluster_config(n)) for n in unprobed]
+
+
+def probe_snapshot(directory: Optional[str], removed: Optional[Dict[str, str]] = None,
+                   clusters: Sequence[Dict[str, Any]] = (), **router_kwargs: Any) -> Dict[str, Any]:
     """Probe every account in ``directory`` and return a snapshot (about a minute for 10 accounts)."""
+    if not directory:
+        return snapshot_from_statuses([], clusters=clusters)
     accounts, pending, removed = scan_tokens_dir(directory, removed)
     if not accounts:
         raise FileNotFoundError("no usable credentials in %s" % directory)
     router = PoolRouter(accounts, **router_kwargs)
     statuses = router.probe_all(check_kernels=True, recent=10, recent_within_hours=0,
                                 with_accelerators=True, with_competitions=True)
-    return snapshot_from_statuses(statuses, pending, removed, max_concurrent=router.max_concurrent)
+    return snapshot_from_statuses(statuses, pending, removed, max_concurrent=router.max_concurrent,
+                                  clusters=clusters)
 
 
 # ---------------------------------------------------------------------------------------
@@ -273,7 +327,7 @@ def _hardware(label: str, used: Dict[str, str]) -> Dict[str, Any]:
         color = SPARE_COLORS[len(used) % len(SPARE_COLORS)]
         style = {"short": label.upper(), "color": color, "rank": 10 + len(used), "spec": "", "extra": ""}
     used[label] = style["color"]
-    return {"name": ACCELERATOR_NAMES.get(label, label), "short": style["short"], "color": style["color"],
+    return {"name": style.get("name") or ACCELERATOR_NAMES.get(label, label), "short": style["short"], "color": style["color"],
             "rank": style["rank"], "spec": style["spec"], "rate": quota_rate(label), "extra": style["extra"]}
 
 
@@ -294,7 +348,10 @@ def page_data(snapshot: Dict[str, Any]) -> Dict[str, Any]:
             comp_hw.setdefault(slug, route["hw"])
     used: Dict[str, str] = {}
     hardware = {}
-    for label in sorted(set(comp_hw.values()), key=lambda l: HARDWARE_STYLE.get(l, {}).get("rank", 50)):
+    clusters = [dict(c) for c in snapshot.get("clusters", []) if c.get("status") != "removed"]
+    cluster_hw = sorted({p for c in clusters for p in c.get("hardware", {})} - set(comp_hw.values()),
+                        key=lambda l: HARDWARE_STYLE.get(l, {}).get("rank", 50))
+    for label in sorted(set(comp_hw.values()), key=lambda l: HARDWARE_STYLE.get(l, {}).get("rank", 50)) + cluster_hw:
         hardware[label] = _hardware(label, used)
 
     # account order: by the hardware/competitions they reach, so shared routes sit together
@@ -304,14 +361,19 @@ def page_data(snapshot: Dict[str, Any]) -> Dict[str, Any]:
         state = {"live": 0, "unreachable": 1, "pending": 2}.get(a.get("status"), 3)
         return (state, not idx, (sum(idx) / len(idx)) if idx else 0, -len(idx), a.get("n") or 0)
     rows.sort(key=acct_key)
-    step = 360.0 / max(1, len(rows))
-    for i, a in enumerate(rows):
+    # clusters ride the same ring, right after the live accounts
+    n_live = sum(1 for a in rows if a.get("status") == "live")
+    ring = rows[:n_live] + clusters + rows[n_live:]
+    step = 360.0 / max(1, len(ring))
+    for i, a in enumerate(ring):
         a["_angle"] = -90 + i * step
 
     comp_angles = spread({s: _circ_mean([a["_angle"] for a in live if s in a["routes"]]) for s in comp_hw},
                          min_gap=36)
-    hw_angles = spread({h: _circ_mean([comp_angles[s] for s in comp_hw if comp_hw[s] == h]) for h in hardware},
-                       min_gap=80)
+    hw_seed = {h: _circ_mean([comp_angles[s] for s in comp_hw if comp_hw[s] == h]) for h in hardware if h not in cluster_hw}
+    for h in cluster_hw:
+        hw_seed[h] = _circ_mean([c["_angle"] for c in clusters if h in c.get("hardware", {})])
+    hw_angles = spread(hw_seed, min_gap=80 if len(hw_seed) <= 4 else 360.0 / len(hw_seed))
 
     competitions = []
     for slug in comp_order:
@@ -343,6 +405,7 @@ def page_data(snapshot: Dict[str, Any]) -> Dict[str, Any]:
     accounts = []
     for a in rows:
         accounts.append({
+            "angle": round(a["_angle"], 2),
             "n": a.get("n") if a.get("n") is not None else a["label"], "name": a.get("name") or a["label"],
             "user": a.get("user") or "", "h": float(a.get("h") or 0.0), "allowed": float(a.get("allowed") or 30.0),
             "runs": [r for r in a.get("runs", []) if r[0] in hardware_all or r[0] in ("t4", "p100", "cpu")],
@@ -353,9 +416,34 @@ def page_data(snapshot: Dict[str, Any]) -> Dict[str, Any]:
     for acc in accounts:  # T4/P100/CPU runs are drawn with the open-hardware colour
         acc["runs"] = [["open" if r[0] in ("t4", "p100", "cpu") else r[0], r[1]] for r in acc["runs"]]
 
+    cluster_rows = []
+    for c in clusters:
+        days = None
+        until = _parse_iso(c.get("until"))
+        if until:
+            days = max(0, (until.date() - taken.date()).days + 1)
+        reserve = None
+        for lo, hi in c.get("reserve", []):
+            lo_d, hi_d = _parse_iso(lo), _parse_iso(hi)
+            if lo_d and hi_d and hi_d.date() >= taken.date():
+                reserve = {"from": _fmt_day(lo_d), "to": _fmt_day(hi_d), "days": (lo_d.date() - taken.date()).days}
+                break
+        cluster_rows.append({
+            "id": c["name"], "name": c.get("title") or c["name"], "site": c.get("site") or "",
+            "account": c.get("account") or "", "angle": round(c["_angle"], 2),
+            "budget": float(c.get("budget") or 0), "left": c.get("left"), "spent": c.get("spent"),
+            "until": _fmt_day(until) if until else "", "days": days if days is not None else 999,
+            "cap": c.get("gpu_cap") or 0, "in_use": c.get("in_use"),
+            "hw": {p: {"how": r.get("how"), "idle": r.get("idle"), "accels": r.get("accels", [])}
+                   for p, r in c.get("hardware", {}).items() if p in hardware},
+            "jobs": [j for j in c.get("jobs", []) if j and j[0] in hardware],
+            "pending": c.get("status") != "live", "unreachable": c.get("status") == "unreachable",
+            "error": c.get("error"), "reserve": reserve,
+        })
+
     # the "T4 · P100" lettering goes where no competition sits
     candidates = [c * 15.0 for c in range(24)]
-    taken_angles = list(comp_angles.values())
+    taken_angles = list(comp_angles.values()) + [c["_angle"] for c in clusters]
     bus = max(candidates, key=lambda c: min([abs(_wrap(c - t)) for t in taken_angles] or [180]))
 
     pending = [a for a in snapshot["accounts"] if a.get("status") == "pending"]
@@ -372,6 +460,7 @@ def page_data(snapshot: Dict[str, Any]) -> Dict[str, Any]:
         "hardware_angles": {k: round(v, 1) for k, v in hw_angles.items()},
         "competitions": competitions,
         "accounts": accounts,
+        "clusters": cluster_rows,
         "meta": {"max_concurrent": snapshot.get("max_concurrent", 2), "bus_center": bus,
                  "live_note": " · ".join(notes) or "every folder has a working token"},
     }
@@ -443,8 +532,9 @@ def changes(snapshot: Dict[str, Any], previous: Optional[Dict[str, Any]] = None,
         if a.get("status") == "unreachable":
             cards.append({"kicker": "unreachable", "tone": "--hot", "title": "Account %s · %s" % (a.get("n"), a.get("name")),
                           "text": "The probe failed: %s" % (a.get("error") or "unknown error")})
-    # premium hardware about to disappear
     taken = _parse_iso(snapshot.get("taken_at")) or datetime.now(timezone.utc)
+    cards += cluster_changes(snapshot, previous, taken)
+    # premium hardware about to disappear
     by_hw: Dict[str, List[datetime]] = {}
     for a in snapshot["accounts"]:
         for slug, r in a.get("routes", {}).items():
@@ -458,6 +548,39 @@ def changes(snapshot: Dict[str, Any], previous: Optional[Dict[str, Any]] = None,
             cards.append({"kicker": "ending soon", "tone": "--hot", "title": "%s ends %s" % (hw_name(h), _fmt_day(last)),
                           "text": "Every route to %s closes within %d days. %d accounts lose it." % (hw_name(h), math.ceil(days), _reach(snapshot, h))})
     return cards[:limit]
+
+
+def cluster_changes(snapshot: Dict[str, Any], previous: Optional[Dict[str, Any]], taken: datetime) -> List[Dict[str, str]]:
+    """Cards about Slurm clusters: joined, unreachable, awaiting probe, reserve window, low budget."""
+    cards = []
+    before = {c["name"] for c in (previous or {}).get("clusters", [])}
+    for c in snapshot.get("clusters", []):
+        title = "%s · %s" % (c.get("title") or c["name"], c.get("site") or "")
+        hw = " and ".join(HARDWARE_STYLE.get(p, {}).get("name", p) + (" (preemptible)" if r.get("how") == "preemptible" else "")
+                          for p, r in c.get("hardware", {}).items())
+        until = _parse_iso(c.get("until"))
+        if previous is not None and c["name"] not in before:
+            cards.append({"kicker": "new cluster", "tone": "--v100", "title": "%s joins" % title,
+                          "text": "Slurm project %s: %.0f GPU-h until %s, up to %d GPUs at once, on %s."
+                                  % (c.get("account"), c.get("budget") or 0, _fmt_day(until) if until else "?",
+                                     c.get("gpu_cap") or 0, hw)})
+        if c.get("status") == "pending":
+            cards.append({"kicker": "awaiting probe", "tone": "--muted", "title": title,
+                          "text": "Shown from its config. Probe it over SSH (--cluster %s) from a machine "
+                                  "that holds the key to fill in the budget and the queue." % c["name"]})
+        elif c.get("status") == "unreachable":
+            cards.append({"kicker": "unreachable", "tone": "--hot", "title": title,
+                          "text": "The SSH probe failed: %s" % (c.get("error") or "unknown error")})
+        elif c.get("left") is not None and c.get("budget") and c["left"] < 0.1 * c["budget"]:
+            cards.append({"kicker": "budget low", "tone": "--hot", "title": "%s: %.0f GPU-h left" % (title, c["left"]),
+                          "text": "Under a tenth of the project budget remains until %s." % (_fmt_day(until) if until else "?")})
+        for lo, hi in c.get("reserve", []):
+            lo_d, hi_d = _parse_iso(lo), _parse_iso(hi)
+            if lo_d and hi_d and (lo_d - taken).total_seconds() <= 14 * 86400 and hi_d.date() >= taken.date():
+                cards.append({"kicker": "reserve window", "tone": "--l4",
+                              "title": "%s held %s to %s" % (c.get("title") or c["name"], _fmt_day(lo_d), _fmt_day(hi_d)),
+                              "text": "Budget reserved for the PI's reviewer response: ask before any large run in it."})
+    return cards
 
 
 # ---------------------------------------------------------------------------------------
@@ -515,17 +638,23 @@ def _parse_args(argv: Optional[Sequence[str]] = None) -> argparse.Namespace:
     parser.add_argument("--title", help="page name (default: Moon Cluster)")
     parser.add_argument("--subtitle", help="italic word after the name")
     parser.add_argument("--note", action="append", default=[], help='extra card "KICKER|Title|Text" (repeatable)')
+    parser.add_argument("--cluster", action="append", default=[],
+                        help="also probe this Slurm cluster over SSH: preset (%s) or JSON config (repeatable)"
+                        % ", ".join(CLUSTERS))
+    parser.add_argument("--cluster-unprobed", action="append", default=[],
+                        help="show this cluster from its config only, as awaiting probe (repeatable)")
     parser.add_argument("--removed", action="append", default=[],
                         help="leave an account out and show it as removed: account7 or account7=deleted (repeatable)")
     args = parser.parse_args(argv)
-    if not args.from_snapshot and not args.tokens_dir:
-        parser.error("give --tokens-dir (or set KAGGLE_TOKENS_DIR) or --from-snapshot")
+    if not args.from_snapshot and not args.tokens_dir and not (args.cluster or args.cluster_unprobed):
+        parser.error("give --tokens-dir (or set KAGGLE_TOKENS_DIR), --cluster or --from-snapshot")
     return args
 
 
 def main(argv: Optional[Sequence[str]] = None) -> int:
     args = _parse_args(argv)
     removed = dict((r.split("=", 1) + [""])[:2] for r in args.removed)
+    clusters = probe_clusters(args.cluster, args.cluster_unprobed)
     if args.from_snapshot:
         snapshot = load_snapshot(args.from_snapshot)
         for a in snapshot["accounts"]:
@@ -533,8 +662,11 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
             hit = next((k for k in removed if k == a["label"] or k == "account%s" % n), None)
             if hit is not None:
                 a.update(status="removed", reason=removed[hit] or "removed", routes={}, runs=[])
+        # a freshly probed cluster replaces the snapshot's row of the same name
+        fresh = {c["name"] for c in clusters}
+        snapshot["clusters"] = [c for c in snapshot.get("clusters", []) if c["name"] not in fresh] + clusters
     else:
-        snapshot = probe_snapshot(args.tokens_dir, removed)
+        snapshot = probe_snapshot(args.tokens_dir, removed, clusters=clusters)
     if args.title:
         snapshot["title"] = args.title
     if args.subtitle is not None:
@@ -553,7 +685,8 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
         with open(out, "w") as fh:
             fh.write(render(snapshot, previous))
         live = [a for a in snapshot["accounts"] if a.get("status") == "live"]
-        print("page -> %s (%d live accounts, %.1f GPU-hours spare)" % (out, len(live), sum(a["h"] for a in live)))
+        print("page -> %s (%d live accounts, %.1f GPU-hours spare, %d cluster(s))"
+              % (out, len(live), sum(a["h"] for a in live), len(snapshot.get("clusters", []))))
     return 0
 
 

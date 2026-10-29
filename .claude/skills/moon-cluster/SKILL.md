@@ -1,6 +1,6 @@
 ---
 name: moon-cluster
-description: Refresh or change the Moon Cluster page, the night-sky dial of our shared accelerator pool (accounts, competition-gated GPUs, quota). Use when asked to update, redraw, refresh or annotate the Moon Cluster / pool visualization, or after the pool changes (new tokens, removed accounts, new competitions).
+description: Refresh or change the Moon Cluster page, the night-sky dial of our shared accelerator pool (Kaggle accounts, competition-gated GPUs, quota, and the HSE cHARISMa Slurm cluster). Use when asked to update, redraw, refresh or annotate the Moon Cluster / pool visualization, or after the pool changes (new tokens, removed accounts, new competitions).
 ---
 
 # Moon Cluster
@@ -22,6 +22,11 @@ The published page embeds its own snapshot, so the current page is always the `-
    unpack into a fresh folder in your scratchpad. Never copy tokens into the repo or the page.
    Folders without a `token` show up as *awaiting token*; folders tagged like
    `account7_Name[suspended]` show up as removed.
+   **Clusters.** Always include HSE cHARISMa: `--cluster charisma` probes it over SSH (needs the key in
+   ssh-agent and outbound port 2222; see `gpu_pool/charisma/GUIDE.md`). Where SSH is unavailable (a
+   cloud session without the key or the port), pass `--cluster-unprobed charisma` instead so the
+   cluster stays on the page as *awaiting probe*; a re-render from `--from-snapshot` keeps the cluster
+   row the previous page had unless one of these flags replaces it.
 2. **Previous page.** Read the artifact (`Artifact` tool, `action: "read"`, the URL above) and pass
    the saved HTML file as `--previous`. Skip this only if the read fails; the page then shows no
    "new account / new route" cards.
@@ -37,14 +42,15 @@ The published page embeds its own snapshot, so the current page is always the `-
 
    ```bash
    python gpu_pool/moon_cluster.py --tokens-dir "$TOKENS" --previous previous.html \
-       --out "$SCRATCH/moon_cluster.html" [--note ...] [--removed ...]
+       --cluster charisma --out "$SCRATCH/moon_cluster.html" [--note ...] [--removed ...]
    ```
 
 5. **Publish** with the `Artifact` tool: `file_path` = the rendered file, `url` = the URL above.
    Read the artifact first in this conversation if you have not (a publish to an unread artifact
    is refused).
 6. **Report** in a few lines: spare GPU-hours, live accounts, which premium GPUs are reachable and
-   until when, and the change cards the page now shows.
+   until when, the cluster's budget left and GPUs in use (or that it was not probed), and the change
+   cards the page now shows.
 
 ## Do not
 

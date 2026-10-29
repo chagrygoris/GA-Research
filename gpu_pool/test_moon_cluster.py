@@ -14,6 +14,7 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from gpu_pool.moon_cluster import (
     changes,
+    cluster_entry,
     load_snapshot,
     main,
     page_data,
@@ -159,6 +160,35 @@ def test_cli_renders_from_a_snapshot_with_notes_and_removals():
         page = open(out).read()
     assert "<em>night shift</em>" in page and "Heads up" in page and "Account 4 deleted" in page
     assert all(a["n"] != 4 for a in _embedded(page)["accounts"])
+
+
+def test_slurm_cluster_rides_the_ring_with_its_own_hardware():
+    from gpu_pool.slurm import CHARISMA, ClusterStatus
+    snap = _snapshot()
+    st = ClusterStatus(CHARISMA, ok=True, spent_gpu_h=120.0, idle={"v100": (10, 96), "a100": (0, 64)})
+    snap["clusters"] = [cluster_entry(CHARISMA, st)]
+    data = page_data(snap)
+    c = data["clusters"][0]
+    assert c["left"] == 4880.0 and c["cap"] == 4 and c["in_use"] == 0
+    assert set(c["hw"]) == {"v100", "hpc-ef"} and c["hw"]["hpc-ef"]["how"] == "preemptible"
+    assert c["hw"]["v100"]["idle"] == [10, 96]
+    assert {"v100", "hpc-ef"} <= set(data["hardware_angles"])
+    ring = sorted([a["angle"] for a in data["accounts"]] + [c["angle"]])
+    assert min(b - a for a, b in zip(ring, ring[1:])) > 50          # 6 nodes, evenly spaced
+    assert data["meta"]["live_note"] == "1 more awaiting token"      # clusters are not accounts
+    cards = {k["kicker"]: k for k in changes(snap, _snapshot())}
+    assert "proj_1898" in cards["new cluster"]["text"]
+    assert "5 Nov" in cards["reserve window"]["title"]
+    page = render(snap)
+    assert _embedded(page)["clusters"][0]["name"] == "cHARISMa"
+
+
+def test_unprobed_cluster_is_awaiting_probe():
+    from gpu_pool.slurm import CHARISMA
+    snap = _snapshot()
+    snap["clusters"] = [cluster_entry(CHARISMA)]
+    assert page_data(snap)["clusters"][0]["pending"] is True
+    assert any(c["kicker"] == "awaiting probe" for c in changes(snap))
 
 
 if __name__ == "__main__":
