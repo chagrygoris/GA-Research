@@ -225,3 +225,16 @@ skipped with `--use_warp`, `--use_synth`, `--raw_cache` or `--fisher_prior`.
 differ from the defaults; the other cells clone the branch, install what Kaggle lacks (no Poetry) and run
 `python -m pose3d`. Attach the datasets `syfry5suvzovvakmuj/pascal3d` and
 `syfry5suvzovvakmuj/pascal3d-ram-cache`.
+
+## Key checkpoints (W&B `clifforders/key-checkpoints`)
+
+The checkpoints of record live in the W&B project **`clifforders/key-checkpoints`** (artifact type `checkpoint`), each
+with its metrics, source run and loading notes in the artifact metadata. Load one with
+`wandb.Api().artifact("clifforders/key-checkpoints/<name>:<alias>").download()`.
+
+| artifact | alias | what it is |
+|---|---|---|
+| `i2s_exact_warp_synth.pt` | `pascal-i2s-best` | Image2Sphere, upstream training script (ResNet-101, warp + synth, 40 epochs): Pascal3D+ class-mean 9.70 deg, median 8.58 deg. Upstream format; load into `I2SReal(normalize_input=False)` as in `probes/pascal_wigner_spectrum/i2s_truncation.py`. |
+| `symsol1_10pct_gatr_spherecloud_harm6_nc.pth` | `symsol-best` | Clifford Flow GATr harm6 + nearest coupling, SYMSOL I 10 %: class-mean 1.55 deg, acc@15 0.954 (`reports/symsol_stf/README.md`, section 7). Loads with `pose3d/evaluate.py:build_model`. |
+
+Add a new checkpoint of record there (not only to the run's project) with a description and metrics.
