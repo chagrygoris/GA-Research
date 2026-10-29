@@ -39,7 +39,17 @@ def main():
 
     torch.set_grad_enabled(False)
     ckpt = torch.load(args.checkpoint, map_location="cpu", weights_only=False)
-    model, saved = build_model(ckpt, torch.device("cpu"))
+    if "model_state_dict" in ckpt:
+        # upstream image2sphere's own training script (train.py): its I2S module is I2SReal.net, and upstream feeds
+        # the ResNet [0, 1] images without ImageNet normalisation, so the wrapper must not normalise either.
+        from pose3d.models.i2s_real import I2SReal
+
+        model = I2SReal(encoder_type="resnet101", pretrained_backbone=False, lmax=6, normalize_input=False)
+        missing, unexpected = model.load_state_dict({"net." + k: v for k, v in ckpt["model_state_dict"].items()
+                                                     if k not in ("eval_wigners", "eval_rotmats")}, strict=False)
+        assert set(missing) <= {"mean", "std"} and not unexpected, (missing, unexpected)
+    else:
+        model, saved = build_model(ckpt, torch.device("cpu"))
     model.eval()
     lmax = model.lmax
     cache = torch.load(args.val_cache, map_location="cpu", weights_only=False)
