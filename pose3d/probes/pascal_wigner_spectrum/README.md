@@ -18,3 +18,30 @@ classes from the annotation files, 18,371 train / 1,309 val):
    mode is already set at L = 1–2).
 
 Run from `pose3d/`: `python -m probes.pascal_wigner_spectrum.spectrum --labels pascal_labels.npz`.
+
+## 3. A trained Image2Sphere truncated at L (`i2s_truncation.py`, `i2s_truncation.png`)
+
+Checkpoint `i2s_real_r101_nosynth.pth` (W&B `clifforders/3D Pose Estimation`, run `i2s_real_r101_nosynth`: I2SReal,
+ResNet-101, real images only, final median 10.9 deg). Its Wigner-D output psi (degrees 0..6) is kept up to degree L
+and decoded by the argmax over the level-5 SO(3) grid (2.36M rotations, 1.875 deg), on the 1,309 val images of the
+RAM cache. The energy |psi_l|^2 is the variance degree l adds to the predicted log-density over SO(3).
+
+| L | median (deg) | class-mean median | acc@15 | acc@30 |
+|---|---|---|---|---|
+| 0 | 106.6 | 109.9 | 0.000 | 0.000 |
+| 1 | 132.8 | 133.3 | 0.022 | 0.085 |
+| 2 | 157.7 | 123.0 | 0.167 | 0.297 |
+| 3 | 14.1 | 26.2 | 0.528 | 0.752 |
+| 4 | 10.6 | 18.4 | 0.623 | 0.801 |
+| 5 | 10.5 | 15.3 | 0.641 | 0.813 |
+| 6 | 10.5 | 14.9 | 0.647 | 0.816 |
+
+Energy share of degrees 1..6 (all val images): 0.04, 0.17, **0.37, 0.27**, 0.08, 0.06.
+
+* I2S does not encode the pose in its low degrees: degrees <= 2 decode to the wrong side of SO(3) (median 133–158
+  deg, worse than a random guess's ~126 deg), although degree 1 alone could identify a single pose (section 1). The
+  distribution is built from l = 3 and 4 (64 % of the energy), and L = 4 already gives the full model's median
+  (10.6 vs 10.5 deg); degrees 5–6 matter for the class mean only through a few classes.
+* Per class (median, L = 3 / 4 / 6): bus 6.1 / 4.6 / 4.0, car 8.6 / 6.1 / 5.9, train 11.9 / 7.7 / 6.6, bottle 12.1 / 9.2
+  / 8.3 (resolved at L = 3–4); sofa 65.0 / 18.5 / 11.7 and diningtable 82.0 / 75.7 / 46.6 need degrees 5–6 (the two
+  classes with the most rotational ambiguity, cf. their concentrated priors in section 2).
