@@ -1,5 +1,10 @@
 """SYMSOL-CHILE: SYMSOL-style renders of regular n-gonal pyramids, up to the chiliagon (n = 1000).
 
+SYMSOL is the benchmark of Murphy et al., "Implicit-PDF" (ICML 2021, arXiv 2106.05965): untextured solids rendered
+from poses uniform on SO(3), each image labelled with all its equivalent poses. The paper describes 100,000 renders
+per shape; the released files have 50,000 (45,000 train + 5,000 test), the default here. It does not publish the
+renderer, camera or lighting, so those below are matched to the released images by eye.
+
 Why (reports/symmetry_spectrum.md): an n-gonal pyramid looks the same after a turn of 360/n degrees about its
 axis, so its symmetry group is the cyclic group C_n and its pose density needs the Wigner-D degree l = n to be
 told apart from a cone's. A model that only reaches degrees below n gets the axis right and guesses the turn, an

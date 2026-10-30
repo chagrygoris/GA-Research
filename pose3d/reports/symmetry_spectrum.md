@@ -203,7 +203,7 @@ Below `L = n` the error is a uniform guess of the turn over `[0, 180°/n]`, whos
 margin is ≈ 0 there (0.001–0.015, grid effect), because poses on the same ring more than 15° from an equivalent tie
 with it.
 
-**The dataset.** `datasets/symsol_chile.py` renders SYMSOL-style images of the pyramids `pyr7`, `pyr10` and `pyr1000`
+**The dataset.** SYMSOL is the benchmark of Murphy et al., *Implicit-PDF* (ICML 2021, arXiv 2106.05965). The paper specifies the shapes, uniform random poses and the equivalent-pose labels, and 100,000 renders per shape (the released files have 50,000). It does not give the renderer, camera or lighting, so SYMSOL-CHILE matches those to the released images by eye. `datasets/symsol_chile.py` renders SYMSOL-style images of the pyramids `pyr7`, `pyr10` and `pyr1000`
 (the chiliagon), shaped like the SYMSOL cone. Images are 224 × 224, an untextured grey solid on black, a point light at
 the camera, slight perspective. The renderer ray-casts the pyramid's `n + 1` face planes exactly; a pyramid is convex,
 so no mesh rasteriser is needed. The output uses SYMSOL's file layout, and `datasets/symsol.Symsol` reads it as

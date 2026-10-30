@@ -2,7 +2,7 @@
 
 Generated from `literature/papers.yaml` on 2026-10-30 by `python -m ga_lit render`. Do not edit by hand; edit the YAML or use the CLI.
 
-**145 accepted papers** (50 core, 43 adjacent, 52 context), 1 waiting in the inbox. Browse interactively: `literature/site/index.html`.
+**148 accepted papers** (50 core, 43 adjacent, 55 context), 1 waiting in the inbox. Browse interactively: `literature/site/index.html`.
 
 Relevance: **core** = geometric algebra inside the model or method; **adjacent** = GA-related machine learning or a GA method next to a learned component; **context** = cites or benchmarks against GA models without using one.
 
@@ -374,3 +374,30 @@ The Lorentz-equivariant geometric algebra transformer (L-GATr) line and other sp
 
 - **Economical Jet Taggers - Equivariant, Slim, and Quantized** — Petitjean, Plehn, Spinner, Köthe. *arXiv (Dec 2025), 2025-12-18.* [arxiv](https://arxiv.org/abs/2512.17011) · [inspire](https://inspirehep.net/literature/3094401)
   Late-2025 precursor that introduces L-GATr-slim, the slim Lorentz-equivariant tagger used by several 2026 papers.
+
+## 2024
+
+### Vision, remote sensing and medical imaging
+
+Image backbones, hyperspectral classification, registration, segmentation and enhancement.
+
+- **3D Equivariant Pose Regression via Direct Wigner-D Harmonics Prediction** *(context)* — Lee, Cho. *NeurIPS 2024, 2024-11-01.* [arxiv](https://arxiv.org/abs/2411.00543)
+  Regresses Wigner-D coefficients of the pose directly (pose3d's --model wignerd); a non-GA SO(3) baseline.
+
+## 2022
+
+### Other machine-learning uses of GA
+
+Classifiers, filters, causal discovery and quantum machine learning built on GA.
+
+- **Super-Fibonacci Spirals: Fast, Low-Discrepancy Sampling of SO(3)** *(context)* — Alexa. *CVPR 2022, 2022-06-01.* [url](https://openaccess.thecvf.com/content/CVPR2022/html/Alexa_Super-Fibonacci_Spirals_Fast_Low-Discrepancy_Sampling_of_SO3_CVPR_2022_paper.html)
+  Closed-form near-uniform rotation grids of any size; used for the SO(3) grid in pose3d's symmetry probes.
+
+## 2021
+
+### Vision, remote sensing and medical imaging
+
+Image backbones, hyperspectral classification, registration, segmentation and enhancement.
+
+- **Implicit-PDF: Non-Parametric Representation of Probability Distributions on the Rotation Manifold** *(context)* — Murphy, Esteves, Jampani, Ramalingam et al.. *ICML 2021, 2021-06-10.* [arxiv](https://arxiv.org/abs/2106.05965)
+  Introduces IPDF and the SYMSOL I / II benchmarks of symmetric solids that pose3d evaluates on; no GA.

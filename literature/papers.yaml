@@ -3013,3 +3013,59 @@
   - survey-references
   - inspire
   added: 2026-10-25
+- id: arxiv:2106.05965
+  title: 'Implicit-PDF: Non-Parametric Representation of Probability Distributions on the Rotation Manifold'
+  authors:
+  - Kieran Murphy
+  - Carlos Esteves
+  - Varun Jampani
+  - Srikumar Ramalingam
+  - Ameesh Makadia
+  date: 2021-06-10
+  venue: ICML 2021
+  venue_type: conference
+  links:
+    arxiv: https://arxiv.org/abs/2106.05965
+  topics:
+  - vision
+  status: accepted
+  relevance: context
+  summary: Introduces IPDF and the SYMSOL I / II benchmarks of symmetric solids that pose3d evaluates on; no GA.
+  found_by:
+  - manual
+  added: 2026-10-30
+- id: arxiv:2411.00543
+  title: 3D Equivariant Pose Regression via Direct Wigner-D Harmonics Prediction
+  authors:
+  - Jongmin Lee
+  - Minsu Cho
+  date: 2024-11-01
+  venue: NeurIPS 2024
+  venue_type: conference
+  links:
+    arxiv: https://arxiv.org/abs/2411.00543
+  topics:
+  - vision
+  status: accepted
+  relevance: context
+  summary: Regresses Wigner-D coefficients of the pose directly (pose3d's --model wignerd); a non-GA SO(3) baseline.
+  found_by:
+  - manual
+  added: 2026-10-30
+- id: url:cvpr2022-alexa-super-fibonacci
+  title: 'Super-Fibonacci Spirals: Fast, Low-Discrepancy Sampling of SO(3)'
+  authors:
+  - Marc Alexa
+  date: 2022-06-01
+  venue: CVPR 2022
+  venue_type: conference
+  links:
+    url: https://openaccess.thecvf.com/content/CVPR2022/html/Alexa_Super-Fibonacci_Spirals_Fast_Low-Discrepancy_Sampling_of_SO3_CVPR_2022_paper.html
+  topics:
+  - other-ml
+  status: accepted
+  relevance: context
+  summary: Closed-form near-uniform rotation grids of any size; used for the SO(3) grid in pose3d's symmetry probes.
+  found_by:
+  - manual
+  added: 2026-10-30
