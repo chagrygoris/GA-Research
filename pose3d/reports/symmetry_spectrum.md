@@ -188,6 +188,35 @@ estimated well. These are different requirements.
   that canonicalises the axis first turns the turn into a scalar angle φ, after which `cos 1000φ` is a
   frequency-1000 function of one variable: a spectral-bias problem, not a representation problem.
 
+## SYMSOL-CHILE: pyramids as a benchmark for degree reach
+
+The 1000-gon only tests whether a model learns the density. A pyramid with few base sides `n` also tests the pose: a
+model that cannot reach degree `n` guesses the turn, and that costs up to `180° / n`. Oracle decoding of the truncated
+target (`symmetry_decoding.run_shape`, 200 views, an 80,000-rotation grid):
+
+| pyramid | `n_l`, `l = 0..12` | median error, `1 ≤ L < n` | median error, `L ≥ n` | margin at `L = n` |
+|---|---|---|---|---|
+| 7-gon (C_7) | 1 1 1 1 1 1 1 3 3 3 3 3 3 | 13.3° | 1.5° | 2.59 |
+| 10-gon (C_10) | 1 1 1 1 1 1 1 1 1 1 3 3 3 | 9.7° | 1.4° | 3.86 |
+
+Below `L = n` the error is a uniform guess of the turn over `[0, 180°/n]`, whose median is `90°/n` (12.9° / 9°). The
+margin is ≈ 0 there (0.001–0.015, grid effect), because poses on the same ring more than 15° from an equivalent tie
+with it.
+
+**The dataset.** `datasets/symsol_chile.py` renders SYMSOL-style images of the pyramids `pyr7`, `pyr10` and `pyr1000`
+(the chiliagon), shaped like the SYMSOL cone. Images are 224 × 224, an untextured grey solid on black, a point light at
+the camera, slight perspective. The renderer ray-casts the pyramid's `n + 1` face planes exactly; a pyramid is convex,
+so no mesh rasteriser is needed. The output uses SYMSOL's file layout, and `datasets/symsol.Symsol` reads it as
+`--symsol_set 5` from `<path_to_datasets>/symsol_chile/`. Test items are padded to 1000 equivalents for this set only;
+SYMSOL I stays at 720. `tests/test_symsol_chile.py` checks the geometry, the camera frame (columns = `e1`, rows down =
+`e2`), that every labelled equivalent pose renders the same image while half a step does not, and the loader.
+
+![SYMSOL-CHILE samples: rows pyr7, pyr10, pyr1000](figures/symmetry_spectrum/symsol_chile_samples.png)
+
+Rendering cost on this 4-core CPU: about 40 images/s for `pyr7` and `pyr10`, and 2.5 images/s for `pyr1000` (1001 face
+planes per ray). SYMSOL's size (45,000 train + 5,000 test views per shape) is therefore about 6 h of CPU, nearly all of
+it `pyr1000`, and about 660 MB of PNG.
+
 ## The general case
 
 Every finite rotation group is one of `C_n`, `D_n` (`C_n` plus `n` half-turns about axes perpendicular to the main

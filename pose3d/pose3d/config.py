@@ -227,7 +227,8 @@ class DataConfig:
     synth_pack_weights: bool = False
     # --dataset symsol: which shape subset (datasets/symsol.py SHAPE_SETS).
     # 1: the standard 5-shape benchmark (tet, cube, icosa, cone, cyl). 2/3/4: the single-shape
-    # near-symmetric variants (sphereX/cylO/tetX).
+    # near-symmetric variants (sphereX/cylO/tetX). 5: SYMSOL-CHILE, pyramids with 7 / 10 / 1000 base sides,
+    # rendered by datasets/symsol_chile.py into <path_to_datasets>/symsol_chile.
     symsol_set: int = 1
     # First views per shape kept from the train / test split (None: all 45,000 / 5,000). Howell et al.'s
     # "10 % of the training data" is --symsol_train_views 4500.
