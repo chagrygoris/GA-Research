@@ -182,7 +182,10 @@ def main():
     o3 = _o3()
 
     qgrid = super_fibonacci(args.grid)
-    Dgrid = wigner(o3.quaternion_to_matrix(qgrid), args.lmax)
+    Rgrid = o3.quaternion_to_matrix(qgrid)
+    parts = [wigner(Rgrid[i:i + args.chunk], args.lmax) for i in range(0, args.grid, args.chunk)]   # chunked: memory
+    Dgrid = [torch.cat([p[l] for p in parts]) for l in range(args.lmax + 1)]
+    del parts
     G = groups(args.pyramid)
     labels = {"tet": "tetrahedron (12)", "cube": "cube (24)", "icosa": "icosahedron (60)", "cone": "cone (360)",
               "cyl": "cylinder (720)", f"pyr{args.pyramid}": f"{args.pyramid}-gon pyramid ({args.pyramid})"}
