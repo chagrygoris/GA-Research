@@ -363,8 +363,10 @@ def validate(cfg: Config) -> None:
 
     if cfg.flow.stf_track and cfg.model.name != "clifford_flow":
         raise ValueError("--stf_track is a CliffordFlow option: use --model clifford_flow")
-    if cfg.flow.stf_track and not 2 <= cfg.flow.stf_lmax <= 6:
-        raise ValueError(f"--stf_lmax must be in 2..6, got {cfg.flow.stf_lmax}")
+    if cfg.flow.stf_track:
+        from pose3d.models.stf_track import MAX_RANK
+        if not 2 <= cfg.flow.stf_lmax <= MAX_RANK:
+            raise ValueError(f"--stf_lmax must be in 2..{MAX_RANK}, got {cfg.flow.stf_lmax}")
 
     vit_ga = cfg.model.name == "vit_baseline" and cfg.vit.vit_pooling_type == "ga"
     if vit_ga and cfg.vit.vit_ga_readout_type == "rotor" and dim != 3:

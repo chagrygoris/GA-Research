@@ -1,4 +1,4 @@
-"""SYMSOL-CHILE: SYMSOL-style renders of regular n-gonal pyramids, up to the chiliagon (n = 1000).
+"""SYMSOL-CHILE: SYMSOL-style renders of regular n-gonal pyramids (named after the chiliagon, n = 1000).
 
 SYMSOL is the benchmark of Murphy et al., "Implicit-PDF" (ICML 2021, arXiv 2106.05965): untextured solids rendered
 from poses uniform on SO(3), each image labelled with all its equivalent poses. The paper describes 100,000 renders
@@ -8,9 +8,10 @@ renderer, camera or lighting, so those below are matched to the released images 
 Why (reports/symmetry_spectrum.md): an n-gonal pyramid looks the same after a turn of 360/n degrees about its
 axis, so its symmetry group is the cyclic group C_n and its pose density needs the Wigner-D degree l = n to be
 told apart from a cone's. A model that only reaches degrees below n gets the axis right and guesses the turn, an
-error spread evenly over [0, 180/n] degrees: up to 25.7 deg for pyr7, 18 deg for pyr10, 0.18 deg for pyr1000.
+error spread evenly over [0, 180/n] degrees: up to 25.7 deg for pyr7, 18 deg for pyr10, 13.8 deg for pyr13
+(0.18 deg for the chiliagon, which is why it is not in the default set; --shapes pyr1000 renders it).
 
-Shapes (SHAPES): "pyr<n>", a pyramid with a regular n-gon base. Proportions as the SYMSOL cone of
+Shapes (SHAPES, the default set and --symsol_set 5): "pyr<n>", a pyramid with a regular n-gon base. Proportions as the SYMSOL cone of
 datasets/symsol_points.py: apex (0, 0, 1), base vertices at radius 1 in the plane z = -1 (the k-th at angle 2 pi k / n),
 all scaled by 1 / sqrt 2 into the unit ball. Its rotations are the n turns about e3 (pyramid_group); equivalent
 poses of a view at pose R are R g for those g, as in SYMSOL.
@@ -28,7 +29,7 @@ Output, the layout of the official SYMSOL zip, so datasets/symsol.Symsol reads i
     <root>/symsol_chile/{train,test}/images/<shape>_<index:05d>.png
 Poses are uniform on SO(3), seeded per split and shape, so a run regenerates the same data.
 
-usage: python -m pose3d.datasets.symsol_chile --root DIR [--train 45000] [--test 5000] [--shapes pyr7,pyr10,pyr1000]
+usage: python -m pose3d.datasets.symsol_chile --root DIR [--train 45000] [--test 5000] [--shapes pyr7,pyr10,pyr13]
 """
 
 import argparse
@@ -40,7 +41,7 @@ import numpy as np
 import torch
 from PIL import Image
 
-SHAPES = ("pyr7", "pyr10", "pyr1000")
+SHAPES = ("pyr7", "pyr10", "pyr13")
 SIZE = 224
 SUPERSAMPLE = 2
 CAM_DIST = 4.0

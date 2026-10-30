@@ -55,15 +55,26 @@ def test_camera_frame_columns_right_rows_down():
 
 def test_symsol_loader_reads_the_chile_set(tmp_path):
     generate(str(tmp_path), "test", 2, log=lambda *_: None)
-    generate(str(tmp_path), "train", 2, shapes=("pyr7", "pyr10", "pyr1000"), log=lambda *_: None)
+    generate(str(tmp_path), "train", 2, log=lambda *_: None)
     test = Symsol(str(tmp_path), train=False, set_number=5, workers=2)
-    assert len(test) == 6 and test.shapes == ("pyr7", "pyr10", "pyr1000")
-    for i, n in zip((0, 2, 4), (7, 10, 1000)):
+    assert len(test) == 6 and test.shapes == ("pyr7", "pyr10", "pyr13")
+    for i, n in zip((0, 2, 4), (7, 10, 13)):
         item = test[i]
-        assert int(item["n_eq"]) == n and item["rots_eq"].shape == (1000, 3, 3)
+        assert int(item["n_eq"]) == n and item["rots_eq"].shape == (720, 3, 3)    # SYMSOL I's padding
         assert torch.allclose(item["rots_eq"][0], item["rot"])
         assert item["img"].shape == (3, SIZE, SIZE) and item["img"].max() > 0.5
     train = Symsol(str(tmp_path), train=True, set_number=5, workers=2)
     rot = train[0]["rot"]                                                              # a random equivalent of pyr7
     eq = torch.from_numpy(np.load(tmp_path / "symsol_chile" / "train" / "rotations.npz")["pyr7"][0])
     assert torch.isclose(eq, rot, atol=1e-6).flatten(1).all(1).any()
+
+
+def test_padding_grows_for_a_set_with_more_equivalents(tmp_path):
+    generate(str(tmp_path), "test", 1, shapes=("pyr1000",), log=lambda *_: None)
+    import pose3d.datasets.symsol as symsol
+    symsol.SHAPE_SETS[99], symsol.SET_DIRS[99] = ("pyr1000",), "symsol_chile"
+    try:
+        item = Symsol(str(tmp_path), train=False, set_number=99, workers=1)[0]
+        assert int(item["n_eq"]) == 1000 and item["rots_eq"].shape == (1000, 3, 3)
+    finally:
+        del symsol.SHAPE_SETS[99], symsol.SET_DIRS[99]

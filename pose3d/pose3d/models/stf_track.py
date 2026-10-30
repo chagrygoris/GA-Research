@@ -31,7 +31,7 @@ from typing import NamedTuple, Tuple
 import torch
 import torch.nn as nn
 
-MAX_RANK = 6   # the largest rank supported (3**6 = 729 floats per channel)
+MAX_RANK = 10  # the largest rank supported (3**10 = 59,049 floats per channel; rank 10 costs ~70x rank 6 on a CPU)
 _EPS = 1e-12
 
 

@@ -10,12 +10,13 @@ import pytest
 import torch
 
 from pose3d.models.stf_track import (
+    MAX_RANK,
     INJECT_MODES, NormGate, StfTower, apply_rotation, contract_down, n_components, rotate_to_frame,
     stf2, stf_basis, stf_feature_blocks, stf_invariants, stf_next, to_components,
 )
 
 D = torch.float64
-RANKS = range(2, 7)
+RANKS = range(2, MAX_RANK + 1)
 
 
 def random_rotation(n=None, dtype=D, seed=None):
@@ -110,7 +111,7 @@ def test_vector_parity_is_l(l):
     torch.testing.assert_close(flipped, (-1) ** l * S, atol=1e-12, rtol=1e-12)
 
 
-@pytest.mark.parametrize("l", range(2, 7))
+@pytest.mark.parametrize("l", RANKS)
 def test_contract_down_keeps_symmetric_traceless_and_is_equivariant(l):
     S, vs = chain(l)
     v = torch.randn(4, 3, dtype=D)
@@ -144,7 +145,7 @@ def test_rotate_to_frame_broadcasts_over_channels():
     torch.testing.assert_close(out[2, 5], rotate_to_frame(S[2, 5], R[2], 3))
 
 
-@pytest.mark.parametrize("l", range(1, 7))
+@pytest.mark.parametrize("l", range(1, MAX_RANK + 1))
 def test_stf_basis_has_2l_plus_1_orthonormal_columns(l):
     B = stf_basis(l)
     assert B.shape == (3 ** l, n_components(l)) == (3 ** l, 2 * l + 1)
@@ -174,7 +175,7 @@ def test_norm_gate_is_invariant():
                                atol=1e-12, rtol=1e-12)
 
 
-@pytest.mark.parametrize("lmax", [2, 3, 6])
+@pytest.mark.parametrize("lmax", [2, 3, 6, MAX_RANK])
 def test_tower_is_equivariant_and_feedback_is_a_vector(lmax):
     torch.manual_seed(0)
     tower = StfTower(n_vec=12, lmax=lmax, channels=4, n_scalars=6).to(D)

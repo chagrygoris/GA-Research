@@ -160,7 +160,7 @@ def test_stf_flags_reach_the_model_and_validate():
                       "--no-gatr_compile"])
     model = build_model(cfg, ALGEBRA)
     assert model.stf_tower.lmax == 6 and model.stf_tower.channels == 4 and model.stf_inject == "frame"
-    bad = parse_args(["--path_to_datasets=/tmp", "--stf_track", "--stf_lmax", "7"])
+    bad = parse_args(["--path_to_datasets=/tmp", "--stf_track", "--stf_lmax", "11"])
     with pytest.raises(ValueError):
         build_model(bad, ALGEBRA)
     default = parse_args(["--path_to_datasets=/tmp"])

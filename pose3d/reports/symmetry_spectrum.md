@@ -191,31 +191,64 @@ estimated well. These are different requirements.
 ## SYMSOL-CHILE: pyramids as a benchmark for degree reach
 
 The 1000-gon only tests whether a model learns the density. A pyramid with few base sides `n` also tests the pose: a
-model that cannot reach degree `n` guesses the turn, and that costs up to `180° / n`. Oracle decoding of the truncated
-target (`symmetry_decoding.run_shape`, 200 views, an 80,000-rotation grid):
+model that cannot reach degree `n` guesses the turn, and that costs up to `180° / n`. SYMSOL-CHILE uses `n = 7, 10, 13`.
+Oracle decoding of the truncated target (`symmetry_decoding.run_shape`, 200 views, an 80,000-rotation grid):
 
-| pyramid | `n_l`, `l = 0..12` | median error, `1 ≤ L < n` | median error, `L ≥ n` | margin at `L = n` |
+| pyramid | `n_l`, `l = 0..n+1` | median error, `1 ≤ L < n` | median error, `L ≥ n` | margin at `L = n` |
 |---|---|---|---|---|
-| 7-gon (C_7) | 1 1 1 1 1 1 1 3 3 3 3 3 3 | 13.3° | 1.5° | 2.59 |
-| 10-gon (C_10) | 1 1 1 1 1 1 1 1 1 1 3 3 3 | 9.7° | 1.4° | 3.86 |
+| 7-gon (C_7) | 1 ×7, then 3 3 | 13.3° | 1.5° | 2.59 (≈ 0 below) |
+| 10-gon (C_10) | 1 ×10, then 3 3 | 9.7° | 1.4° | 3.86 (≈ 0 below) |
+| 13-gon (C_13) | 1 ×13, then 3 3 | 7.3° | 1.4° | 6.64 (not informative, see below) |
 
-Below `L = n` the error is a uniform guess of the turn over `[0, 180°/n]`, whose median is `90°/n` (12.9° / 9°). The
-margin is ≈ 0 there (0.001–0.015, grid effect), because poses on the same ring more than 15° from an equivalent tie
-with it.
+Below `L = n` the error is a uniform guess of the turn over `[0, 180°/n]`, whose median is `90°/n` (12.9° / 9° /
+6.9°). For the 7- and 10-gon the margin is ≈ 0 there (0.001–0.015, grid effect): poses on the same ring more than 15°
+from an equivalent tie with it. For the 13-gon the 15° margin cannot see the turn at all: equivalents are 27.7° apart, so
+every pose on the ring is within 13.8° of one and none counts as "far". Its margin is positive from `L = 1` and only
+measures how sharp the axis is. The margin needs a threshold below `180°/n` for `n ≥ 12`; the error does not.
 
-**The dataset.** SYMSOL is the benchmark of Murphy et al., *Implicit-PDF* (ICML 2021, arXiv 2106.05965). The paper specifies the shapes, uniform random poses and the equivalent-pose labels, and 100,000 renders per shape (the released files have 50,000). It does not give the renderer, camera or lighting, so SYMSOL-CHILE matches those to the released images by eye. `datasets/symsol_chile.py` renders SYMSOL-style images of the pyramids `pyr7`, `pyr10` and `pyr1000`
-(the chiliagon), shaped like the SYMSOL cone. Images are 224 × 224, an untextured grey solid on black, a point light at
-the camera, slight perspective. The renderer ray-casts the pyramid's `n + 1` face planes exactly; a pyramid is convex,
-so no mesh rasteriser is needed. The output uses SYMSOL's file layout, and `datasets/symsol.Symsol` reads it as
-`--symsol_set 5` from `<path_to_datasets>/symsol_chile/`. Test items are padded to 1000 equivalents for this set only;
-SYMSOL I stays at 720. `tests/test_symsol_chile.py` checks the geometry, the camera frame (columns = `e1`, rows down =
-`e2`), that every labelled equivalent pose renders the same image while half a step does not, and the loader.
+**Prediction for a band-limited model.** Image2Sphere outputs logits `f(R) = Σ_{l ≤ L} <Ψ^l, D^l(R)>` and trains
+with a cross-entropy over a rotation grid, with a uniformly drawn equivalent label. For an `n`-gon with `n > L` it
+cannot do better than ignoring the turn. On each ring of turns `φ` about the axis, `f = f_0 + g(φ)`, where `f_0` does
+not depend on `φ` and `g` has only frequencies `1 ≤ |m| ≤ L < n`. The expected log-likelihood is
+`(1/n) Σ_k f(φ_0 + 2πk/n) − log Z`. The average over the `n` equally spaced turns removes `g`, because each of its
+frequencies sums to zero. Meanwhile `log Z ≥` its value at `g = 0`, by Jensen's inequality (`∫ e^{f_0 + g} dφ ≥
+2π e^{f_0}` when `g` averages to zero). So the optimum is `g = 0`: the model's density is uniform along the ring, and
+its argmax guesses the turn. With `L = 6` that holds for all three pyramids. The predicted median errors are
+12.9° / 9° / 6.9°, against about 1–2° for a model that reaches `l = n`.
 
-![SYMSOL-CHILE samples: rows pyr7, pyr10, pyr1000](figures/symmetry_spectrum/symsol_chile_samples.png)
+**The dataset.** SYMSOL is the benchmark of Murphy et al., *Implicit-PDF* (ICML 2021, arXiv 2106.05965). The paper
+specifies the shapes, uniform random poses and the equivalent-pose labels, and 100,000 renders per shape (the released
+files have 50,000). It does not give the renderer, camera or lighting, so SYMSOL-CHILE matches those to the released
+images by eye. `datasets/symsol_chile.py` renders SYMSOL-style images of the pyramids `pyr7`, `pyr10` and `pyr13`,
+shaped like the SYMSOL cone; the chiliagon `pyr1000` that names the set renders with `--shapes pyr1000`. Images are
+224 × 224, an untextured grey solid on black, a point light at the camera, slight perspective. The renderer ray-casts
+the pyramid's `n + 1` face planes exactly; a pyramid is convex, so no mesh rasteriser is needed. The output uses
+SYMSOL's file layout, and `datasets/symsol.Symsol` reads it as `--symsol_set 5` from
+`<path_to_datasets>/symsol_chile/`. Test items keep SYMSOL I's padding of 720 equivalents; a set with more (the
+chiliagon) pads to its own maximum. `tests/test_symsol_chile.py` checks the geometry, the camera frame (columns = `e1`,
+rows down = `e2`), that every labelled equivalent pose renders the same image while half a step does not, and the
+loader.
 
-Rendering cost on this 4-core CPU: about 40 images/s for `pyr7` and `pyr10`, and 2.5 images/s for `pyr1000` (1001 face
-planes per ray). SYMSOL's size (45,000 train + 5,000 test views per shape) is therefore about 6 h of CPU, nearly all of
-it `pyr1000`, and about 660 MB of PNG.
+![SYMSOL-CHILE samples: rows pyr7, pyr10, pyr13](figures/symmetry_spectrum/symsol_chile_samples.png)
+
+Rendering cost on this 4-core CPU: about 40 images/s for these pyramids (2.5 images/s for the chiliagon, 1001 face
+planes per ray). The 10 % setting (4,500 training + 1,000 scored test views per shape, 16,500 images) takes a few
+minutes on a GPU, so `notebooks/symsol-chile-runner.ipynb` renders it inside each training kernel.
+
+**Planned runs** (`notebooks/symsol-chile-runner.ipynb`, one variant per kernel, the 10 % protocol of the
+`symsol1_10pct_*` runs: ResNet-50, AdamW, 40 epochs, batch 64):
+
+| variant | model | reaches | prediction | est. RTX Pro 6000 / T4 |
+|---|---|---|---|---|
+| `chile_10pct_i2s_l6_adamw` | Image2Sphere, `--lmax 6` | `l ≤ 6` | turn guessed on all three: ≈ 12.9° / 9° / 6.9° | ~25 min / ~2 h |
+| `chile_10pct_gatr_stf_l10` | Clifford Flow + STF track, `--stf_lmax 10` | tensors up to rank 10 | can reach the 7- and 10-gon, not the 13-gon | ~45–75 min / ~4–6 h |
+
+The STF flow is not a band-limited readout, so the prediction for it is weaker. The GATr vector field can build higher
+degrees nonlinearly, and on SYMSOL I the plain flow stalled on the polyhedra (`symsol_p1_stall.md`). For it
+the experiment measures, rather than tests, how far the STF track helps. `MAX_RANK` of `models/stf_track.py` was
+raised from 6 to 10 for this run; the rank tests (symmetric, traceless, equivariant, basis of `2l + 1` vectors) pass up
+to rank 10. Rank 10 costs about 70× rank 6 inside the track on a CPU (11 s vs 0.15 s for a batch of 64, forward and
+backward).
 
 ## The general case
 

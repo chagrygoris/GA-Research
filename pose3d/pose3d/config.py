@@ -227,7 +227,7 @@ class DataConfig:
     synth_pack_weights: bool = False
     # --dataset symsol: which shape subset (datasets/symsol.py SHAPE_SETS).
     # 1: the standard 5-shape benchmark (tet, cube, icosa, cone, cyl). 2/3/4: the single-shape
-    # near-symmetric variants (sphereX/cylO/tetX). 5: SYMSOL-CHILE, pyramids with 7 / 10 / 1000 base sides,
+    # near-symmetric variants (sphereX/cylO/tetX). 5: SYMSOL-CHILE, pyramids with 7 / 10 / 13 base sides,
     # rendered by datasets/symsol_chile.py into <path_to_datasets>/symsol_chile.
     symsol_set: int = 1
     # First views per shape kept from the train / test split (None: all 45,000 / 5,000). Howell et al.'s
@@ -418,7 +418,8 @@ class FlowConfig:
     # reach the GATr vector field as invariant scalars of the rotor token. Needs vector_field=gatr, cond_tokens=pooled
     # and pose_tokens=rotor (the defaults). Off: the reference model, bit for bit.
     stf_track: bool = False
-    # Highest STF rank (2..6); rank l holds stf_channels tensors of 2l + 1 independent components each.
+    # Highest STF rank (2..10, models/stf_track.MAX_RANK); rank l holds stf_channels tensors of 2l + 1 independent
+    # components each, stored full (3^l floats).
     stf_lmax: int = 3
     stf_channels: int = 8
     # How the vector field sees the tensors S_l and the current rotation matrix R (stf_track.stf_invariants):
