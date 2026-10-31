@@ -268,6 +268,18 @@ Degrees 7–10 make the 7- and 10-gon's turn representable, but the model still 
 plateau. So for Image2Sphere the band limit is not the only obstacle; with the band raised, the turn is still not learned
 from 4,500 views per shape in 40 epochs.
 
+**What Image2Sphere L = 10 outputs, degree by degree, on the 7-gon**
+(`figures/symmetry_spectrum/i2s_l10_7gon_by_degree.png`). The trained model's logit is `f(R) = Σ_l <Ψ^l, D^l(R)>`.
+For 200 test views with pose `R0`, each degree's term `f_l` is evaluated with the model's own Wigner functions on the
+ring of turns `R0·R_z(φ)` (the correct poses at `φ = 2πk/7`) and Fourier-analysed in `φ`. Checks: the logit on the
+ring averages 45.9 against 7.5 on random rotations (the ring is the right set of poses), and degree `l` contains only
+frequencies `|m| ≤ l` along it (the conventions match). Result: every degree is dominated by `m = 0`, the axis signal.
+The `m = 7` component of degrees 7–10, the only place the turn can live, is no larger than the other frequencies
+(about 0.2 logit units), and its part aligned with the correct poses is about 0 (−0.011, −0.010, +0.021, +0.010).
+The model's best turn lands uniformly within each 51.4° period (mean 26.3°, uniform 25.7°). So L = 10 gives the model
+room for the turn, but training puts nothing there. The training grid is not the reason: HEALPix level 3 (36,864
+rotations, about 7.5° apart) has about 7 points per 51.4° period, enough to tell a 7-fold pattern from a uniform ring.
+
 **Result: Clifford Flow + STF track, ranks up to 10** (`chile_10pct_gatr_stf_l10`, Kaggle kernel
 `syfry5suvzovvakmuj/symsol-chile-stf-l10-rtx`, RTX Pro 6000, 40 epochs at about 104 s each, about 87 min all-in;
 32-sample final evaluation, same test views; no log-likelihood, `--no-symsol_likelihood` as in the SYMSOL I STF runs):
