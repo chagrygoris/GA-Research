@@ -243,6 +243,23 @@ minutes on a GPU, so `notebooks/symsol-chile-runner.ipynb` renders it inside eac
 | `chile_10pct_i2s_l6_adamw` | Image2Sphere, `--lmax 6` | `l ≤ 6` | turn guessed on all three: ≈ 12.9° / 9° / 6.9° | ~25 min / ~2 h |
 | `chile_10pct_gatr_stf_l10` | Clifford Flow + STF track, `--stf_lmax 10` | tensors up to rank 10 | can reach the 7- and 10-gon, not the 13-gon | ~45–75 min / ~4–6 h |
 
+**Result: Image2Sphere, L = 6** (`chile_10pct_i2s_l6_adamw`, Kaggle kernel `syfry5suvzovvakmuj/symsol-chile-i2s-l6-rtx`,
+RTX Pro 6000, 40 epochs at about 15 s each, about 14 min all-in; 32-sample final evaluation, first 1,000 test views
+per shape, error to the nearest equivalent pose):
+
+| pyramid | predicted median if the turn is guessed, `90°/n` | measured median | acc@15 | acc@30 | log-likelihood |
+|---|---|---|---|---|---|
+| 7-gon | 12.9° | **12.67°** | 0.598 | 1.000 | 4.19 |
+| 10-gon | 9.0° | **8.97°** | 0.821 | 1.000 | 4.24 |
+| 13-gon | 6.9° | **6.94°** | 1.000 | 1.000 | 4.29 |
+| mean | 9.6° | **9.53°** | 0.806 | 1.000 | 4.24 (grid, T = 1: 4.22) |
+
+Image2Sphere finds the axis (acc@30 = 1.0 on every shape) and guesses the turn, exactly as the band-limit argument
+above predicts: every per-shape median is within 0.25° of `90°/n`. The error was flat from epoch 5 on (10.4° → 9.0°
+class mean), so this is the model's ceiling, not undertraining. Its log-likelihood (4.24) stays high because the
+density puts its mass on the right ring of poses, spread evenly over the turn. acc@15 only looks good for the 13-gon,
+whose largest possible error (13.8°) is under 15°, which is why the median, not acc@15, is the metric to read here.
+
 The STF flow is not a band-limited readout, so the prediction for it is weaker. The GATr vector field can build higher
 degrees nonlinearly, and on SYMSOL I the plain flow stalled on the polyhedra (`symsol_p1_stall.md`). For it
 the experiment measures, rather than tests, how far the STF track helps. `MAX_RANK` of `models/stf_track.py` was
