@@ -287,6 +287,27 @@ did not, not that it cannot. Candidate reasons, untested:
 What a follow-up would need: the same flow without the STF track (to see whether rank 10 changed anything), the
 `--stf_inject frame` variant, and longer training.
 
+**Result: the native STF flow** (persistent per-token Cartesian STF_2..6 inside GATr, spherecloud condition
+tokens, frame_pin pose token; the model and recipe of Kaggle kernel `saudabubin/symsol-native-stf6-no-nc-t4x2`,
+which reached a 1.11° median, 1.67° mean of per-shape medians, on SYMSOL I at 10 %). Code recovered from that
+kernel's embedded archive and patched only for `--symsol_set 5` and per-epoch resume (snapshot dataset
+`syfry5suvzovvakmuj/ga-research-native-chile`, runner `notebooks/symsol-chile-native-stf-runner.ipynb`); run as
+`syfry5suvzovvakmuj/symsol-chile-native-stf6-rtx` on one RTX Pro 6000 (one process at the same global batch 64,
+about 68 s per training epoch, 40 epochs, 32-sample final evaluation):
+
+| pyramid | guessing the turn, `90°/n` | Image2Sphere L = 6 | STF flow (two-tower), rank ≤ 10 | **native STF flow, rank ≤ 6** |
+|---|---|---|---|---|
+| 7-gon | 12.9° | 12.67° | 13.46° | **13.15°** (acc@15 0.556) |
+| 10-gon | 9.0° | 8.97° | 9.26° | **9.50°** (acc@15 0.827) |
+| 13-gon | 6.9° | 6.94° | 7.19° | **6.70°** (acc@15 1.000) |
+| mean | 9.6° | 9.53° | 9.97° | **9.79°** (acc@30 1.000) |
+
+Every 5-epoch evaluation sat at the guessing level from epoch 5 on (7-gon 13.6° → 13.2° → 13.4° → 13.1° → 13.3° →
+13.2°), including after the learning-rate step at epoch 20 that took the same model from 3.5° to 1.1° on SYMSOL I.
+So the model that resolves all five SYMSOL I shapes finds the pyramids' axis and guesses their turn. That fits its
+tensor ranks stopping at 6, below every pyramid's `n ≥ 7`, but the run does not show that the rank limit is the
+cause. A rank-`n` version of the native track is the experiment that would.
+
 The STF flow is not a band-limited readout, so the prediction for it is weaker. The GATr vector field can build higher
 degrees nonlinearly, and on SYMSOL I the plain flow stalled on the polyhedra (`symsol_p1_stall.md`). For it
 the experiment measures, rather than tests, how far the STF track helps. `MAX_RANK` of `models/stf_track.py` was
