@@ -2,7 +2,7 @@
 
 Generated from `literature/papers.yaml` on 2026-10-31 by `python -m ga_lit render`. Do not edit by hand; edit the YAML or use the CLI.
 
-**145 accepted papers** (50 core, 43 adjacent, 52 context), 247 waiting in the inbox. Browse interactively: `literature/site/index.html`.
+**290 accepted papers** (125 core, 108 adjacent, 57 context), 0 waiting in the inbox. Browse interactively: `literature/site/index.html`.
 
 Relevance: **core** = geometric algebra inside the model or method; **adjacent** = GA-related machine learning or a GA method next to a learned component; **context** = cites or benchmarks against GA models without using one.
 
@@ -215,6 +215,8 @@ Image backbones, hyperspectral classification, registration, segmentation and en
 
 - **Geometric algebra enhanced twin-branch contrastive network design for few-shot hyperspectral image classification** — Zhang, Cao, Liu. *Pattern Recognition, 2026-11-01.* [doi](https://doi.org/10.1016/j.patcog.2026.113549)
   GA-enhanced twin-branch contrastive network for few-shot hyperspectral classification.
+- **Subspace Clifford Networks** — Ji. *arXiv, 2026-10-27.* [arxiv](https://arxiv.org/abs/2610.37226)
+  Subspace Clifford Networks: replace CliffordNet's global cyclic rolling with grouped subspace interactions. — also: New GA / Clifford architectures
 - **Preprocessing of Retinal Fundus Image Using Clifford Algebra** *(adjacent)* — Roy, Mitra, Setua. *Preprints.org, 2026-05-11.* [doi](https://doi.org/10.20944/preprints202605.0666.v1)
   Clifford colour space and rotor-based illumination correction as a preprocessing stage for diagnosis pipelines (not itself a neural network).
 - **UHD Low-Light Image Enhancement via Real-Time Enhancement Methods with Clifford Information Fusion** — Wang, Wu, Zhao, Gao. *arXiv, 2026-04-10.* [arxiv](https://arxiv.org/abs/2604.09321)
@@ -368,9 +370,476 @@ Libraries, curated lists and theme issues.
 
 ## 2025
 
+### Surveys, reviews and position papers
+
+Overviews of geometric-algebra (GA) neural networks and essays arguing for GA as a representation.
+
+- **Geometric Algebra Transformers: Revolutionizing Geometric Data** — Cohen. *ICIAM2023 Springer Series, 2025-08-19.* [doi](https://doi.org/10.1007/978-981-95-0351-3_2)
+  Book chapter introducing geometric algebra transformers. — also: New GA / Clifford architectures
+
+### New GA / Clifford architectures
+
+General-purpose layers and models whose weights or activations are multivectors.
+
+- **Soft Geometric Inductive Bias for Object Centric Dynamics** — Linander, Heins, Tschantz, Perin et al.. *arXiv, 2025-12-17.* [arxiv](https://arxiv.org/abs/2512.15493)
+  Object-centric world models with a soft geometric-algebra inductive bias (Clifford transformer). — also: Robotics, driving and control learning
+- **Single-Core Superscalar Optimization of Clifford Neural Layers** — Huang, Ciranni, Spadaccini, Zurita. *arXiv, 2025-09-29.* [arxiv](https://arxiv.org/abs/2510.03290)
+  Superscalar single-core optimisation of Clifford convolutional layers. — also: Software and resources
+- **Equivariant Neural Networks with Geometric Algebras: A New Approach** — Filimoshina, Shirokov. *2025 International Joint Conference on Neural Networks (IJCNN), 2025-06-30.* [doi](https://doi.org/10.1109/ijcnn64981.2025.11227310)
+  New approach to equivariant neural networks with geometric algebras (IJCNN 2025).
+- **Fast Clifford Neural Layers** — Xia, Neuwinger, Xiao. *arXiv, 2025-06-22.* [arxiv](https://arxiv.org/abs/2507.01040)
+  Optimised single-core CPU inference for Clifford convolution and multivector activation layers. — also: Software and resources
+- **GLGENN: A Novel Parameter-Light Equivariant Neural Networks Architecture Based on Clifford Geometric Algebras** — Filimoshina, Shirokov. *arXiv, 2025-06-11.* [arxiv](https://arxiv.org/abs/2506.09625) · [openreview](https://openreview.net/forum?id=H0ySAzwu8k)
+  GLGENN: parameter-light networks equivariant to all pseudo-orthogonal transformations, via generalised Lipschitz groups.
+- **ViNE-GATr: scaling geometric algebra transformers with virtual nodes embeddings** — Suk, Hehn, Behboodi, Cesa. *ICLR 2025 Workshop MLMP Poster, 2025-03-06.* [openreview](https://openreview.net/forum?id=Eb7fQBdA3D)
+  ViNE-GATr: virtual-node embeddings that scale GATr to large geometric data.
+
+### Theory and analysis of GA layers
+
+Expressivity, identifiability, group-theoretic and optimisation studies of GA networks.
+
+- **Composing Linear Layers from Irreducibles** — Pence, Yamada, Singh. *arXiv, 2025-07-15.* [arxiv](https://arxiv.org/abs/2507.11688) · [openreview](https://openreview.net/forum?id=z5FGi0vyCr)
+  Synthesises linear layers from Clifford-algebra bivector (rotor) primitives.
+- **The neural networks with tensor weights and emergent fermionic Wick rules in the large-width limit** *(adjacent)* — Huang, Zhou. *arXiv, 2025-07-07.* [arxiv](https://arxiv.org/abs/2507.05303)
+  Tensor-weight complex networks whose infinite-width limit yields Clifford-algebra (fermionic Wick) statistics.
+
+### Scientific machine learning
+
+Molecules, materials, PDE surrogates, fluids, geoscience and lattice field theory.
+
+- **Conditional Clifford-Steerable CNNs with Complete Kernel Basis for PDE Modeling** — Szarvas, Zhdanov. *Submitted to ICLR 2026, 2025-09-19.* [openreview](https://openreview.net/forum?id=GiNy68FgKR)
+  Completes the Clifford-steerable CNN kernel basis with conditional kernels for PDE modelling. — also: Theory and analysis of GA layers
+- **Geometric Algebra-Enhanced Bayesian Flow Network for RNA Inverse Design** — Wang, Gao, Zhao. *NeurIPS 2025 poster, 2025-09-18.* [doi](https://doi.org/10.52202/085713-0341) · [openreview](https://openreview.net/forum?id=x0KcjteNds)
+  Geometric-algebra-enhanced Bayesian flow network for RNA inverse design.
+- **Wall Shear Stress Estimation in Abdominal Aortic Aneurysms: Towards Generalisable Neural Surrogate Models** — Rygiel, Suk, Brune, Yeung et al.. *arXiv, 2025-07-30.* [arxiv](https://arxiv.org/abs/2507.22817)
+  E(3)-equivariant model with projective-GA descriptors for wall-shear-stress estimation in aortic aneurysms.
+- **Clifford Group Equivariant Diffusion Models for 3D Molecular Generation** — Liu, Vadgama, Ruhe, Bekkers et al.. *arXiv, 2025-04-22.* [arxiv](https://arxiv.org/abs/2504.15773) · [openreview](https://openreview.net/forum?id=XxIDwO5H5q)
+  Clifford diffusion models: E(n)-equivariant diffusion with Clifford multivectors for 3D molecule generation.
+- **Fengbo: a Clifford Neural Operator pipeline for 3D PDEs in Computational Fluid Dynamics** — Pepe, Montanari, Lasenby. *ICLR 2025 Poster, 2025-01-22.* [openreview](https://openreview.net/forum?id=VsxbWTDHjh)
+  Fengbo: a Clifford neural-operator pipeline for 3D computational fluid dynamics.
+
 ### High-energy physics
 
 The Lorentz-equivariant geometric algebra transformer (L-GATr) line and other spacetime-algebra models.
 
 - **Economical Jet Taggers - Equivariant, Slim, and Quantized** — Petitjean, Plehn, Spinner, Köthe. *arXiv (Dec 2025), 2025-12-18.* [arxiv](https://arxiv.org/abs/2512.17011) · [inspire](https://inspirehep.net/literature/3094401)
   Late-2025 precursor that introduces L-GATr-slim, the slim Lorentz-equivariant tagger used by several 2026 papers.
+- **Probing a Quarkophobic ${\mathbf{W}}^\prime$ at the High-Luminosity LHC via Vector Boson Fusion and Lorentz-Equivariant Point Cloud Learning** — U.S., A., J.D.. *arXiv, 2025-02-23.* [arxiv](https://arxiv.org/abs/2502.16630) · [inspire](https://inspirehep.net/literature/2893828)
+  First BSM search (quarkophobic W') using L-GATr point-cloud learning.
+- **Symmetry-aware networks for the LHC** — Simon. *INSPIRE record, 2025-01-01.* [doi](https://doi.org/10.11588/heidok.00036846) · [inspire](https://inspirehep.net/literature/2961245)
+  PhD thesis on symmetry-aware networks (the L-GATr line) for the LHC.
+
+### Vision, remote sensing and medical imaging
+
+Image backbones, hyperspectral classification, registration, segmentation and enhancement.
+
+- **Dual-branch geometric algebra graph network with pyramid fusion for deformable medical image registration** — Anwar, Cao. *Journal of King Saud University Computer and Information Sciences, 2025-12-09.* [doi](https://doi.org/10.1007/s44443-025-00412-9)
+  Dual-branch geometric-algebra graph network with pyramid fusion for deformable medical image registration.
+- **Neural-GASh: A CGA-based neural radiance prediction pipeline for real-time shading** — Geronikolakis, Kamarianakis, Protopsaltis, Papagiannakis. *arXiv, 2025-07-18.* [arxiv](https://arxiv.org/abs/2507.13917)
+  Neural-GASh: real-time neural radiance shading with CGA-encoded vertex inputs. — also: Wireless channels and neural fields
+- **Geometric Inductive Priors in Diffusion-Based Optical Flow Estimation** — Pepe, Mendonca, Lasenby. *BEW 2025 Oral, 2025-07-09.* [openreview](https://openreview.net/forum?id=0CnP0YAFZ4)
+  GA-DDVM: a diffusion optical-flow model that works on geometric-algebra representations.
+- **A Geometric Algebra-Based Model for Enhanced Hyperspectral Anomaly Detection** — Liu, Luo, Wang, Huang et al.. *IEEE Trans. Geosci. Remote. Sens. 2025, 2025-01-01.* [openreview](https://openreview.net/forum?id=053lHSab8h)
+  Geometric-algebra model for hyperspectral anomaly detection.
+
+### Graphs, multimodal and representation learning
+
+Graph neural networks, sheaves, binding / vector-symbolic representations with Clifford structure.
+
+- **Geometric Algebra Multi-Order Graph Neural Network for Traffic Prediction** — Zang, Cui, Wang, Lei et al.. *IEEE Trans. Big Data 2025, 2025-12-31.* [doi](https://doi.org/10.1109/tbdata.2024.3442533) · [openreview](https://openreview.net/forum?id=PFUyWKGYYt)
+  Geometric-algebra multi-order graph neural network for traffic prediction.
+- **Graph Geometric Algebra networks for graph representation learning** — Zhong, Cao. *Scientific Reports, 2025-01-02.* [doi](https://doi.org/10.1038/s41598-024-84483-0)
+  Graph geometric algebra networks for graph representation learning.
+- **Expressiveness Analysis and Enhancing Framework for Geometric Knowledge Graph Embedding Models** *(adjacent)* — Song, Yin, Liu, Liao et al.. *IEEE Trans. Knowl. Data Eng. 2025, 2025-01-01.* [openreview](https://openreview.net/forum?id=fZhr1S6Jli)
+  Expressiveness analysis of geometric knowledge-graph embeddings, comparing models built on different geometric algebras. — also: Theory and analysis of GA layers
+
+### Robotics, driving and control learning
+
+Policies, scene models and pose pipelines built on projective or conformal GA.
+
+- **GAGrasp: Geometric Algebra Diffusion for Dexterous Grasping** — Zhong, Allen-Blanchette. *arXiv, 2025-03-06.* [arxiv](https://arxiv.org/abs/2503.04123) · [doi](https://doi.org/10.1109/icra55743.2025.11127957) · [openreview](https://openreview.net/forum?id=t67yG4Kkxg)
+  GAGrasp: SE(3)-equivariant geometric-algebra diffusion for dexterous grasp generation.
+
+### Sequence models, language and LLM tooling
+
+Rotor-based recurrences, time-series forecasters, semantics and GA-aware language-model tools.
+
+- **Clifford Algebraic Rotor Embeddings : Maybe embeddings should start to CARE** — Sriram, Paliwal, Ecker, Geijn. *arXiv, 2025-11-11.* [arxiv](https://arxiv.org/abs/2511.11665) · [openreview](https://openreview.net/forum?id=V7hM3JpJKE)
+  CARE: Clifford-algebra rotor positional embeddings that generalise RoPE. — also: New GA / Clifford architectures
+- **Geometric Dynamics of Consumer Credit Cycles: A Multivector-based Linear-Attention Framework for Explanatory Economic Analysis** — Sudjianto, Setiawan. *arXiv, 2025-09-08.* [arxiv](https://arxiv.org/abs/2510.15892) · [doi](https://doi.org/10.2139/ssrn.5443034)
+  Multivector linear-attention model of consumer-credit dynamics, with bivectors capturing rotational feedback.
+- **ReCo: Reminder Composition Mitigates Hallucinations in Vision-Language Models** *(adjacent)* — Chytas, Choi, Kim, Singh. *arXiv, 2025-06-27.* [arxiv](https://arxiv.org/abs/2506.22636) · [openreview](https://openreview.net/forum?id=NpQ8QZjL3o)
+  ReCo: a small trainable module built on geometric-algebra composition that reduces VLM hallucination. — also: Vision, remote sensing and medical imaging
+
+### Clifford-valued network dynamics
+
+Stability and synchronisation theory of recurrent networks with Clifford-number states (control theory).
+
+- **Fast fixed-/preassigned-time synchronization of Clifford-valued neural networks for medical image encryption** *(adjacent)* — Zhang, Kou, Zhang, Liu. *Neurocomputing, 2025-10-01.* [doi](https://doi.org/10.1016/j.neucom.2025.130984)
+  Fixed- and preassigned-time synchronisation of Clifford-valued networks for medical image encryption.
+- **Further results on global stability of Clifford-valued neural networks subject to time-varying delays** *(adjacent)* — Manoj, Sriraman, Gurusamy, Shang. *Neurocomputing, 2025-10-01.* [doi](https://doi.org/10.1016/j.neucom.2025.130886)
+  Global stability of Clifford-valued networks with time-varying delays.
+- **Event-triggered control for exponential synchronization of reaction–diffusion fractional-order Clifford-valued delayed neural networks and its application to image encryption** *(adjacent)* — Sriraman, Manoj, Agarwal, Vigo-Aguiar et al.. *Neurocomputing, 2025-10-01.* [doi](https://doi.org/10.1016/j.neucom.2025.130604)
+  Event-triggered synchronisation of reaction-diffusion fractional-order Clifford-valued networks, applied to image encryption.
+- **Decomposition method-based global Mittag-Leffler synchronization for fractional-order Clifford-valued neural networks with transmission delays and impulses** *(adjacent)* — Sriraman, Manoj, Pratap. *Neural Networks, 2025-09-01.* [doi](https://doi.org/10.1016/j.neunet.2025.107564)
+  Mittag-Leffler synchronisation of fractional-order Clifford-valued networks with transmission delays and impulses.
+- **Synchronization of WPAA-Solution of Clifford-Valued Neural Network with Multiple Time-Varying Delays and Impulse Effects on Hybrid Domains** *(adjacent)* — Agrawal, Abbas. *Acta Applicandae Mathematicae, 2025-04-25.* [doi](https://doi.org/10.1007/s10440-025-00729-7)
+  Synchronisation of weighted pseudo almost automorphic solutions of Clifford-valued networks on hybrid domains.
+- **Mean-square stability of stochastic Clifford-valued Cohen-Grossberg neural networks with variable coefficients and time-varying delays** *(adjacent)* — Luo, Jiang, Tan. *Neurocomputing, 2025-04-01.* [doi](https://doi.org/10.1016/j.neucom.2025.129500)
+  Mean-square stability of stochastic Clifford-valued Cohen-Grossberg networks with variable coefficients.
+- **Global Mittag-Leffler stability and synchronization of fractional-order Clifford-valued delayed neural networks with reaction-diffusion terms and its application to image encryption** *(adjacent)* — Manoj, Sriraman. *Information Sciences, 2025-04-01.* [doi](https://doi.org/10.1016/j.ins.2024.121773)
+  Mittag-Leffler stability of fractional-order reaction-diffusion Clifford-valued networks, applied to image encryption.
+- **Fixed-time synchronization of Clifford-valued neural networks with D operator via aperiodic semi-intermittent control** *(adjacent)* — Wang, Li, Zheng. *Advances in Continuous and Discrete Models, 2025-02-13.* [doi](https://doi.org/10.1186/s13662-025-03911-1)
+  Fixed-time synchronisation of Clifford-valued networks with a D operator via semi-intermittent control.
+- **Besicovitch almost periodic solutions to Clifford-valued high-order Hopfield fuzzy neural networks with a $ D $ operator** *(adjacent)* — Li, , Ning, Li et al.. *AIMS Mathematics, 2025-01-01.* [doi](https://doi.org/10.3934/math.2025549)
+  Besicovitch almost periodic solutions of Clifford-valued high-order Hopfield fuzzy networks with a D operator.
+
+### Hypercomplex-valued networks
+
+Quaternion, biquaternion and general hypercomplex layers framed as Clifford algebras.
+
+- **Hypercomplex neural networks: Exploring quaternion, octonion, and beyond in deep learning** *(adjacent)* — Devadas, Hiremani, Preethi, T et al.. *MethodsX, 2025-12-01.* [doi](https://doi.org/10.1016/j.mex.2025.103644)
+  Overview of quaternion, octonion and higher hypercomplex networks. — also: Surveys, reviews and position papers
+- **Complex, Hypercomplex and Fuzzy-Valued Neural Networks** *(adjacent)* — Niemczynowicz, Perfilieva, García-Raffi, Kycia. *, 2025-11-06.* [doi](https://doi.org/10.1201/9781003515302)
+  Book on complex-, hypercomplex- and fuzzy-valued neural networks. — also: Surveys, reviews and position papers
+- **Asymptotically Stable Quaternion-valued Hopfield-structured Neural Network with Periodic Projection-based Supervised Learning Rules** *(adjacent)* — Wang, Ma, Pang. *arXiv, 2025-10-18.* [arxiv](https://arxiv.org/abs/2510.16607)
+  Quaternion-valued Hopfield-structured network with stable supervised learning rules. — also: Clifford-valued network dynamics
+- **A Study on Convolutional Vector-Valued Neural Networks for Color Image Classification** *(adjacent)* — Rodrigues, Valle. *Anais do XXII Encontro Nacional de Inteligência Artificial e Computacional (ENIAC 2025), 2025-09-29.* [doi](https://doi.org/10.5753/eniac.2025.11952)
+  Convolutional vector-valued (including hypercomplex) networks for colour image classification. — also: Vision, remote sensing and medical imaging
+- **Generalized Hypercomplex Neural Networks: Advancing Multi-Dimensional Feature Representation with Adaptive Quaternion-Based Architectures** *(adjacent)* — Hiremani, Devadas, Rani, K.R et al.. *, 2025-01-01.* [doi](https://doi.org/10.2139/ssrn.5084804)
+  Generalised hypercomplex networks with adaptive quaternion-based layers.
+
+### Other machine-learning uses of GA
+
+Classifiers, filters, causal discovery and quantum machine learning built on GA.
+
+- **A New Geometric Algebra-Based Classification of Hand Bradykinesia in Parkinson’s Disease Measured Using a Sensory Glove** *(adjacent)* — Saggio, Roselli, Pietrosanti, Romano et al.. *Algorithms, 2025-08-19.* [doi](https://doi.org/10.3390/a18080527)
+  Geometric-algebra-based classification of Parkinson's bradykinesia from sensory-glove data.
+
+### Software and resources
+
+Libraries, curated lists and theme issues.
+
+- **Geometric Algebra Software for Kinematics** *(context)* — Storti, Hadfield, Rockhold. *Volume 5: 21st IEEE/ASME International Conference on Mechatronic and Embedded Systems and Applications (MESA); 49th Mechanisms and Robotics Conference (MR), 2025-08-17.* [doi](https://doi.org/10.1115/detc2025-168739)
+  Geometric-algebra software for kinematics. — also: Robotics, driving and control learning
+- **GAGPT and Its Application to the Interactive Learning of Geometric Algebra** *(adjacent)* — Wang, Du, Zhao, Luo et al.. *Advances in Applied Clifford Algebras, 2025-05-30.* [doi](https://doi.org/10.1007/s00006-025-01385-8)
+  GAGPT: a GPT-based assistant for interactive learning of geometric algebra. — also: Sequence models, language and LLM tooling
+
+## 2024
+
+### Surveys, reviews and position papers
+
+Overviews of geometric-algebra (GA) neural networks and essays arguing for GA as a representation.
+
+- **Deep Learning Using Geometric Algebra** — Bayro-Corrochano. *Geometric Algebra Applications Vol. III, 2024-01-01.* [doi](https://doi.org/10.1007/978-3-031-66342-0_14)
+  Book chapter on deep learning with geometric algebra. — also: New GA / Clifford architectures
+
+### New GA / Clifford architectures
+
+General-purpose layers and models whose weights or activations are multivectors.
+
+- **Metric Learning for Clifford Group Equivariant Neural Networks** — Ali, Kulytė, Borde, Liò. *arXiv, 2024-07-13.* [arxiv](https://arxiv.org/abs/2407.09926) · [openreview](https://openreview.net/forum?id=4tw1U41t6Q)
+  Learns the metric of the Clifford algebra inside CGENNs. — also: Theory and analysis of GA layers
+- **Clifford-Steerable Convolutional Neural Networks** — Zhdanov, Ruhe, Weiler, Lucic et al.. *arXiv, 2024-02-22.* [arxiv](https://arxiv.org/abs/2402.14730) · [openreview](https://openreview.net/forum?id=eMvxweO8DK)
+  Clifford-Steerable CNNs: E(p,q)-equivariant CNNs on multivector fields, including Poincaré equivariance. — also: Scientific machine learning
+
+### Theory and analysis of GA layers
+
+Expressivity, identifiability, group-theoretic and optimisation studies of GA networks.
+
+- **Black Boxes and Looking Glasses: Multilevel Symmetries, Reflection Planes, and Convex Optimization in Deep Networks** — Zeger, Pilanci. *arXiv, 2024-10-05.* [arxiv](https://arxiv.org/abs/2410.04279) · [openreview](https://openreview.net/forum?id=vpo2K9Xivv)
+  Convex Lasso reformulation of absolute-value networks whose features are expressed with geometric algebra.
+- **Gradient of Clifford Neural Networks** — Maruyama, Alesiani. *D3S3 2024 Poster, 2024-09-30.* [openreview](https://openreview.net/forum?id=SjoBKs8gR6)
+  Derives gradients and backpropagation for Clifford neural networks.
+- **Randomized Geometric Algebra Methods for Convex Neural Networks** — Wang, Kim, Chu, Subramaniam et al.. *arXiv, 2024-06-04.* [arxiv](https://arxiv.org/abs/2406.02806)
+  Randomised GA algorithms for training convex networks to global optimality, including LLM fine-tuning.
+- **Universal Approximation Theorem for Vector- and Hypercomplex-Valued Neural Networks** *(adjacent)* — Valle, Vital, Vieira. *arXiv, 2024-01-04.* [arxiv](https://arxiv.org/abs/2401.02277) · [doi](https://doi.org/10.1016/j.neunet.2024.106632)
+  Universal approximation theorem for vector- and hypercomplex-valued (including Clifford) networks. — also: Hypercomplex-valued networks
+
+### Scientific machine learning
+
+Molecules, materials, PDE surrogates, fluids, geoscience and lattice field theory.
+
+- **Self-Supervised Learning for Ordered Three-Dimensional Structures** — Spellings, Martirossyan, Dshemuchadse. *arXiv, 2024-11-22.* [arxiv](https://arxiv.org/abs/2411.14680) · [openreview](https://openreview.net/forum?id=MkR9hN9twX)
+  Self-supervised pretraining of rotation-equivariant geometric-algebra networks on ordered 3D structures.
+- **Generating Highly Designable Proteins with Geometric Algebra Flow Matching** — Wagner, Seute, Viliuga, Wolf et al.. *arXiv, 2024-11-07.* [arxiv](https://arxiv.org/abs/2411.05238) · [doi](https://doi.org/10.52202/079017-2479) · [openreview](https://openreview.net/forum?id=k8O4pDqfXY)
+  Clifford Frame Attention: geometric-algebra flow matching for designable protein backbones.
+- **STAResNet: a Network in Spacetime Algebra to solve Maxwell's PDEs** — Pepe, Buchholz, Lasenby. *arXiv, 2024-08-24.* [arxiv](https://arxiv.org/abs/2408.13619)
+  STAResNet: a ResNet in spacetime algebra for Maxwell's PDEs.
+- **SINR: Equivariant Neural Vector Fields** *(adjacent)* — Ruhe, Forré. *ICML 2024 Workshop GRaM, 2024-06-17.* [openreview](https://openreview.net/forum?id=LgWZvbcjM1)
+  SINR: steerable implicit neural representations for vector, multivector and tensor fields. — also: Vision, remote sensing and medical imaging
+- **A Geometric Algebra-based machine learning method for Typhoon intensity forecasting** — haiyan, Huang, Li, Luo et al.. *, 2024-05-07.* [doi](https://doi.org/10.21203/rs.3.rs-4353217/v1)
+  Geometric-algebra-based machine learning for typhoon intensity forecasting.
+- **CLIFFORD NEURAL OPERATORS ON ATMOSPHERIC DATA INFLUENCED PARTIAL DIFFERENTIAL EQUATIONS** — Roy, Leong, Shinde, Phillips et al.. *AI4DiffEqtnsInSci @ ICLR 2024 Poster, 2024-03-03.* [openreview](https://openreview.net/forum?id=wFv3EeJtan)
+  Clifford neural operators for atmospheric PDEs.
+- **GA-ReLU: an activation function for Geometric Algebra Networks applied to 2D Navier-Stokes PDEs** — Pepe, Buchholz, Lasenby. *AI4DiffEqtnsInSci @ ICLR 2024 Poster, 2024-03-03.* [openreview](https://openreview.net/forum?id=T54Hn1e98P)
+  GA-ReLU: an activation function for GA networks, tested on 2D Navier-Stokes. — also: New GA / Clifford architectures
+- **Clifford Fourier Neural Operators for Learning the Multi-Components Elastic Wavefields** — Zhang, Innanen. *First EAGE Workshop on The Role of AI in FWI, 2024-01-01.* [doi](https://doi.org/10.3997/2214-4609.202481003)
+  Clifford Fourier neural operators for multi-component elastic wavefields.
+- **Geometric Algebra Models of Proteins for Three-Dimensional Structure Prediction: A Detailed Analysis** — Pepe, Lasenby, Chacon. *Springer Proceedings in Mathematics &amp; Statistics, 2024-01-01.* [doi](https://doi.org/10.1007/978-3-031-55985-3_6)
+  Detailed analysis of geometric-algebra protein features for 3D structure prediction.
+- **Geometric Algebra Models of Proteins for Three-Dimensional Structure Prediction** — Pepe, Lasenby, Chacón. *Lecture Notes in Computer Science, 2024-01-01.* [doi](https://doi.org/10.1007/978-3-031-34031-4_6)
+  Geometric-algebra models of protein geometry as inputs to deep structure prediction.
+
+### High-energy physics
+
+The Lorentz-equivariant geometric algebra transformer (L-GATr) line and other spacetime-algebra models.
+
+- **Interpolating amplitudes** *(context)* — Víctor, Gudrun, Vitaly, Anton. *arXiv, 2024-12-12.* [arxiv](https://arxiv.org/abs/2412.09534) · [doi](https://doi.org/10.21468/SciPostPhys.19.5.123) · [inspire](https://inspirehep.net/literature/2858900)
+  Compares interpolation methods for loop amplitudes, including an MLP and L-GATr.
+- **A Lorentz-Equivariant Transformer for All of the LHC** — Brehmer, Bresó, Haan, Plehn et al.. *arXiv, 2024-11-01.* [arxiv](https://arxiv.org/abs/2411.00446) · [doi](https://doi.org/10.21468/SciPostPhys.19.4.108) · [inspire](https://inspirehep.net/literature/2844989)
+  L-GATr across LHC tasks: amplitude regression, record jet tagging and the first Lorentz-equivariant flow-matching event generator. — also: New GA / Clifford architectures
+- **Geometric Graph Neural Network based track finding** — Garcia, Selvaggi, Francois. *Submitted to ICLR 2025, 2024-09-23.* [doi](https://doi.org/10.1051/epjconf/202533701125) · [openreview](https://openreview.net/forum?id=PgVo0t9rC2)
+  GATr-based geometric GNN for charged-particle track finding. — also: Graphs, multimodal and representation learning
+- **Lorentz-Equivariant Geometric Algebra Transformers for High-Energy Physics** — Spinner, Bresó, Haan, Plehn et al.. *arXiv, 2024-05-23.* [arxiv](https://arxiv.org/abs/2405.14806) · [doi](https://doi.org/10.52202/079017-0699) · [openreview](https://openreview.net/forum?id=X34GKv8sYT) · [inspire](https://inspirehep.net/literature/2789600)
+  L-GATr: Lorentz-equivariant GATr in spacetime algebra for amplitude regression, jet tagging and generative modelling. — also: New GA / Clifford architectures
+
+### Vision, remote sensing and medical imaging
+
+Image backbones, hyperspectral classification, registration, segmentation and enhancement.
+
+- **A Geometric algebra-enhanced network for skin lesion detection with diagnostic prior** — Wang, Ju, Zhu, Zhu et al.. *The Journal of Supercomputing, 2024-12-23.* [doi](https://doi.org/10.1007/s11227-024-06833-z)
+  Geometric-algebra-enhanced network for skin-lesion detection with diagnostic priors.
+- **Fuzzy Attention-based Geometric Algebra Convolution in Recursive Fusion Network for Medical Image Registration** — Zhou, Cao, Zhang. *2024 IEEE International Conference on Bioinformatics and Biomedicine (BIBM), 2024-12-03.* [doi](https://doi.org/10.1109/bibm62325.2024.10821956)
+  Fuzzy-attention geometric-algebra convolution in a recursive fusion network for medical image registration.
+- **Geometric Algebra Planes: Convex Implicit Neural Volumes** *(adjacent)* — Sivgin, Fridovich-Keil, Wetzstein, Pilanci. *arXiv, 2024-11-20.* [arxiv](https://arxiv.org/abs/2411.13525) · [openreview](https://openreview.net/forum?id=mVOz28mPHr)
+  GA-Planes: convex-trainable implicit neural volumes from geometric-algebra-inspired feature planes. — also: Theory and analysis of GA layers
+- **LaB-GATr: geometric algebra transformers for large biomedical surface and volume meshes** — Suk, Imre, Wolterink. *arXiv, 2024-03-12.* [arxiv](https://arxiv.org/abs/2403.07536) · [openreview](https://openreview.net/forum?id=19YEmVJCEt)
+  LaB-GATr: GATr with learned pooling for large biomedical surface and volume meshes. — also: New GA / Clifford architectures
+- **CGAPoseNet+GCAN: A Geometric Clifford Algebra Network for Geometry-aware Camera Pose Regression** — Pepe, Lasenby, Buchholz. *2024 IEEE/CVF Winter Conference on Applications of Computer Vision (WACV), 2024-01-03.* [doi](https://doi.org/10.1109/wacv57701.2024.00646)
+  CGAPoseNet+GCAN: a Geometric Clifford Algebra Network head for geometry-aware camera pose regression. — also: Robotics, driving and control learning
+- **CliffPhys: Camera-Based Respiratory Measurement Using Clifford Neural Networks** — Ghezzi, Boccignone, Grossi, Lanzarotti et al.. *ECCV (85) 2024, 2024-01-01.* [doi](https://doi.org/10.1007/978-3-031-73013-9_13) · [openreview](https://openreview.net/forum?id=UvjVBmU5q6)
+  CliffPhys: Clifford-algebra networks on optical-flow and depth fields for camera-based respiration measurement.
+- **GASSF-Net: Geometric Algebra Based Spectral-Spatial Hierarchical Fusion Network for Hyperspectral and LiDAR Image Classification** — Wang, Ye, Huang, Ju et al.. *Remote. Sens. 2024, 2024-01-01.* [doi](https://doi.org/10.3390/rs16203825) · [openreview](https://openreview.net/forum?id=Up4l39tZqZ)
+  GASSF-Net: GA-based spectral-spatial fusion for hyperspectral and LiDAR classification.
+- **Point Cloud Upsampling with Geometric Algebra Driven Inverse Heat Dissipation** — Xu, Dai, Zheng, Li et al.. *ACM Multimedia 2024, 2024-01-01.* [openreview](https://openreview.net/forum?id=JjlO36YACl)
+  Point-cloud upsampling with GA-driven inverse heat dissipation.
+- **Clifford Convolutional Neural Networks: Concepts, Implementation, and an Application for Lymphoblast Image Classification** — Vieira, Valle, Lopes. *Springer Proceedings in Mathematics &amp; Statistics, 2024-01-01.* [doi](https://doi.org/10.1007/978-3-031-55985-3_10)
+  Concepts and implementation of Clifford convolutional networks, with lymphoblast image classification. — also: New GA / Clifford architectures
+- **Clifford Convolutional Neural Networks for Lymphoblast Image Classification** — Vieira, Valle, Lopes. *Lecture Notes in Computer Science, 2024-01-01.* [doi](https://doi.org/10.1007/978-3-031-34031-4_7)
+  Clifford convolutional networks for lymphoblast image classification.
+
+### Graphs, multimodal and representation learning
+
+Graph neural networks, sheaves, binding / vector-symbolic representations with Clifford structure.
+
+- **TeMME: Temporal Knowledge Graph Completion Using Multi-grade Multivector Embeddings** — Lu, Yu, Fan, Zhan et al.. *PRICAI (4) 2024, 2024-12-31.* [openreview](https://openreview.net/forum?id=5XWlgyy40k)
+  TeMME: temporal knowledge-graph completion with multi-grade multivector embeddings.
+- **A Clifford Algebraic Approach to E(n)-Equivariant High-order Graph Neural Networks** — Tran, Vo, Huu, Nguyen. *arXiv, 2024-10-07.* [arxiv](https://arxiv.org/abs/2410.04692)
+  Clifford-algebraic E(n)-equivariant high-order graph neural networks.
+- **Geometric Algebra based encoding for graph prompting** — Chytas, Chakraborty, Singh. *AccMLBio Poster, 2024-06-17.* [openreview](https://openreview.net/forum?id=LR2VeJEDFw)
+  Geometric-algebra graph encoder for prompting LLMs with graphs. — also: Sequence models, language and LLM tooling
+- **Multivector Neurons: Better and Faster O(n)-Equivariant Clifford Graph Neural Networks** — Liu, Ruhe, Forré. *arXiv, 2024-06-06.* [arxiv](https://arxiv.org/abs/2406.04052) · [openreview](https://openreview.net/forum?id=Jd62y3QfAQ)
+  Multivector neurons: fast O(n)-equivariant Clifford message-passing GNNs. — also: New GA / Clifford architectures
+- **Hierarchy-based Clifford Group Equivariant Message Passing Neural  Networks** — Maruyama, Alesiani. *AI4DiffEqtnsInSci @ ICLR 2024 Poster, 2024-03-03.* [openreview](https://openreview.net/forum?id=x16hXhSbS1)
+  Clifford-group-equivariant U-Net message passing with hierarchical pooling. — also: Scientific machine learning
+- **Clifford Group Equivariant Simplicial Message Passing Networks** — Liu, Ruhe, Eijkelboom, Forré. *arXiv, 2024-02-15.* [arxiv](https://arxiv.org/abs/2402.10011) · [openreview](https://openreview.net/forum?id=Zz594UBNOH)
+  Clifford-group-equivariant message passing on simplicial complexes. — also: New GA / Clifford architectures
+- **Embedding Knowledge Graphs in Degenerate Clifford Algebras** — Teyou, Demir, Ngomo. *arXiv, 2024-02-06.* [arxiv](https://arxiv.org/abs/2402.04870) · [openreview](https://openreview.net/forum?id=8dkw4oipJH)
+  Knowledge-graph embeddings in degenerate Clifford algebras with nilpotent basis vectors.
+- **A Study of LFT Embeddings in the Second Order Clifford Algebra Cl(R²,º)** — Amouzouvi, Vahdati, Song, Bainson et al.. *IEEE Access, 2024-01-01.* [doi](https://doi.org/10.1109/access.2024.3514303) · [openreview](https://openreview.net/forum?id=v9xeBAymtI)
+  Knowledge-graph embeddings using linear fractional transformations in the second-order Clifford algebra.
+
+### Wireless channels and neural fields
+
+GA attention inside neural radiance fields and Gaussian splatting for radio propagation.
+
+- **Differentiable and Learnable Wireless Simulation with Geometric Transformers** — Hehn, Peschl, Orekondy, Behboodi et al.. *arXiv, 2024-06-21.* [arxiv](https://arxiv.org/abs/2406.14995) · [openreview](https://openreview.net/forum?id=9TClCDZXeh)
+  Wireless GATr: differentiable and learnable radio-propagation simulation with geometric algebra transformers.
+
+### Sequence models, language and LLM tooling
+
+Rotor-based recurrences, time-series forecasters, semantics and GA-aware language-model tools.
+
+- **A Novel Spinor-Based Embedding Model for Transformers** — White. *arXiv, 2024-09-26.* [arxiv](https://arxiv.org/abs/2410.00038)
+  Spinor-based word embeddings for transformers.
+- **Geometric Algebra Meets Large Language Models: Instruction-Based Transformations of Separate Meshes in 3D, Interactive and Controllable Scenes** *(adjacent)* — Kolyvakis, Kamarianakis, Papagiannakis. *arXiv, 2024-08-05.* [arxiv](https://arxiv.org/abs/2408.02275) · [doi](https://doi.org/10.1109/isemv67326.2025.00018) · [openreview](https://openreview.net/forum?id=Wnsv1aVC6y)
+  LLM instructions mapped to conformal-GA transformations for 3D scene editing. — also: Vision, remote sensing and medical imaging
+
+### Clifford-valued network dynamics
+
+Stability and synchronisation theory of recurrent networks with Clifford-number states (control theory).
+
+- **Stability and synchronization of octonion-valued neural networks with leakage and mixed delays on time scales** *(adjacent)* — Popa. *Comput. Appl. Math. 2024, 2024-12-31.* [doi](https://doi.org/10.1007/s40314-024-02820-5) · [openreview](https://openreview.net/forum?id=Tkny3U2iEZ)
+  Stability and synchronisation of octonion-valued networks with leakage and mixed delays on time scales. — also: Hypercomplex-valued networks
+- **Stability analysis of Clifford-valued memristor-based neural networks with impulsive disturbances and its application to image encryption** *(adjacent)* — Zhao, Qiao. *Applied Mathematics and Computation, 2024-08-01.* [doi](https://doi.org/10.1016/j.amc.2024.128710)
+  Stability of Clifford-valued memristor networks with impulses, applied to image encryption.
+- **Lagrange stability criteria for hypercomplex neural networks with time varying delays** *(adjacent)* — Baluni, Yadav, Das. *Communications in Nonlinear Science and Numerical Simulation, 2024-04-01.* [doi](https://doi.org/10.1016/j.cnsns.2023.107765)
+  Lagrange stability criteria for hypercomplex networks with time-varying delays. — also: Hypercomplex-valued networks
+- **Synchronization of Hypercomplex Neural Networks with Mixed Time-Varying Delays** *(adjacent)* — Baluni, Yadav, Das, Cao. *Cognitive Computation, 2024-03-11.* [doi](https://doi.org/10.1007/s12559-024-10253-9)
+  Synchronisation of hypercomplex-valued networks with mixed time-varying delays. — also: Hypercomplex-valued networks
+- **Exponential synchronisation for delayed Clifford-valued coupled switched neural networks via static event-triggering rule** *(adjacent)* — Xing, Luan, Deng. *International Journal of Systems Science, 2024-01-18.* [doi](https://doi.org/10.1080/00207721.2023.2301498)
+  Event-triggered exponential synchronisation of delayed Clifford-valued coupled switched networks.
+- **Finite-time stability of weighted pseudo almost periodic solutions for Clifford-valued shunting inhibitory cellular neural networks with delays** *(adjacent)* — Gao, Dai. *International Journal of Control, 2024-01-03.* [doi](https://doi.org/10.1080/00207179.2023.2285901)
+  Finite-time stability of weighted pseudo almost periodic solutions for Clifford-valued shunting-inhibitory networks.
+- **Synchronization of Clifford-valued neural networks with leakage, time-varying, and infinite distributed delays on time scales** *(adjacent)* — Popa. *AIMS Mathematics, 2024-01-01.* [doi](https://doi.org/10.3934/math.2024915)
+  Synchronisation of Clifford-valued networks with leakage, time-varying and infinite distributed delays on time scales.
+- **Almost periodic solutions for Clifford-valued stochastic shunting inhibitory cellular neural networks with mixed delays** *(adjacent)* — Shao, Li. *AIMS Mathematics, 2024-01-01.* [doi](https://doi.org/10.3934/math.2024655)
+  Stepanov almost periodic solutions of Clifford-valued stochastic shunting-inhibitory cellular networks.
+- **Anti-Periodic Solutions on Clifford-Valued High-Order Cohen--Grossberg Neural Networks with Multi-Proportional Delays** *(adjacent)* — Luo, Qiu. *, 2024-01-01.* [doi](https://doi.org/10.2139/ssrn.4710728)
+  Anti-periodic solutions of Clifford-valued high-order Cohen-Grossberg networks with proportional delays.
+- **PSEUDO ALMOST PERIODIC SOLUTION OF FRACTIONAL-ORDER CLIFFORD-VALUED HIGH-ORDER HOPFIELD NEURAL NETWORKS** *(adjacent)* — Huo, Li. *Journal of Applied Analysis &amp; Computation, 2024-01-01.* [doi](https://doi.org/10.11948/20220447)
+  Pseudo almost periodic solutions of fractional-order Clifford-valued high-order Hopfield networks.
+- **Synchronization analysis of novel delayed dynamical Clifford-valued neural networks on timescales** *(adjacent)* — Arbi, Tahri. *Journal of Algorithms &amp; Computational Technology, 2024-01-01.* [doi](https://doi.org/10.1177/17483026241241492)
+  Synchronisation of delayed Clifford-valued shunting-inhibitory cellular networks on time scales.
+
+### Hypercomplex-valued networks
+
+Quaternion, biquaternion and general hypercomplex layers framed as Clifford algebras.
+
+- **Auxiliary Learning for Hypercomplex Neural Networks** *(adjacent)* — Buscarino, Famoso, Fortuna, Puglisi. *2024 IEEE 19th Conference on Industrial Electronics and Applications (ICIEA), 2024-08-05.* [doi](https://doi.org/10.1109/iciea61579.2024.10664949)
+  Auxiliary-learning training scheme for hypercomplex networks.
+- **KHNNs: hypercomplex neural networks computations via Keras using TensorFlow and PyTorch** *(adjacent)* — Niemczynowicz, Kycia. *arXiv, 2024-06-29.* [arxiv](https://arxiv.org/abs/2407.00452) · [doi](https://doi.org/10.1016/j.softx.2025.102163)
+  KHNN: Keras library for hypercomplex-valued dense and convolutional layers (TensorFlow and PyTorch). — also: Software and resources
+- **Demystifying the Hypercomplex: Inductive biases in hypercomplex deep learning** *(adjacent)* — Comminiello, Grassucci, Mandic, Uncini. *IEEE Signal Processing Magazine, 2024-05-01.* [doi](https://doi.org/10.1109/msp.2024.3401622)
+  Tutorial on the inductive biases of hypercomplex deep learning. — also: Surveys, reviews and position papers
+- **Towards Explaining Hypercomplex Neural Networks** *(adjacent)* — Lopez, Grassucci, Capriotti, Comminiello. *arXiv, 2024-03-26.* [arxiv](https://arxiv.org/abs/2403.17929) · [doi](https://doi.org/10.1109/ijcnn60899.2024.10650793)
+  Explainability methods for hypercomplex networks.
+- **Hypercomplex Techniques in Signal and Image Processing Using Network Graph Theory: Identifying core research directions** *(adjacent)* — Alcayde, Ventura, Montoya. *IEEE Signal Processing Magazine, 2024-03-14.* [doi](https://doi.org/10.1109/msp.2024.3365463)
+  Network-graph analysis of research directions in hypercomplex signal and image processing. — also: Surveys, reviews and position papers
+- **PHNNs: Lightweight Neural Networks via Parameterized Hypercomplex Convolutions** *(adjacent)* — Grassucci, Zhang, Comminiello. *IEEE Trans. Neural Networks Learn. Syst. 2024, 2024-01-01.* [doi](https://doi.org/10.1109/tnnls.2022.3226772) · [openreview](https://openreview.net/forum?id=ABt2BYyJHc)
+  PHNNs: parameterised hypercomplex convolutions that learn the algebra rules, framed through Clifford algebras. — also: Vision, remote sensing and medical imaging
+
+### Other machine-learning uses of GA
+
+Classifiers, filters, causal discovery and quantum machine learning built on GA.
+
+- **Optimization of Weight Function for (3+1)d Phonon Propagation in Weyl Fermion Sea Expressed by Clifford Algebra Using Elman Rnn and Echo State Network** *(adjacent)* — Furui, Santos. *Applied Mathematics and Sciences An International Journal (MathSJ), 2024-07-13.* [doi](https://doi.org/10.5121/mathsj.2024.11301)
+  Elman and echo-state networks optimise a weight function for phonon propagation with Clifford-algebra (biquaternion) Weyl fermions.
+- **Quantum Boltzmann machines: Clifford algebras and asymptotic analysis** *(adjacent)* — A.S., N.A.. *INSPIRE record, 2024-06-13.* [doi](https://doi.org/10.1088/1402-4896/ad52d3) · [inspire](https://inspirehep.net/literature/2798321)
+  Symmetry and asymptotic analysis of quantum Boltzmann machines whose Hamiltonians are built from Clifford generators.
+- **Geometric Algebra Quantum Convolutional Neural Network: A model using geometric (Clifford) algebras and quantum computing** *(adjacent)* — Altamirano-Escobedo, Bayro-Corrochano. *IEEE Signal Processing Magazine, 2024-03-14.* [doi](https://doi.org/10.1109/msp.2024.3369015)
+  Geometric-algebra quantum convolutional network combining Clifford algebras and quantum computing.
+- **Applications of Quantum Computing and Geometric Algebra Convolutional Neural Networks** *(adjacent)* — Bayro-Corrochano. *Geometric Algebra Applications Vol. III, 2024-01-01.* [doi](https://doi.org/10.1007/978-3-031-66342-0_21)
+  Book chapter on quantum computing and geometric-algebra convolutional networks.
+
+### Software and resources
+
+Libraries, curated lists and theme issues.
+
+- **GA-Unity: A Production-Ready Unity Package for Seamless Integration of Geometric Algebra in Networked Collaborative Applications** *(context)* — Kamarianakis, Lydatakis, Papagiannakis. *arXiv, 2024-06-17.* [arxiv](https://arxiv.org/abs/2406.11560)
+  GA-Unity: Unity package for geometric algebra in networked collaborative applications.
+
+## 2023
+
+### Surveys, reviews and position papers
+
+Overviews of geometric-algebra (GA) neural networks and essays arguing for GA as a representation.
+
+- **Survey of New Applications of Geometric Algebra** *(adjacent)* — Hitzer, Kamarianakis, Papagiannakis, Vašík. *, 2023-02-20.* [doi](https://doi.org/10.22541/au.167687105.52780013/v1) · [inspire](https://inspirehep.net/literature/2822586)
+  Survey of 101 GA application papers from 2022, including machine-learning uses.
+
+### New GA / Clifford architectures
+
+General-purpose layers and models whose weights or activations are multivectors.
+
+- **Euclidean, Projective, Conformal: Choosing a Geometric Algebra for Equivariant Transformers** — Haan, Cohen, Brehmer. *arXiv, 2023-11-08.* [arxiv](https://arxiv.org/abs/2311.04744) · [openreview](https://openreview.net/forum?id=MeuKVydtOf)
+  Generalises GATr to any geometric algebra and compares Euclidean, projective and conformal versions. — also: Theory and analysis of GA layers
+- **Geometric Algebra Transformer** — Brehmer, Haan, Behrends, Cohen. *arXiv, 2023-05-28.* [arxiv](https://arxiv.org/abs/2305.18415) · [doi](https://doi.org/10.52202/075280-1541) · [openreview](https://openreview.net/forum?id=M7r2CO4tJC)
+  GATr: an E(3)-equivariant transformer on projective-GA multivectors for geometric data across domains.
+- **Clifford Group Equivariant Neural Networks** — Ruhe, Brandstetter, Forré. *arXiv, 2023-05-18.* [arxiv](https://arxiv.org/abs/2305.11141) · [doi](https://doi.org/10.52202/075280-2748) · [openreview](https://openreview.net/forum?id=n84bzMrGUD) · [inspire](https://inspirehep.net/literature/2661033)
+  CGENN: O(n)- and E(n)-equivariant layers that act on multivectors through the Clifford group. — also: Theory and analysis of GA layers
+- **Geometric Clifford Algebra Networks** — Ruhe, Gupta, Keninck, Welling et al.. *arXiv, 2023-02-13.* [arxiv](https://arxiv.org/abs/2302.06594) · [openreview](https://openreview.net/forum?id=DNAJdkHPQ5)
+  Geometric Clifford Algebra Networks (GCANs): Pin(p,q,r) group actions in plane-based GA as layers for dynamical systems. — also: Scientific machine learning
+
+### Theory and analysis of GA layers
+
+Expressivity, identifiability, group-theoretic and optimisation studies of GA networks.
+
+- **From Complexity to Clarity: Analytical Expressions of Deep Neural Network Weights via Clifford's Geometric Algebra and Convexity** — Pilanci. *arXiv, 2023-09-28.* [arxiv](https://arxiv.org/abs/2309.16512) · [openreview](https://openreview.net/forum?id=6XPwSwEWsV)
+  Optimal weights of deep ReLU networks are wedge products of training samples; training reduces to convex GA problems.
+
+### Scientific machine learning
+
+Molecules, materials, PDE surrogates, fluids, geoscience and lattice field theory.
+
+- **Clifford Group Equivariant Neural Network Layers for Protein Structure Prediction** — Pepe, Buchholz, Lasenby. *NLDL 2024, 2023-11-03.* [openreview](https://openreview.net/forum?id=JNfpsiGS5E)
+  CGENN layers inside a protein-structure-prediction pipeline.
+- **Modeling orientational features via Geometric Algebra for 3D protein coordinates prediction** — Pepe, Lasenby. *, 2023-01-18.* [doi](https://doi.org/10.22541/au.167403971.10736333/v1)
+  Geometric-algebra orientational features for deep-learning protein-structure prediction.
+- **Using a Graph Transformer Network to Predict 3D Coordinates of Proteins via Geometric Algebra Modelling** — Pepe, Lasenby, Chacón. *Lecture Notes in Computer Science, 2023-01-01.* [doi](https://doi.org/10.1007/978-3-031-30923-6_7)
+  Graph transformer that predicts 3D protein coordinates from geometric-algebra models of the backbone.
+
+### Vision, remote sensing and medical imaging
+
+Image backbones, hyperspectral classification, registration, segmentation and enhancement.
+
+- **Geometric algebra-based multiscale encoder-decoder networks for 3D motion prediction** — Zhong, Cao. *Applied Intelligence, 2023-08-31.* [doi](https://doi.org/10.1007/s10489-023-04908-7)
+  Geometric-algebra multiscale encoder-decoder for 3D human motion prediction.
+- **Geometric algebra-based multiview interaction networks for 3D human motion prediction** — Zhong, Cao. *Pattern Recognition, 2023-06-01.* [doi](https://doi.org/10.1016/j.patcog.2023.109427)
+  Geometric-algebra multiview interaction networks for 3D human motion prediction.
+- **CGA-PoseNet: Camera Pose Regression via a 1D-Up Approach to Conformal Geometric Algebra** — Pepe, Lasenby. *arXiv, 2023-02-10.* [arxiv](https://arxiv.org/abs/2302.05211)
+  CGA-PoseNet: camera pose regression that predicts a conformal-GA motor via the 1D-Up embedding. — also: Robotics, driving and control learning
+
+### Graphs, multimodal and representation learning
+
+Graph neural networks, sheaves, binding / vector-symbolic representations with Clifford structure.
+
+- **UniSG^GA: A 3D scenegraph powered by Geometric Algebra unifying geometry, behavior and GNNs towards generative AI** — Kamarianakis, Protopsaltis, Angelis, Zikas et al.. *arXiv, 2023-06-18.* [arxiv](https://arxiv.org/abs/2306.10621)
+  UniSG^GA: a 3D scene graph with GA-encoded geometry and behaviour, designed for GNN-based generative models.
+- **Clifford Embeddings - A Generalized Approach for Embedding in Normed Algebras** — Demir, Ngomo. *ECML/PKDD (3) 2023, 2023-01-01.* [openreview](https://openreview.net/forum?id=EddLV8fHQ4)
+  Knowledge-graph embeddings in Clifford algebras Cl(p,q) that generalise complex and quaternion models and pick the algebra per graph.
+- **Block Decomposition with Multi-granularity Embedding for Temporal Knowledge Graph Completion** *(context)* — Yue, Ren, Zeng, Zhang et al.. *DASFAA (2) 2023, 2023-01-01.* [openreview](https://openreview.net/forum?id=9ilzCQOOPw)
+  Block-decomposition temporal knowledge-graph embedding; matched "multivector" but its use of geometric algebra is unverified (abstract unavailable).
+
+### Clifford-valued network dynamics
+
+Stability and synchronisation theory of recurrent networks with Clifford-number states (control theory).
+
+- **Global Exponential Synchronization of Clifford-Valued Memristive Fuzzy Neural Networks with Delayed Impulses** *(adjacent)* — Zhao, Qiao. *Cognitive Computation, 2023-12-07.* [doi](https://doi.org/10.1007/s12559-023-10221-9)
+  Exponential synchronisation of Clifford-valued memristive fuzzy networks with delayed impulses.
+- **Global exponential stability for delayed Clifford-valued coupled neural networks with impulsive effects** *(adjacent)* — Xing, Luan, Deng. *Journal of the Franklin Institute, 2023-12-01.* [doi](https://doi.org/10.1016/j.jfranklin.2023.09.024)
+  Global exponential stability of delayed Clifford-valued coupled networks with impulses.
+- **Multistability of almost periodic solution for Clifford-valued Cohen–Grossberg neural networks with mixed time delays** *(adjacent)* — Zhang, Qiao, Duan, Miao. *Chaos, Solitons &amp; Fractals, 2023-11-01.* [doi](https://doi.org/10.1016/j.chaos.2023.114100)
+  Multistability of almost periodic solutions for Clifford-valued Cohen-Grossberg networks with mixed delays.
+- **Weighted Pseudo Almost Periodic Synchronization for Clifford-Valued Neural Networks with Leakage Delay and Proportional Delay** *(adjacent)* — Gao, Huang, Dai. *Acta Applicandae Mathematicae, 2023-07-05.* [doi](https://doi.org/10.1007/s10440-023-00587-1)
+  Weighted pseudo almost periodic synchronisation of Clifford-valued networks with leakage and proportional delays.
+- **Besicovitch-like almost periodic solutions of Clifford-valued fuzzy cellular neural networks with time-varying delays** *(adjacent)* — Li, Zhang, Li. *Franklin Open, 2023-03-01.* [doi](https://doi.org/10.1016/j.fraope.2023.100011)
+  Besicovitch-like almost periodic solutions of Clifford-valued fuzzy cellular networks with time-varying delays.
+- **A spectral radius-based global exponential stability for Clifford-valued recurrent neural networks involving time-varying delays and distributed delays** *(adjacent)* — Assali. *Computational and Applied Mathematics, 2023-01-18.* [doi](https://doi.org/10.1007/s40314-023-02188-y)
+  Spectral-radius criterion for global exponential stability of Clifford-valued recurrent networks with time-varying and distributed delays.
+- **Clifford-Valued Distributed Optimization Based on Recurrent Neural Networks** *(adjacent)* — Xia, Liu, Kou, Wang. *IEEE Trans. Neural Networks Learn. Syst. 2023, 2023-01-01.* [doi](https://doi.org/10.1109/tnnls.2021.3139865) · [openreview](https://openreview.net/forum?id=JGWto1xzTQ)
+  Networks of Clifford-valued recurrent neural networks that solve constrained distributed convex optimisation through a generalised Clifford gradient.
+- **System decomposition method-based global stability criteria for T-S fuzzy Clifford-valued delayed neural networks with impulses and leakage term** *(adjacent)* — Alanazi, Sriraman, Gurusamy, Athithan et al.. *AIMS Mathematics, 2023-01-01.* [doi](https://doi.org/10.3934/math.2023774)
+  Global asymptotic stability of Takagi-Sugeno fuzzy Clifford-valued delayed networks with impulses and leakage, via system decomposition.
+- **Besicovitch almost periodic stochastic processes and almost periodic solutions of Clifford-valued stochastic neural networks** *(adjacent)* — Li, , Wang. *Discrete and Continuous Dynamical Systems - B, 2023-01-01.* [doi](https://doi.org/10.3934/dcdsb.2022162)
+  Existence of Besicovitch almost periodic solutions for Clifford-valued stochastic neural networks.
+- **System Decomposition Method-Based Exponential Stability of Clifford-Valued BAM Delayed Neural Networks** *(adjacent)* — Sriraman, Balaji, Veerasivaji. *IEEE Access, 2023-01-01.* [doi](https://doi.org/10.1109/access.2023.3295420)
+  Exponential stability of Clifford-valued BAM delayed networks by system decomposition.
+
+### Hypercomplex-valued networks
+
+Quaternion, biquaternion and general hypercomplex layers framed as Clifford algebras.
+
+- **PHYDI: Initializing Parameterized Hypercomplex Neural Networks as Identity Functions** *(adjacent)* — Mancanelli, Grassucci, Uncini, Comminiello. *arXiv, 2023-10-11.* [arxiv](https://arxiv.org/abs/2310.07612) · [doi](https://doi.org/10.1109/mlsp55844.2023.10285926)
+  PHYDI: identity initialisation that stabilises large parameterised hypercomplex networks.
+- **Generalization of Neural Networks on Second-Order Hypercomplex Numbers** *(adjacent)* — Pavlov, Kozlov, Bakulin, Zuev et al.. *Mathematics, 2023-09-19.* [doi](https://doi.org/10.3390/math11183973)
+  Neural networks over general second-order hypercomplex numbers (complex, dual, hyperbolic).
+- **Understanding Vector-Valued Neural Networks and Their Relationship with Real and Hypercomplex-Valued Neural Networks** *(adjacent)* — Valle. *arXiv, 2023-09-14.* [arxiv](https://arxiv.org/abs/2309.07716) · [doi](https://doi.org/10.1109/msp.2024.3401621)
+  Relates vector-valued networks to real- and hypercomplex-valued networks. — also: Theory and analysis of GA layers
+- **Deep Separable Hypercomplex Networks** *(adjacent)* — Shahadat, Maida. *The International FLAIRS Conference Proceedings, 2023-05-08.* [doi](https://doi.org/10.32473/flairs.36.133540)
+  Depthwise-separable hypercomplex convolutions that cut the parameter cost of hypercomplex CNNs. — also: Vision, remote sensing and medical imaging
+- **Enhancing ResNet Image Classification Performance by using Parameterized Hypercomplex Multiplication** *(adjacent)* — Shahadat, Maida. *arXiv, 2023-01-11.* [arxiv](https://arxiv.org/abs/2301.04623)
+  Parameterised hypercomplex multiplication in ResNet front ends for image classification. — also: Vision, remote sensing and medical imaging
+- **Self-Organizing Hypercomplex-Valued Adaptive Network** *(adjacent)* — Hazubski, Hoppe. *, 2023-01-01.* [doi](https://doi.org/10.2139/ssrn.4495222)
+  Self-organising adaptive network with hypercomplex-valued weights.
+
+### Other machine-learning uses of GA
+
+Classifiers, filters, causal discovery and quantum machine learning built on GA.
+
+- **Machine Learning Clifford invariants of ADE Coxeter elements** *(adjacent)* — Chen, Dechant, He, Heyes et al.. *arXiv, 2023-09-29.* [arxiv](https://arxiv.org/abs/2310.00041) · [doi](https://doi.org/10.1007/s00006-024-01325-y) · [inspire](https://inspirehep.net/literature/2705182)
+  Machine learning applied to Clifford invariants of ADE Coxeter elements.
+- **Logarithmic-Function And Geometric Algebra Based Variable Step-size Least Mean Square Algorithm.** *(adjacent)* — shahzad, WANG. *, 2023-09-18.* [doi](https://doi.org/10.21203/rs.3.rs-3334278/v1)
+  GA-based variable step-size least-mean-square adaptive filter with a logarithmic cost.
+- **Clifford Algebras, Quantum Neural Networks and Generalized Quantum Fourier Transform** *(adjacent)* — Trindade, Lula-Rocha, Floquet. *Advances in Applied Clifford Algebras, 2023-06-13.* [doi](https://doi.org/10.1007/s00006-023-01279-7)
+  Clifford algebras as a framework for quantum neural networks and a generalised quantum Fourier transform.
+
+### Software and resources
+
+Libraries, curated lists and theme issues.
+
+- **gafro: Geometric Algebra for Robotics** *(context)* — Löw, Abbet, Calinon. *arXiv, 2023-10-29.* [arxiv](https://arxiv.org/abs/2310.19090)
+  gafro: C++ geometric-algebra library for robot kinematics and optimisation. — also: Robotics, driving and control learning
+- **Project Elements: A computational entity-component-system in a scene-graph pythonic framework, for a neural, geometric computer graphics curriculum** *(adjacent)* — Papagiannakis, Kamarianakis, Protopsaltis, Angelis et al.. *arXiv, 2023-02-15.* [arxiv](https://arxiv.org/abs/2302.07691)
+  Educational Python graphics framework (entity-component-system and scene graph) that combines GA with neural components.
