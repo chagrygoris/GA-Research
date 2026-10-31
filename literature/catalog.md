@@ -2,7 +2,7 @@
 
 Generated from `literature/papers.yaml` on 2026-10-31 by `python -m ga_lit render`. Do not edit by hand; edit the YAML or use the CLI.
 
-**145 accepted papers** (50 core, 43 adjacent, 52 context), 172 waiting in the inbox. Browse interactively: `literature/site/index.html`.
+**145 accepted papers** (50 core, 43 adjacent, 52 context), 247 waiting in the inbox. Browse interactively: `literature/site/index.html`.
 
 Relevance: **core** = geometric algebra inside the model or method; **adjacent** = GA-related machine learning or a GA method next to a learned component; **context** = cites or benchmarks against GA models without using one.
 
@@ -16,7 +16,7 @@ Overviews of geometric-algebra (GA) neural networks and essays arguing for GA as
   First full survey of GA-native neural networks (Princeton / Stanford); its companion AwesomeGANN list is the best single starting point. — also: Software and resources
 - **A Comprehensive Review of CliffordNet: Geometric Algebra as the Foundation for Efficient Vision Architectures** *(context)* — Mamun. *Zenodo, 2026-09-01.* [url](https://zenodo.org/records/22992570)
   Secondary review of a single paper (CliffordNet); low weight. — also: Vision, remote sensing and medical imaging
-- **One algebra for all: geometric algebra methods for neurosymbolic XR scene authoring, animation and neural rendering** *(adjacent)* — Kamarianakis, Protopsaltis, Papagiannakis. *Philosophical Transactions of the Royal Society A, 2026-08-13.* [doi](https://doi.org/10.1098/rsta.2025.0109)
+- **One algebra for all: geometric algebra methods for neurosymbolic XR scene authoring, animation and neural rendering** *(adjacent)* — Kamarianakis, Protopsaltis, Papagiannakis. *Philosophical Transactions of the Royal Society A, 2026-08-13.* [arxiv](https://arxiv.org/abs/2511.15398) · [doi](https://doi.org/10.1098/rsta.2025.0109)
   Position paper on GA for neural rendering and generative-AI scene editing in extended reality.
 - **Merits of geometric algebra applied to cryptography and machine learning** — Silva. *Philosophical Transactions of the Royal Society A, 2026-08-13.* [doi](https://doi.org/10.1098/rsta.2025.0107)
   Clifford fully homomorphic encryption plus "geometric neural networks" that classify encrypted Cl(3,0) point clouds with multivector weights instead of matrices. — also: New GA / Clifford architectures
@@ -99,7 +99,7 @@ Molecules, materials, PDE surrogates, fluids, geoscience and lattice field theor
   Compares GATr-type equivariant surrogates with canonically aligned non-equivariant ones on vascular CFD meshes.
 - **Geometric deep learning for local growth prediction on abdominal aortic aneurysm surfaces** — Alblas, Rygiel, Suk, Kappe et al.. *Artificial Intelligence in Medicine 172:103323, 2026-02-01.* [doi](https://doi.org/10.1016/j.artmed.2025.103323)
   Projective-GA (GATr-based) model predicting local growth on aneurysm surface meshes. — also: Vision, remote sensing and medical imaging
-- **Design and Evaluation of a Geometric Algebra-Based Graph Neural Network for Molecular Property Prediction** — Petersen, Schmidt. *NLDL 2026 (PMLR 307), 2026-01-19.* [url](https://proceedings.mlr.press/v307/petersen26a.html)
+- **Design and Evaluation of a Geometric Algebra-Based Graph Neural Network for Molecular Property Prediction** — Petersen, Schmidt. *NLDL 2026 (PMLR 307), 2026-01-19.* [openreview](https://openreview.net/forum?id=aHHQByxsjB) · [url](https://proceedings.mlr.press/v307/petersen26a.html)
   GA-based graph neural network evaluated on molecular property prediction at the Northern Lights Deep Learning conference. — also: Graphs, multimodal and representation learning
 
 ### High-energy physics

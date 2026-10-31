@@ -1075,6 +1075,7 @@
   venue_type: journal
   links:
     doi: https://doi.org/10.1098/rsta.2025.0109
+    arxiv: https://arxiv.org/abs/2511.15398
   topics:
   - survey
   status: accepted
@@ -1082,7 +1083,13 @@
   summary: Position paper on GA for neural rendering and generative-AI scene editing in extended reality.
   found_by:
   - crossref
+  - arxiv:all:"geometric algebra"
+  - arxiv:all:"geometric algebra" AND all:transformer
+  - arxiv:all:"geometric algebra" AND all:learning
+  - arxiv:abs:"geometric algebra"
   added: 2026-10-25
+  aliases:
+  - arxiv:2511.15398
 - id: doi:10.1098/rsta.2025.0107
   title: Merits of geometric algebra applied to cryptography and machine learning
   authors:
@@ -1757,6 +1764,13 @@
   - survey-references
   - openreview
   - crossref
+  - arxiv:all:"geometric algebra"
+  - arxiv:all:"geometric algebra" AND all:transformer
+  - arxiv:all:GATr
+  - arxiv:all:"projective geometric algebra"
+  - arxiv:all:"geometric algebra" AND all:learning
+  - arxiv:all:"geometric algebra" AND all:network
+  - arxiv:abs:"geometric algebra"
   added: 2026-10-25
 - id: arxiv:2606.00714
   title: 'The Cartan-Topos Protocol: A Unified Geometric and Categorical Framework for Resilient Multi-Agent Coordination'
@@ -2069,6 +2083,10 @@
   found_by:
   - openreview
   - survey-references
+  - arxiv:all:clifford AND all:equivariant
+  - arxiv:all:clifford AND all:learning
+  - arxiv:all:"clifford" AND all:"machine learning"
+  - arxiv:abs:clifford AND cat:cs.LG
   added: 2026-10-25
 - id: arxiv:2604.25902
   title: Toward a Functional Geometric Algebra for Natural Language Semantics
@@ -2195,7 +2213,18 @@
   - openreview
   - consensus
   - crossref
+  - crossref:geometric algebra neural network
+  - crossref:geometric algebra deep learning
+  - crossref:geometric algebra transformer
+  - crossref:geometric algebra machine learning
+  - crossref:geometric algebra attention
+  - crossref:Clifford algebra transformer
+  - crossref:geometric algebra learning
+  - crossref:conformal geometric algebra learning
+  - crossref:projective geometric algebra learning
   added: 2026-10-25
+  aliases:
+  - doi:10.2139/ssrn.5684030
 - id: arxiv:2604.01466
   title: Efficient Equivariant Transformer for Self-Driving Agent Modeling
   authors:
@@ -2741,6 +2770,7 @@
   venue_type: conference
   links:
     url: https://proceedings.mlr.press/v307/petersen26a.html
+    openreview: https://openreview.net/forum?id=aHHQByxsjB
   topics:
   - scientific-ml
   - graphs
@@ -2750,7 +2780,13 @@
     Learning conference.
   found_by:
   - survey-references
+  - openreview:Clifford algebra
+  - openreview:geometric algebra
+  - openreview:multivector
+  - openreview:geometric product
   added: 2026-10-25
+  aliases:
+  - openreview:aHHQByxsjB
 - id: arxiv:2601.13308
   title: Scaling laws for amplitude surrogates
   authors:
@@ -2993,6 +3029,43 @@
   found_by:
   - survey-references
   added: 2026-10-25
+- id: openreview:PFUyWKGYYt
+  title: Geometric Algebra Multi-Order Graph Neural Network for Traffic Prediction
+  authors:
+  - Di Zang
+  - Zhe Cui
+  - Zengqiang Wang
+  - Juntao Lei
+  - Yongjie Ding
+  - Chenguang Wei
+  - Junqi Zhang
+  date: '2025-12-31'
+  venue: IEEE Trans. Big Data 2025
+  venue_type: openreview
+  links:
+    openreview: https://openreview.net/forum?id=PFUyWKGYYt
+    doi: https://doi.org/10.1109/tbdata.2024.3442533
+  topics:
+  - graphs
+  status: inbox
+  relevance: null
+  summary: ''
+  triage:
+    score: 3
+    ga_terms:
+    - geometric algebra
+    ml_context: true
+    excluded_terms: []
+    title_hit: true
+  found_by:
+  - openreview:Clifford algebra
+  - openreview:geometric algebra
+  - crossref:Clifford algebra neural network
+  - crossref:geometric algebra neural network
+  - crossref:geometric algebra graph neural network
+  added: '2026-10-31'
+  aliases:
+  - doi:10.1109/tbdata.2024.3442533
 - id: arxiv:2512.17011
   title: Economical Jet Taggers - Equivariant, Slim, and Quantized
   authors:
@@ -3015,7 +3088,2451 @@
   found_by:
   - survey-references
   - inspire
+  - arxiv:all:GATr
+  - inspire:cites L-GATr for all of the LHC (Brehmer et al. 2024)
+  - inspire:cites Clifford Group Equivariant Neural Networks (Ruhe et al. 2023)
   added: 2026-10-25
+- id: arxiv:2512.15493
+  title: Soft Geometric Inductive Bias for Object Centric Dynamics
+  authors:
+  - Hampus Linander
+  - Conor Heins
+  - Alexander Tschantz
+  - Marco Perin
+  - Christopher Buckley
+  date: '2025-12-17'
+  venue: arXiv
+  venue_type: arxiv
+  links:
+    arxiv: https://arxiv.org/abs/2512.15493
+  topics:
+  - theory
+  status: inbox
+  relevance: null
+  summary: 'Physical systems are naturally parameterized in terms of geometric entities and their transformations.
+    While exact equivariance can be a powerful inductive bias, real-world applications frequently exhibit approximate
+    or broken symmetries in practice. We introduce object-centric world models that provide a soft geometric inductive
+    bias without enforcing exact symmetries. By embedding object states '
+  triage:
+    score: 5
+    ga_terms:
+    - clifford transformer
+    - geometric algebra
+    - multivector
+    ml_context: true
+    excluded_terms: []
+    title_hit: false
+  found_by:
+  - arxiv:abs:"geometric algebra"
+  - arxiv:abs:clifford AND cat:cs.LG
+  - arxiv:abs:clifford AND cat:stat.ML
+  - arxiv:all:"clifford" AND all:"machine learning"
+  - arxiv:all:"clifford" AND all:transformer
+  - arxiv:all:"geometric algebra"
+  - arxiv:all:"geometric algebra" AND all:"machine learning"
+  - arxiv:all:"geometric algebra" AND all:equivariant
+  - arxiv:all:"geometric algebra" AND all:learning
+  - arxiv:all:"geometric algebra" AND all:transformer
+  - arxiv:all:clifford AND all:equivariant
+  - arxiv:all:clifford AND all:learning
+  - arxiv:all:multivector
+  - arxiv:all:multivectors
+  added: '2026-10-31'
+- id: doi:10.1007/s44443-025-00412-9
+  title: Dual-branch geometric algebra graph network with pyramid fusion for deformable medical image registration
+  authors:
+  - Muhammad Anwar
+  - Wenming Cao
+  date: '2025-12-09'
+  venue: Journal of King Saud University Computer and Information Sciences
+  venue_type: journal
+  links:
+    doi: https://doi.org/10.1007/s44443-025-00412-9
+  topics:
+  - vision
+  status: inbox
+  relevance: null
+  summary: ''
+  triage:
+    score: 3
+    ga_terms:
+    - geometric algebra
+    ml_context: true
+    excluded_terms: []
+    title_hit: true
+  found_by:
+  - crossref:geometric algebra graph neural network
+  - crossref:geometric algebra neural network
+  added: '2026-10-31'
+- id: doi:10.1016/j.mex.2025.103644
+  title: 'Hypercomplex neural networks: Exploring quaternion, octonion, and beyond in deep learning'
+  authors:
+  - Raghavendra M Devadas
+  - Vani Hiremani
+  - Preethi
+  - Sowmya T
+  - Sapna R
+  - Praveen Gujjar
+  date: '2025-12-01'
+  venue: MethodsX
+  venue_type: journal
+  links:
+    doi: https://doi.org/10.1016/j.mex.2025.103644
+  topics:
+  - hypercomplex
+  status: inbox
+  relevance: null
+  summary: ''
+  triage:
+    score: 3
+    ga_terms:
+    - hypercomplex
+    ml_context: true
+    excluded_terms: []
+    title_hit: true
+  found_by:
+  - crossref:hypercomplex neural network
+  added: '2026-10-31'
+- id: arxiv:2512.00238
+  title: A unified approach to spinor duals via Clifford algebras and $G_Ω$ groups
+  authors:
+  - R. T. Cavalcanti
+  - J. M. Hoff da Silva
+  date: '2025-11-28'
+  venue: arXiv
+  venue_type: arxiv
+  links:
+    arxiv: https://arxiv.org/abs/2512.00238
+    inspire: https://inspirehep.net/literature/3088410
+  topics:
+  - architecture
+  status: inbox
+  relevance: null
+  summary: Recent developments in the construction of generalized Dirac duals have revealed, within the structure
+    of the Clifford algebra $\mathbb{C}\otimes\mathcal{C}\ell_{1,3},$ the existence of distinct algebraic formulations
+    of spinors duals with potential applications in quantum field theoretic models. In this work, after reviewing
+    the matrix formulation, we employ the recent covariant formulation of th
+  triage:
+    score: 2
+    ga_terms:
+    - clifford algebra
+    ml_context: true
+    excluded_terms: []
+    title_hit: true
+  found_by:
+  - arxiv:all:"clifford algebra"
+  - inspire:t clifford and not t circuit and not t gate
+  added: '2026-10-31'
+- id: arxiv:2511.11665
+  title: 'Clifford Algebraic Rotor Embeddings : Maybe embeddings should start to CARE'
+  authors:
+  - Sameeksha Sriram
+  - Ayush Paliwal
+  - Alexander S. Ecker
+  - Chase van de Geijn
+  date: '2025-11-11'
+  venue: arXiv
+  venue_type: arxiv
+  links:
+    arxiv: https://arxiv.org/abs/2511.11665
+    openreview: https://openreview.net/forum?id=V7hM3JpJKE
+  topics:
+  - architecture
+  status: inbox
+  relevance: null
+  summary: 'Rotary Positional Embeddings (RoPE) have demonstrated exceptional performance as a positional encoding
+    method, consistently outperforming their baselines. While recent work has sought to extend RoPE to higher-dimensional
+    inputs, many such extensions are non-commutative, thereby forfeiting RoPE''s shift-equivariance property. Spherical
+    RoPE is one such non-commutative variant, motivated by the idea '
+  triage:
+    score: 6
+    ga_terms:
+    - cl(3
+    - clifford algebra
+    - geometric algebra
+    - multivector
+    ml_context: true
+    excluded_terms: []
+    title_hit: true
+  found_by:
+  - arxiv:abs:"geometric algebra"
+  - arxiv:abs:clifford AND cat:cs.LG
+  - arxiv:all:"clifford algebra"
+  - arxiv:all:"clifford" AND all:"machine learning"
+  - arxiv:all:"geometric algebra"
+  - arxiv:all:"geometric algebra" AND all:"machine learning"
+  - arxiv:all:"geometric algebra" AND all:equivariant
+  - arxiv:all:"geometric algebra" AND all:learning
+  - arxiv:all:clifford AND all:equivariant
+  - arxiv:all:clifford AND all:learning
+  - arxiv:all:multivector
+  - arxiv:all:multivectors
+  - openreview:Clifford
+  - openreview:Clifford algebra
+  - openreview:geometric algebra
+  - openreview:multivector
+  - openreview:Clifford group
+  added: '2026-10-31'
+  aliases:
+  - openreview:V7hM3JpJKE
+- id: doi:10.1201/9781003515302-6
+  title: 'Comparative Analysis of Hypercomplex and Real-Valued CNNs for Melanoma Detection: A Study on Batch Sizes'
+  authors:
+  - Piotr Artiemjew
+  date: '2025-11-06'
+  venue: Complex, Hypercomplex and Fuzzy-Valued Neural Networks
+  venue_type: book
+  links:
+    doi: https://doi.org/10.1201/9781003515302-6
+  topics:
+  - hypercomplex
+  status: inbox
+  relevance: null
+  summary: ''
+  triage:
+    score: 3
+    ga_terms:
+    - hypercomplex
+    ml_context: true
+    excluded_terms: []
+    title_hit: true
+  found_by:
+  - crossref:Clifford-valued neural networks
+  - crossref:hypercomplex neural network
+  added: '2026-10-31'
+- id: doi:10.1201/9781003515302-5
+  title: Chaos Game Representation of DNA and Hypercomplex Neural Networks Classification
+  authors:
+  - Radosław Kycia
+  - Agnieszka Niemczynowicz
+  date: '2025-11-06'
+  venue: Complex, Hypercomplex and Fuzzy-Valued Neural Networks
+  venue_type: book
+  links:
+    doi: https://doi.org/10.1201/9781003515302-5
+  topics:
+  - hypercomplex
+  status: inbox
+  relevance: null
+  summary: ''
+  triage:
+    score: 3
+    ga_terms:
+    - hypercomplex
+    ml_context: true
+    excluded_terms: []
+    title_hit: true
+  found_by:
+  - crossref:Clifford-valued neural networks
+  - crossref:hypercomplex neural network
+  added: '2026-10-31'
+- id: doi:10.1201/9781003515302
+  title: Complex, Hypercomplex and Fuzzy-Valued Neural Networks
+  authors:
+  - Agnieszka Niemczynowicz
+  - Irina Perfilieva
+  - Lluís M. García-Raffi
+  - Radosław Kycia
+  date: '2025-11-06'
+  venue: ''
+  venue_type: other
+  links:
+    doi: https://doi.org/10.1201/9781003515302
+  topics:
+  - hypercomplex
+  status: inbox
+  relevance: null
+  summary: ''
+  triage:
+    score: 3
+    ga_terms:
+    - hypercomplex
+    ml_context: true
+    excluded_terms: []
+    title_hit: true
+  found_by:
+  - crossref:Clifford-valued neural networks
+  - crossref:hypercomplex neural network
+  added: '2026-10-31'
+- id: arxiv:2510.19321
+  title: Online Handwritten Signature Verification Based on Temporal-Spatial Graph Attention Transformer
+  authors:
+  - Hai-jie Yuan
+  - Heng Zhang
+  - Fei Yin
+  date: '2025-10-22'
+  venue: arXiv
+  venue_type: arxiv
+  links:
+    arxiv: https://arxiv.org/abs/2510.19321
+  topics:
+  - sequence-nlp
+  status: inbox
+  relevance: null
+  summary: 'Handwritten signature verification is a crucial aspect of identity authentication, with applications
+    in various domains such as finance and e-commerce. However, achieving high accuracy in signature verification
+    remains challenging due to intra-user variability and the risk of forgery. This paper introduces a novel approach
+    for dynamic signature verification: the Temporal-Spatial Graph Attention Tr'
+  triage:
+    score: 3
+    ga_terms:
+    - gatr
+    ml_context: true
+    excluded_terms: []
+    title_hit: false
+  found_by:
+  - arxiv:all:GATr
+  added: '2026-10-31'
+- id: arxiv:2510.16607
+  title: Asymptotically Stable Quaternion-valued Hopfield-structured Neural Network with Periodic Projection-based
+    Supervised Learning Rules
+  authors:
+  - Tianwei Wang
+  - Xinhui Ma
+  - Wei Pang
+  date: '2025-10-18'
+  venue: arXiv
+  venue_type: arxiv
+  links:
+    arxiv: https://arxiv.org/abs/2510.16607
+  topics:
+  - robotics
+  - clifford-valued-dynamics
+  - hypercomplex
+  status: inbox
+  relevance: null
+  summary: Motivated by the geometric advantages of quaternions in representing rotations and postures, we propose
+    a quaternion-valued supervised learning Hopfield-structured neural network (QSHNN) with a fully connected structure
+    inspired by the classic Hopfield neural network (HNN). Starting from a continuous-time dynamical model of HNNs,
+    we extend the formulation to the quaternionic domain and establish t
+  triage:
+    score: 3
+    ga_terms:
+    - hypercomplex
+    ml_context: true
+    excluded_terms: []
+    title_hit: false
+  found_by:
+  - arxiv:all:hypercomplex AND all:neural
+  added: '2026-10-31'
+- id: doi:10.1109/taffc.2025.3605133
+  title: Hypercomplex Neural Network and Cross-Modal Attention for Multi-Modal Emotion Recognition Using Physiological
+    Signals
+  authors:
+  - Xu Xu
+  - Junxin Chen
+  - Chong Fu
+  - Zhihan Lyu
+  date: '2025-10-01'
+  venue: IEEE Transactions on Affective Computing
+  venue_type: journal
+  links:
+    doi: https://doi.org/10.1109/taffc.2025.3605133
+  topics:
+  - hypercomplex
+  status: inbox
+  relevance: null
+  summary: ''
+  triage:
+    score: 3
+    ga_terms:
+    - hypercomplex
+    ml_context: true
+    excluded_terms: []
+    title_hit: true
+  found_by:
+  - crossref:hypercomplex neural network
+  added: '2026-10-31'
+- id: doi:10.1016/j.neucom.2025.130984
+  title: Fast fixed-/preassigned-time synchronization of Clifford-valued neural networks for medical image encryption
+  authors:
+  - Yanlin Zhang
+  - Kit Ian Kou
+  - Yanhui Zhang
+  - Lizhi Liu
+  date: '2025-10-01'
+  venue: Neurocomputing
+  venue_type: journal
+  links:
+    doi: https://doi.org/10.1016/j.neucom.2025.130984
+  topics:
+  - vision
+  - clifford-valued-dynamics
+  status: inbox
+  relevance: null
+  summary: ''
+  triage:
+    score: 3
+    ga_terms:
+    - clifford-valued
+    ml_context: true
+    excluded_terms: []
+    title_hit: true
+  found_by:
+  - crossref:Clifford algebra neural network
+  - crossref:Clifford equivariant neural
+  - crossref:Clifford neural
+  - crossref:Clifford-valued neural networks
+  added: '2026-10-31'
+- id: doi:10.1016/j.neucom.2025.130886
+  title: Further results on global stability of Clifford-valued neural networks subject to time-varying delays
+  authors:
+  - N. Manoj
+  - R. Sriraman
+  - R. Gurusamy
+  - Yilun Shang
+  date: '2025-10-01'
+  venue: Neurocomputing
+  venue_type: journal
+  links:
+    doi: https://doi.org/10.1016/j.neucom.2025.130886
+  topics:
+  - clifford-valued-dynamics
+  status: inbox
+  relevance: null
+  summary: ''
+  triage:
+    score: 3
+    ga_terms:
+    - clifford-valued
+    ml_context: true
+    excluded_terms: []
+    title_hit: true
+  found_by:
+  - crossref:Clifford algebra neural network
+  - crossref:Clifford equivariant neural
+  - crossref:Clifford neural
+  - crossref:Clifford-valued neural networks
+  added: '2026-10-31'
+- id: doi:10.1016/j.neucom.2025.130604
+  title: Event-triggered control for exponential synchronization of reaction–diffusion fractional-order Clifford-valued
+    delayed neural networks and its application to image encryption
+  authors:
+  - R. Sriraman
+  - N. Manoj
+  - P. Agarwal
+  - J. Vigo-Aguiar
+  - Shilpi Jain
+  date: '2025-10-01'
+  venue: Neurocomputing
+  venue_type: journal
+  links:
+    doi: https://doi.org/10.1016/j.neucom.2025.130604
+  topics:
+  - vision
+  - clifford-valued-dynamics
+  status: inbox
+  relevance: null
+  summary: ''
+  triage:
+    score: 3
+    ga_terms:
+    - clifford-valued
+    ml_context: true
+    excluded_terms: []
+    title_hit: true
+  found_by:
+  - crossref:Clifford neural
+  - crossref:Clifford-valued neural networks
+  added: '2026-10-31'
+- id: doi:10.5753/eniac.2025.11952
+  title: A Study on Convolutional Vector-Valued Neural Networks for Color Image Classification
+  authors:
+  - Carolina Rodrigues
+  - Marcos Eduardo Valle
+  date: '2025-09-29'
+  venue: Anais do XXII Encontro Nacional de Inteligência Artificial e Computacional (ENIAC 2025)
+  venue_type: conference
+  links:
+    doi: https://doi.org/10.5753/eniac.2025.11952
+  topics:
+  - vision
+  - hypercomplex
+  status: inbox
+  relevance: null
+  summary: Neural networks have gained significant attention in recent years since the development of deep learning.
+    Vector-valued neural networks (V-nets), including hypercomplex-valued neural networks, are appropriate for processing
+    multidimensional data, such as images or hyperspectral imaging. In this article, we present the mathematical
+    foundation for the development of V-nets. We implement and apply th
+  triage:
+    score: 3
+    ga_terms:
+    - hypercomplex
+    ml_context: true
+    excluded_terms: []
+    title_hit: false
+  found_by:
+  - crossref:Clifford-valued neural networks
+  added: '2026-10-31'
+- id: arxiv:2510.03290
+  title: Single-Core Superscalar Optimization of Clifford Neural Layers
+  authors:
+  - X. Angelo Huang
+  - Ruben Ciranni
+  - Giovanni Spadaccini
+  - Carla J. López Zurita
+  date: '2025-09-29'
+  venue: arXiv
+  venue_type: arxiv
+  links:
+    arxiv: https://arxiv.org/abs/2510.03290
+  topics:
+  - architecture
+  status: inbox
+  relevance: null
+  summary: Within the growing interest in the physical sciences in developing networks with equivariance properties,
+    Clifford neural layers shine as one approach that delivers $E(n)$ and $O(n)$ equivariances given specific group
+    actions. In this paper, we analyze the inner structure of the computation within Clifford convolutional layers
+    and propose and implement several optimizations to speed up the inferen
+  triage:
+    score: 5
+    ga_terms:
+    - clifford algebra
+    - clifford convolution
+    - clifford neural
+    ml_context: true
+    excluded_terms: []
+    title_hit: true
+  found_by:
+  - arxiv:abs:clifford AND cat:cs.LG
+  - arxiv:all:"clifford algebra"
+  - arxiv:all:"clifford" AND all:"machine learning"
+  - arxiv:all:clifford AND all:equivariant
+  - arxiv:all:clifford AND all:learning
+  - arxiv:all:clifford AND all:neural
+  added: '2026-10-31'
+- id: openreview:msEYKA6OTj
+  title: Conditioned Clifford-Steerable Kernels
+  authors:
+  - Bálint László Szarvas
+  - Maksim Zhdanov
+  date: '2025-09-24'
+  venue: NeurIPS2025-AI4Science Poster
+  venue_type: openreview
+  links:
+    openreview: https://openreview.net/forum?id=msEYKA6OTj
+  topics:
+  - scientific-ml
+  - sequence-nlp
+  status: inbox
+  relevance: null
+  summary: Clifford-Steerable CNNs (CSCNNs) provide a unified framework that allows incorporating equivariance to
+    arbitrary pseudo-Euclidean groups, including $\mathrm{E}(n)$ and Poincaré-equivariance on Minkowski spacetime.
+    In this work, we analyze the shortcomings of the approach. We demonstrate that the kernel basis used in CSCNNs
+    is not complete. Furthermore, we suggest to restore missing degrees of free
+  triage:
+    score: 3
+    ga_terms:
+    - clifford-steerable
+    ml_context: true
+    excluded_terms: []
+    title_hit: true
+  found_by:
+  - openreview:Clifford
+  - openreview:Clifford algebra
+  - openreview:Clifford group
+  added: '2026-10-31'
+- id: openreview:GiNy68FgKR
+  title: Conditional Clifford-Steerable CNNs with Complete Kernel Basis for PDE Modeling
+  authors:
+  - Bálint László Szarvas
+  - Maksim Zhdanov
+  date: '2025-09-19'
+  venue: Submitted to ICLR 2026
+  venue_type: openreview
+  links:
+    openreview: https://openreview.net/forum?id=GiNy68FgKR
+  topics:
+  - scientific-ml
+  - sequence-nlp
+  - theory
+  status: inbox
+  relevance: null
+  summary: Clifford-Steerable CNNs (CSCNNs) provide a unified framework that allows incorporating equivariance to
+    arbitrary pseudo-Euclidean groups, including isometries of Euclidean space and Minkowski spacetime. In this
+    work, we demonstrate that the kernel basis of CSCNNs is not complete, thus limiting the model expressivity.
+    To address this issue, we propose Conditional Clifford-Steerable Kernels, which a
+  triage:
+    score: 3
+    ga_terms:
+    - clifford-steerable
+    ml_context: true
+    excluded_terms: []
+    title_hit: true
+  found_by:
+  - openreview:Clifford
+  - openreview:Clifford algebra
+  - openreview:Clifford group
+  added: '2026-10-31'
+- id: openreview:x0KcjteNds
+  title: Geometric Algebra-Enhanced Bayesian Flow Network for RNA Inverse Design
+  authors:
+  - Rubo Wang
+  - Xingyu Gao
+  - Peilin Zhao
+  date: '2025-09-18'
+  venue: NeurIPS 2025 poster
+  venue_type: openreview
+  links:
+    openreview: https://openreview.net/forum?id=x0KcjteNds
+    doi: https://doi.org/10.52202/085713-0341
+  topics:
+  - architecture
+  status: inbox
+  relevance: null
+  summary: "With the development of biotechnology, RNA therapies have shown great potential. \nHowever, different\
+    \ from proteins, the sequences corresponding to a single RNA three-dimensional structure are more abundant.\
+    \ Most of the existing RNA design methods merely take into account the secondary structure of RNA, or are only\
+    \ capable of generating a limited number of candidate sequences. \nTo address these lim"
+  triage:
+    score: 3
+    ga_terms:
+    - geometric algebra
+    ml_context: true
+    excluded_terms: []
+    title_hit: true
+  found_by:
+  - openreview:Clifford algebra
+  - openreview:geometric algebra
+  - crossref:Clifford algebra neural network
+  - crossref:geometric algebra neural network
+  - crossref:geometric algebra transformer
+  - crossref:geometric algebra attention
+  - crossref:geometric algebra graph neural network
+  - crossref:geometric algebra learning
+  - crossref:conformal geometric algebra learning
+  added: '2026-10-31'
+  aliases:
+  - doi:10.52202/085713-0341
+- id: arxiv:2509.10044
+  title: Understanding the Geometry of Faulted Power Systems under High Penetration of Inverter-Based Resources
+    via Ellipse Fitting and Geometric Algebra
+  authors:
+  - Jorge Ventura
+  - Jaroslav Hrdina
+  - Aleš Návrat
+  - Marek Stodola
+  - Ahmad Eid
+  - Santiago Sanchez-Acevedo
+  - Francisco G. Montoya
+  date: '2025-09-12'
+  venue: arXiv
+  venue_type: arxiv
+  links:
+    arxiv: https://arxiv.org/abs/2509.10044
+  topics:
+  - architecture
+  status: inbox
+  relevance: null
+  summary: Power systems with high penetration of inverter-based resources (IBR) present significant challenges
+    for conventional protection schemes, with traditional distance protection methods failing to detect line-to-line
+    faults during asymmetric conditions. This paper presents a methodology for electrical fault detection and classification
+    using ellipse fitting and geometric algebra applied to voltage an
+  triage:
+    score: 4
+    ga_terms:
+    - bivector
+    - geometric algebra
+    ml_context: true
+    excluded_terms: []
+    title_hit: true
+  found_by:
+  - arxiv:abs:"geometric algebra"
+  - arxiv:all:"geometric algebra"
+  - arxiv:all:"geometric algebra" AND all:transformer
+  added: '2026-10-31'
+- id: doi:10.64252/x57dm802
+  title: Hypercomplex Neural Network Based Elderly Activity Recognition For Intelligent Healthcare Systems
+  authors:
+  - Rashmi M R
+  - B R Vatsala
+  - Veena M
+  - Mayura D Tapkire
+  - C K Vanamala
+  - Shruthi R
+  - Abhishek K
+  date: '2025-09-08'
+  venue: International Journal of Environmental Sciences
+  venue_type: journal
+  links:
+    doi: https://doi.org/10.64252/x57dm802
+  topics:
+  - vision
+  - hypercomplex
+  status: inbox
+  relevance: null
+  summary: 'Elderly care is becoming increasingly critical due to the rising global aging population. Automatic
+    monitoring systems that can intelligently recognize human activities in real-time offer promising solutions
+    for enhancing elderly safety, independence, and well-being. This research proposes a novel approach for elderly
+    activity recognition using Hypercomplex Neural Networks (HCNNs) integrated with '
+  triage:
+    score: 3
+    ga_terms:
+    - hypercomplex
+    ml_context: true
+    excluded_terms: []
+    title_hit: true
+  found_by:
+  - crossref:hypercomplex neural network
+  added: '2026-10-31'
+- id: arxiv:2510.15892
+  title: 'Geometric Dynamics of Consumer Credit Cycles: A Multivector-based Linear-Attention Framework for Explanatory
+    Economic Analysis'
+  authors:
+  - Agus Sudjianto
+  - Sandi Setiawan
+  date: '2025-09-08'
+  venue: arXiv
+  venue_type: arxiv
+  links:
+    arxiv: https://arxiv.org/abs/2510.15892
+    doi: https://doi.org/10.2139/ssrn.5443034
+  topics:
+  - architecture
+  status: inbox
+  relevance: null
+  summary: This study introduces geometric algebra to decompose credit system relationships into their projective
+    (correlation-like) and rotational (feedback-spiral) components. We represent economic states as multi-vectors
+    in Clifford algebra, where bivector elements capture the rotational coupling between unemployment, consumption,
+    savings, and credit utilization. This mathematical framework reveals intera
+  triage:
+    score: 7
+    ga_terms:
+    - bivector
+    - clifford algebra
+    - geometric algebra
+    - multi-vector
+    - multivector
+    ml_context: true
+    excluded_terms: []
+    title_hit: true
+  found_by:
+  - arxiv:abs:"geometric algebra"
+  - arxiv:abs:clifford AND cat:cs.LG
+  - arxiv:all:"clifford algebra"
+  - arxiv:all:"clifford" AND all:"machine learning"
+  - arxiv:all:"geometric algebra"
+  - arxiv:all:"geometric algebra" AND all:"machine learning"
+  - arxiv:all:"geometric algebra" AND all:learning
+  - arxiv:all:bivector AND all:learning
+  - arxiv:all:clifford AND all:learning
+  - arxiv:all:multivector
+  - arxiv:all:multivectors
+  - crossref:multivector neural network
+  - crossref:geometric algebra attention
+  added: '2026-10-31'
+  aliases:
+  - doi:10.2139/ssrn.5443034
+- id: arxiv:2509.02071
+  title: A Geometric Method for Base Parameter Analysis in Robot Inertia Identification Based on Projective Geometric
+    Algebra
+  authors:
+  - Guangzhen Sun
+  - Ye Ding
+  - Xiangyang Zhu
+  date: '2025-09-02'
+  venue: arXiv
+  venue_type: arxiv
+  links:
+    arxiv: https://arxiv.org/abs/2509.02071
+  topics:
+  - robotics
+  status: inbox
+  relevance: null
+  summary: This paper proposes a novel geometric method for analytically determining the base inertial parameters
+    of robotic systems. The rigid body dynamics is reformulated using projective geometric algebra, leading to a
+    new identification model named ``tetrahedral-point (TP)" model. Based on the rigid body TP model, coefficients
+    in the regresoor matrix of the identification model are derived in closed-for
+  triage:
+    score: 3
+    ga_terms:
+    - projective geometric
+    ml_context: true
+    excluded_terms: []
+    title_hit: true
+  found_by:
+  - arxiv:abs:"geometric algebra"
+  - arxiv:all:"geometric algebra"
+  - arxiv:all:"projective geometric algebra"
+  added: '2026-10-31'
+- id: doi:10.1016/j.neunet.2025.107564
+  title: Decomposition method-based global Mittag-Leffler synchronization for fractional-order Clifford-valued neural
+    networks with transmission delays and impulses
+  authors:
+  - R. Sriraman
+  - N. Manoj
+  - Anbalagan Pratap
+  date: '2025-09-01'
+  venue: Neural Networks
+  venue_type: journal
+  links:
+    doi: https://doi.org/10.1016/j.neunet.2025.107564
+  topics:
+  - clifford-valued-dynamics
+  status: inbox
+  relevance: null
+  summary: ''
+  triage:
+    score: 3
+    ga_terms:
+    - clifford-valued
+    ml_context: true
+    excluded_terms: []
+    title_hit: true
+  found_by:
+  - crossref:Clifford algebra neural network
+  - crossref:Clifford equivariant neural
+  - crossref:Clifford neural
+  - crossref:Clifford-valued neural networks
+  added: '2026-10-31'
+- id: doi:10.3390/a18080527
+  title: A New Geometric Algebra-Based Classification of Hand Bradykinesia in Parkinson’s Disease Measured Using
+    a Sensory Glove
+  authors:
+  - Giovanni Saggio
+  - Paolo Roselli
+  - Luca Pietrosanti
+  - Alessandro Romano
+  - Nicola Arangino
+  - Martina Patera
+  - Antonio Suppa
+  date: '2025-08-19'
+  venue: Algorithms
+  venue_type: journal
+  links:
+    doi: https://doi.org/10.3390/a18080527
+  topics:
+  - robotics
+  status: inbox
+  relevance: null
+  summary: Parkinson’s disease (PD) is a chronic neurodegenerative disorder that progressively impairs motor functions.
+    Clinical assessments have traditionally relied on rating scales such as the Movement Disorder Society Unified
+    Parkinson Disease Rating Scale (MDS-UPDRS); however, these evaluations are susceptible to rater-dependent variability
+    and may miss subtle motor changes. This study explored objectiv
+  triage:
+    score: 4
+    ga_terms:
+    - clifford algebra
+    - geometric algebra
+    ml_context: true
+    excluded_terms: []
+    title_hit: true
+  found_by:
+  - crossref:geometric algebra attention
+  - crossref:geometric algebra transformer
+  added: '2026-10-31'
+- id: doi:10.1007/978-981-95-0351-3_2
+  title: 'Geometric Algebra Transformers: Revolutionizing Geometric Data'
+  authors:
+  - Taco Cohen
+  date: '2025-08-19'
+  venue: ICIAM2023 Springer Series
+  venue_type: book
+  links:
+    doi: https://doi.org/10.1007/978-981-95-0351-3_2
+  topics:
+  - architecture
+  status: inbox
+  relevance: null
+  summary: ''
+  triage:
+    score: 3
+    ga_terms:
+    - geometric algebra
+    ml_context: true
+    excluded_terms: []
+    title_hit: true
+  found_by:
+  - crossref:conformal geometric algebra learning
+  - crossref:geometric algebra attention
+  - crossref:geometric algebra deep learning
+  - crossref:geometric algebra learning
+  - crossref:geometric algebra machine learning
+  - crossref:geometric algebra neural network
+  - crossref:geometric algebra transformer
+  - crossref:projective geometric algebra learning
+  added: '2026-10-31'
+- id: doi:10.1115/detc2025-168739
+  title: Geometric Algebra Software for Kinematics
+  authors:
+  - Duane Storti
+  - Hugo Hadfield
+  - Simon Rockhold
+  date: '2025-08-17'
+  venue: 'Volume 5: 21st IEEE/ASME International Conference on Mechatronic and Embedded Systems and Applications
+    (MESA); 49th Mechanisms and Robotics Conference (MR)'
+  venue_type: conference
+  links:
+    doi: https://doi.org/10.1115/detc2025-168739
+  topics:
+  - robotics
+  - sequence-nlp
+  status: inbox
+  relevance: null
+  summary: "Abstract\n                  Geometric algebra (GA), or Clifford algebra, is an alternative to traditional\
+    \ linear algebra for representing/transforming geometric objects. Both formulations date to the mid-19th century,\
+    \ but linear algebra has been a staple in engineering for decades while GA has received scant attention. That\
+    \ balance is shifting as applications are identified where GA offers signific"
+  triage:
+    score: 4
+    ga_terms:
+    - clifford algebra
+    - geometric algebra
+    ml_context: true
+    excluded_terms: []
+    title_hit: true
+  found_by:
+  - crossref:geometric algebra attention
+  - crossref:geometric algebra learning
+  - crossref:geometric algebra transformer
+  added: '2026-10-31'
+- id: arxiv:2507.22817
+  title: 'Wall Shear Stress Estimation in Abdominal Aortic Aneurysms: Towards Generalisable Neural Surrogate Models'
+  authors:
+  - Patryk Rygiel
+  - Julian Suk
+  - Christoph Brune
+  - Kak Khee Yeung
+  - Jelmer M. Wolterink
+  date: '2025-07-30'
+  venue: arXiv
+  venue_type: arxiv
+  links:
+    arxiv: https://arxiv.org/abs/2507.22817
+  topics:
+  - scientific-ml
+  status: inbox
+  relevance: null
+  summary: 'Abdominal aortic aneurysms (AAAs) are pathologic dilatations of the abdominal aorta posing a high fatality
+    risk upon rupture. Studying AAA progression and rupture risk often involves in-silico blood flow modelling with
+    computational fluid dynamics (CFD) and extraction of hemodynamic factors like time-averaged wall shear stress
+    (TAWSS) or oscillatory shear index (OSI). However, CFD simulations are '
+  triage:
+    score: 3
+    ga_terms:
+    - projective geometric
+    ml_context: true
+    excluded_terms: []
+    title_hit: false
+  found_by:
+  - arxiv:abs:"geometric algebra"
+  - arxiv:all:"geometric algebra"
+  - arxiv:all:"geometric algebra" AND all:equivariant
+  - arxiv:all:"geometric algebra" AND all:learning
+  - arxiv:all:"projective geometric algebra"
+  added: '2026-10-31'
+- id: doi:10.66311/3068-9090.01.02.17
+  title: 'A Precise Unified Mass Scaling Law for Leptons and Quarks: Implications for Their Internal Geometric Structures
+    governed by Hypercomplex Algebra'
+  authors:
+  - Jau Tang
+  - Qiang Tang
+  date: '2025-07-21'
+  venue: International Journal of Quantum Technologies
+  venue_type: journal
+  links:
+    doi: https://doi.org/10.66311/3068-9090.01.02.17
+  topics:
+  - hep
+  - hypercomplex
+  status: inbox
+  relevance: null
+  summary: 'We propose a geometric mass scaling law for charged leptons and quarks based on a unified logarithmic
+    formula, log m
+
+    = Alog x + B + Cx that accurately describes the masses of charged leptons (x=1, 2, and 3) and light and heavy
+    quarks
+
+    (x=13
+
+    , 23
+
+    , and 33
+
+    ) across all generations. This simple three-parameter structure precisely reproduces experimental
+
+    mass values, suggesting a deep correlation betwe'
+  triage:
+    score: 3
+    ga_terms:
+    - hypercomplex
+    ml_context: true
+    excluded_terms: []
+    title_hit: true
+  found_by:
+  - crossref:conformal geometric algebra learning
+  - crossref:geometric algebra attention
+  - crossref:geometric algebra learning
+  - crossref:geometric algebra neural network
+  - crossref:geometric algebra transformer
+  - crossref:projective geometric algebra learning
+  added: '2026-10-31'
+- id: arxiv:2507.13917
+  title: 'Neural-GASh: A CGA-based neural radiance prediction pipeline for real-time shading'
+  authors:
+  - Efstratios Geronikolakis
+  - Manos Kamarianakis
+  - Antonis Protopsaltis
+  - George Papagiannakis
+  date: '2025-07-18'
+  venue: arXiv
+  venue_type: arxiv
+  links:
+    arxiv: https://arxiv.org/abs/2507.13917
+  topics:
+  - vision
+  - wireless
+  status: inbox
+  relevance: null
+  summary: This paper presents Neural-GASh, a novel real-time shading pipeline for 3D meshes, that leverages a neural
+    radiance field architecture to perform image-based rendering (IBR) using Conformal Geometric Algebra (CGA)-encoded
+    vertex information as input. Unlike traditional Precomputed Radiance Transfer (PRT) methods, that require expensive
+    offline precomputations, our learned model directly consumes C
+  triage:
+    score: 3
+    ga_terms:
+    - conformal geometric
+    ml_context: true
+    excluded_terms: []
+    title_hit: false
+  found_by:
+  - arxiv:abs:"geometric algebra"
+  - arxiv:all:"conformal geometric algebra"
+  - arxiv:all:"geometric algebra"
+  - arxiv:all:"geometric algebra" AND all:learning
+  added: '2026-10-31'
+- id: doi:10.1057/s41311-025-00718-5
+  title: 'Role socialization: Kazakhstan and the nature of the multivector foreign policy role'
+  authors:
+  - Spencer L Willardson
+  - Akbota Karibayeva
+  date: '2025-07-16'
+  venue: International Politics
+  venue_type: journal
+  links:
+    doi: https://doi.org/10.1057/s41311-025-00718-5
+  topics:
+  - architecture
+  status: inbox
+  relevance: null
+  summary: ''
+  triage:
+    score: 3
+    ga_terms:
+    - multivector
+    ml_context: true
+    excluded_terms: []
+    title_hit: true
+  found_by:
+  - crossref:multivector neural network
+  added: '2026-10-31'
+- id: arxiv:2507.12185
+  title: 'Jailbreaking Generative AI: Multivector Phishing Threats and Transformer based Defenses'
+  authors:
+  - Rina Mishra
+  - Gaurav Varshney
+  date: '2025-07-16'
+  venue: arXiv
+  venue_type: arxiv
+  links:
+    arxiv: https://arxiv.org/abs/2507.12185
+  topics:
+  - sequence-nlp
+  status: inbox
+  relevance: null
+  summary: The rise of Generative AI (GenAI) has reshaped the cybersecurity landscape by enabling new attack vectors
+    and lowering the barrier for executing advanced social engineering campaigns. This study conducts an empirical
+    analysis of jailbreaking vulnerabilities in ChatGPT-4o-Mini, showing that novices can bypass safeguards to generate
+    complete multivector phishing attacks across email, web, SMS, and v
+  triage:
+    score: 3
+    ga_terms:
+    - multivector
+    ml_context: true
+    excluded_terms: []
+    title_hit: true
+  found_by:
+  - arxiv:all:multivector
+  - arxiv:all:multivectors
+  added: '2026-10-31'
+- id: arxiv:2507.11688
+  title: Composing Linear Layers from Irreducibles
+  authors:
+  - Travis Pence
+  - Daisuke Yamada
+  - Vikas Singh
+  date: '2025-07-15'
+  venue: arXiv
+  venue_type: arxiv
+  links:
+    arxiv: https://arxiv.org/abs/2507.11688
+    openreview: https://openreview.net/forum?id=z5FGi0vyCr
+  topics:
+  - sequence-nlp
+  status: inbox
+  relevance: null
+  summary: 'Contemporary large models often exhibit behaviors suggesting the presence of low-level primitives that
+    compose into modules with richer functionality, but these fundamental building blocks remain poorly understood.
+    We investigate this compositional structure in linear layers by asking: can we identify/synthesize linear transformations
+    from a minimal set of geometric primitives? Using Clifford alge'
+  triage:
+    score: 4
+    ga_terms:
+    - bivector
+    - clifford algebra
+    ml_context: true
+    excluded_terms: []
+    title_hit: false
+  found_by:
+  - arxiv:abs:clifford AND cat:cs.LG
+  - arxiv:all:"clifford algebra"
+  - arxiv:all:"clifford" AND all:"machine learning"
+  - arxiv:all:"clifford" AND all:transformer
+  - arxiv:all:bivector AND all:learning
+  - arxiv:all:clifford AND all:learning
+  - arxiv:all:clifford AND all:neural
+  - arxiv:all:rotor AND all:neural
+  - openreview:Clifford
+  - openreview:Clifford algebra
+  - openreview:geometric algebra
+  - openreview:bivector
+  added: '2026-10-31'
+  aliases:
+  - openreview:z5FGi0vyCr
+- id: arxiv:2507.11564
+  title: Spacetime Grand Unified Theory
+  authors:
+  - Gonçalo M. Quinta
+  date: '2025-07-14'
+  venue: arXiv
+  venue_type: arxiv
+  links:
+    arxiv: https://arxiv.org/abs/2507.11564
+  topics:
+  - architecture
+  status: inbox
+  relevance: null
+  summary: The gauge symmetries and fermionic sector of the Standard Model are derived from the free Dirac Lagrangian
+    in 8-dimensional spacetime. Motivated by second quantization, we embed the 4-dimensional Clifford algebra of
+    the Dirac Lagrangian into that of 8-dimensional spacetime, showing this embedding carries a redundancy described
+    by a complexified Pati-Salam group acting on field multiplets represent
+  triage:
+    score: 3
+    ga_terms:
+    - clifford algebra
+    - spin(1
+    ml_context: true
+    excluded_terms: []
+    title_hit: false
+  found_by:
+  - arxiv:all:"clifford algebra"
+  - arxiv:all:"clifford" AND all:transformer
+  added: '2026-10-31'
+- id: openreview:0CnP0YAFZ4
+  title: Geometric Inductive Priors in Diffusion-Based Optical Flow Estimation
+  authors:
+  - Alberto Pepe
+  - Paulo R. S. Mendonca
+  - Joan Lasenby
+  date: '2025-07-09'
+  venue: BEW 2025 Oral
+  venue_type: openreview
+  links:
+    openreview: https://openreview.net/forum?id=0CnP0YAFZ4
+  topics:
+  - vision
+  status: inbox
+  relevance: null
+  summary: 'Diffusion models are ubiquitous in generative modeling and their prevalence in structured prediction
+    tasks is increasing.
+
+    The denoising diffusion vision model (DDVM), for example, achieves state-of-the-art accuracy on tasks such as
+    monocular depth and optical flow  estimation.
+
+    We introduce GA-DDVM, a modified version of DDVM working in Geometric Algebra (GA) that includes a geometric
+    prior to cons'
+  triage:
+    score: 3
+    ga_terms:
+    - geometric algebra
+    ml_context: true
+    excluded_terms: []
+    title_hit: false
+  found_by:
+  - openreview:Clifford
+  - openreview:Clifford algebra
+  - openreview:geometric algebra
+  - openreview:geometric product
+  added: '2026-10-31'
+- id: arxiv:2507.05303
+  title: The neural networks with tensor weights and emergent fermionic Wick rules in the large-width limit
+  authors:
+  - Guojun Huang
+  - Kai Zhou
+  date: '2025-07-07'
+  venue: arXiv
+  venue_type: arxiv
+  links:
+    arxiv: https://arxiv.org/abs/2507.05303
+  topics:
+  - architecture
+  status: inbox
+  relevance: null
+  summary: In this paper, we study complex-valued neural network (CVNNs) with tensor-valued hidden-to-output weights
+    within the framework of neural-network quantum field theory (NN-QFT). For standard CVNNs with scalar weights,
+    we derive the generating functional and identify the exact Gaussian process that arises in the infinite-width
+    limit, together with its associated effective quantum state. When the last
+  triage:
+    score: 3
+    ga_terms:
+    - clifford-algebra
+    ml_context: true
+    excluded_terms: []
+    title_hit: false
+  found_by:
+  - arxiv:abs:clifford AND cat:cs.LG
+  - arxiv:all:"clifford algebra"
+  - arxiv:all:"clifford" AND all:"machine learning"
+  - arxiv:all:clifford AND all:learning
+  - arxiv:all:clifford AND all:neural
+  added: '2026-10-31'
+- id: doi:10.1038/s41598-025-08957-5
+  title: 4D hypercomplex-valued neural network in multivariate time series forecasting
+  authors:
+  - Radosław Kycia
+  - Agnieszka Niemczynowicz
+  date: '2025-07-03'
+  venue: Scientific Reports
+  venue_type: journal
+  links:
+    doi: https://doi.org/10.1038/s41598-025-08957-5
+  topics:
+  - sequence-nlp
+  - hypercomplex
+  status: inbox
+  relevance: null
+  summary: ''
+  triage:
+    score: 3
+    ga_terms:
+    - hypercomplex
+    ml_context: true
+    excluded_terms: []
+    title_hit: true
+  found_by:
+  - crossref:hypercomplex neural network
+  added: '2026-10-31'
+- id: doi:10.1109/ijcnn64981.2025.11227310
+  title: 'Equivariant Neural Networks with Geometric Algebras: A New Approach'
+  authors:
+  - Ekaterina Filimoshina
+  - Dmitry Shirokov
+  date: '2025-06-30'
+  venue: 2025 International Joint Conference on Neural Networks (IJCNN)
+  venue_type: conference
+  links:
+    doi: https://doi.org/10.1109/ijcnn64981.2025.11227310
+  topics:
+  - architecture
+  status: inbox
+  relevance: null
+  summary: ''
+  triage:
+    score: 3
+    ga_terms:
+    - geometric algebra
+    ml_context: true
+    excluded_terms: []
+    title_hit: true
+  found_by:
+  - crossref:Clifford equivariant neural
+  - crossref:geometric algebra neural network
+  added: '2026-10-31'
+- id: arxiv:2506.22636
+  title: 'ReCo: Reminder Composition Mitigates Hallucinations in Vision-Language Models'
+  authors:
+  - Sotirios Panagiotis Chytas
+  - Miso Choi
+  - Hyunwoo J. Kim
+  - Vikas Singh
+  date: '2025-06-27'
+  venue: arXiv
+  venue_type: arxiv
+  links:
+    arxiv: https://arxiv.org/abs/2506.22636
+    openreview: https://openreview.net/forum?id=NpQ8QZjL3o
+  topics:
+  - vision
+  - sequence-nlp
+  status: inbox
+  relevance: null
+  summary: Vision Language Models (VLMs) show impressive capabilities in integrating and reasoning with both visual
+    and language data. But these models make mistakes. A common finding -- similar to LLMs -- is their tendency
+    to hallucinate, i.e., generate plausible sounding text which is not grounded in the visual input, or at worst,
+    is contradictory. A growing consensus attributes this behavior to an over-re
+  triage:
+    score: 3
+    ga_terms:
+    - geometric algebra
+    ml_context: true
+    excluded_terms: []
+    title_hit: false
+  found_by:
+  - arxiv:abs:"geometric algebra"
+  - arxiv:all:"geometric algebra"
+  - openreview:geometric algebra
+  added: '2026-10-31'
+  aliases:
+  - openreview:NpQ8QZjL3o
+- id: arxiv:2507.01040
+  title: Fast Clifford Neural Layers
+  authors:
+  - Tianxiang Xia
+  - Max Neuwinger
+  - Lin Xiao
+  date: '2025-06-22'
+  venue: arXiv
+  venue_type: arxiv
+  links:
+    arxiv: https://arxiv.org/abs/2507.01040
+  topics:
+  - scientific-ml
+  status: inbox
+  relevance: null
+  summary: Clifford Neural Layers improve PDE modeling by introducing Clifford Algebra into neural networks. In
+    this project we focus on optimizing the inference of 2/3D Clifford convolutional layers and multivector activation
+    layers for one core CPU performance. Overall, by testing on a real network block involving Clifford convolutional
+    layers and multivector activation layers, we observe that our implemen
+  triage:
+    score: 6
+    ga_terms:
+    - clifford algebra
+    - clifford convolution
+    - clifford neural
+    - multivector
+    ml_context: true
+    excluded_terms: []
+    title_hit: true
+  found_by:
+  - arxiv:abs:clifford AND cat:cs.LG
+  - arxiv:all:"clifford algebra"
+  - arxiv:all:"clifford layers"
+  - arxiv:all:"clifford" AND all:"machine learning"
+  - arxiv:all:clifford AND all:learning
+  - arxiv:all:clifford AND all:neural
+  - arxiv:all:multivector
+  - arxiv:all:multivectors
+  added: '2026-10-31'
+- id: arxiv:2506.09625
+  title: 'GLGENN: A Novel Parameter-Light Equivariant Neural Networks Architecture Based on Clifford Geometric Algebras'
+  authors:
+  - Ekaterina Filimoshina
+  - Dmitry Shirokov
+  date: '2025-06-11'
+  venue: arXiv
+  venue_type: arxiv
+  links:
+    arxiv: https://arxiv.org/abs/2506.09625
+    openreview: https://openreview.net/forum?id=H0ySAzwu8k
+  topics:
+  - architecture
+  status: inbox
+  relevance: null
+  summary: 'We propose, implement, and compare with competitors a new architecture of equivariant neural networks
+    based on geometric (Clifford) algebras: Generalized Lipschitz Group Equivariant Neural Networks (GLGENN). These
+    networks are equivariant to all pseudo-orthogonal transformations, including rotations and reflections, of a
+    vector space with any non-degenerate or degenerate symmetric bilinear form. W'
+  triage:
+    score: 3
+    ga_terms:
+    - geometric algebra
+    ml_context: true
+    excluded_terms: []
+    title_hit: true
+  found_by:
+  - arxiv:abs:"geometric algebra"
+  - arxiv:abs:clifford AND cat:cs.LG
+  - arxiv:all:"clifford algebra"
+  - arxiv:all:"clifford" AND all:"machine learning"
+  - arxiv:all:"clifford" AND all:transformer
+  - arxiv:all:"geometric algebra"
+  - arxiv:all:"geometric algebra" AND all:"machine learning"
+  - arxiv:all:"geometric algebra" AND all:equivariant
+  - arxiv:all:"geometric algebra" AND all:learning
+  - arxiv:all:"geometric algebra" AND all:network
+  - arxiv:all:"geometric algebra" AND all:transformer
+  - arxiv:all:clifford AND all:equivariant
+  - arxiv:all:clifford AND all:learning
+  - arxiv:all:clifford AND all:neural
+  - openreview:Clifford
+  - openreview:Clifford algebra
+  - openreview:geometric algebra
+  - openreview:Clifford group
+  added: '2026-10-31'
+  aliases:
+  - openreview:H0ySAzwu8k
+- id: doi:10.1007/s00371-025-04001-9
+  title: Quaternion-based curves and surfaces for enhanced spatial motion generation using geometric algebra
+  authors:
+  - Ferhat TAŞ
+  date: '2025-06-09'
+  venue: The Visual Computer
+  venue_type: journal
+  links:
+    doi: https://doi.org/10.1007/s00371-025-04001-9
+  topics:
+  - robotics
+  status: inbox
+  relevance: null
+  summary: "Abstract\n                  \n                    This paper presents a novel framework for generating\
+    \ quaternion-based curves and surfaces, leveraging the power of geometric (Clifford) algebra to enhance spatial\
+    \ motion generation. The proposed approach enables the representation and manipulation of complex spatial motions\
+    \ in a mathematically rigorous and computationally efficient manner. Through th"
+  triage:
+    score: 3
+    ga_terms:
+    - geometric algebra
+    ml_context: true
+    excluded_terms: []
+    title_hit: true
+  found_by:
+  - crossref:geometric algebra attention
+  - crossref:geometric algebra learning
+  - crossref:geometric algebra transformer
+  added: '2026-10-31'
+- id: doi:10.20944/preprints202506.0486.v1
+  title: Elastic Curves and Euler-Bernoulli Constrained Beams from the Perspective of Geometric Algebra
+  authors:
+  - Dimiter Prodanov
+  date: '2025-06-06'
+  venue: ''
+  venue_type: preprint-server
+  links:
+    doi: https://doi.org/10.20944/preprints202506.0486.v1
+  topics:
+  - architecture
+  status: inbox
+  relevance: null
+  summary: Elasticity is a well-established field within mathematical physics, yet new formulations can provide
+    deeper insight and computational advantages. This study explores the geometry of two- and three-dimensional
+    elastic curves using the formalism of Geometric Algebra, offering a unified and coordinate-free approach. The
+    work systematically derives the Frenet, Darboux, and Bishop frames within the thr
+  triage:
+    score: 4
+    ga_terms:
+    - geometric algebra
+    - multivector
+    ml_context: true
+    excluded_terms: []
+    title_hit: true
+  found_by:
+  - crossref:conformal geometric algebra learning
+  - crossref:geometric algebra attention
+  - crossref:geometric algebra deep learning
+  - crossref:geometric algebra learning
+  - crossref:geometric algebra machine learning
+  - crossref:geometric algebra neural network
+  - crossref:geometric algebra transformer
+  - crossref:projective geometric algebra learning
+  added: '2026-10-31'
+  aliases:
+  - doi:10.3390/math13162555
+- id: doi:10.1007/s00006-025-01385-8
+  title: GAGPT and Its Application to the Interactive Learning of Geometric Algebra
+  authors:
+  - Jian Wang
+  - Pei Du
+  - Zhuo Zhao
+  - Wen Luo
+  - Zhaoyuan Yu
+  - Linwang Yuan
+  date: '2025-05-30'
+  venue: Advances in Applied Clifford Algebras
+  venue_type: journal
+  links:
+    doi: https://doi.org/10.1007/s00006-025-01385-8
+  topics:
+  - architecture
+  status: inbox
+  relevance: null
+  summary: ''
+  triage:
+    score: 3
+    ga_terms:
+    - geometric algebra
+    ml_context: true
+    excluded_terms: []
+    title_hit: true
+  found_by:
+  - crossref:Clifford algebra machine learning
+  - crossref:Clifford algebra neural network
+  - crossref:Clifford algebra transformer
+  - crossref:Clifford convolution
+  - crossref:Clifford neural
+  - crossref:conformal geometric algebra learning
+  - crossref:geometric algebra deep learning
+  - crossref:geometric algebra learning
+  - crossref:geometric algebra machine learning
+  - crossref:geometric algebra transformer
+  - crossref:projective geometric algebra learning
+  added: '2026-10-31'
+- id: doi:10.20944/preprints202505.1877.v1
+  title: 'A Unified Clifford Algebra Framework for Quantum Computation: From Specific Spinor Realizations to General
+    Operator Representations'
+  authors:
+  - Luciano Silva
+  date: '2025-05-23'
+  venue: ''
+  venue_type: preprint-server
+  links:
+    doi: https://doi.org/10.20944/preprints202505.1877.v1
+  topics:
+  - sequence-nlp
+  status: inbox
+  relevance: null
+  summary: This paper presents a unified algebraic framework for $n$-qubit quantum computation rooted in the complex
+    Clifford algebra $Cl(2n, \mathbb{C})$. We leverage the fundamental isomorphism $Cl(2n, \mathbb{C}) \cong M(2^n,
+    \mathbb{C})$ to directly identify the algebra of all $n$-qubit quantum operators (including states, gates, and
+    observables) with elements of $Cl(2n, \mathbb{C})$. This operator-centr
+  triage:
+    score: 2
+    ga_terms:
+    - cl(2
+    - clifford algebra
+    - multivector
+    ml_context: true
+    excluded_terms:
+    - qubit
+    title_hit: true
+  found_by:
+  - crossref:Clifford algebra machine learning
+  - crossref:Clifford algebra neural network
+  - crossref:Clifford algebra transformer
+  added: '2026-10-31'
+- id: doi:10.1115/1.4067155
+  title: 'Geometric Algebra for Multibody Dynamics—Part I: Elements of Geometric Algebra'
+  authors:
+  - Olivier A. Bauchau
+  date: '2025-05-19'
+  venue: Journal of Computational and Nonlinear Dynamics
+  venue_type: journal
+  links:
+    doi: https://doi.org/10.1115/1.4067155
+  topics:
+  - robotics
+  status: inbox
+  relevance: null
+  summary: "Abstract\n               Multibody systems are characterized by two distinguishing features: system\
+    \ components undergo finite motions and these components are connected by mechanical joints that impose restrictions\
+    \ on their relative motion. Clearly, kinematics plays a fundamental role in the analysis of these systems: it\
+    \ is required to describe the arbitrary motion of system components and is neede"
+  triage:
+    score: 4
+    ga_terms:
+    - geometric algebra
+    - geometric product
+    ml_context: true
+    excluded_terms: []
+    title_hit: true
+  found_by:
+  - crossref:conformal geometric algebra learning
+  - crossref:geometric algebra attention
+  - crossref:geometric algebra deep learning
+  - crossref:geometric algebra learning
+  - crossref:geometric algebra machine learning
+  - crossref:geometric algebra neural network
+  - crossref:geometric algebra transformer
+  - crossref:projective geometric algebra learning
+  added: '2026-10-31'
+- id: arxiv:2505.06011
+  title: Construction of exceptional Lie algebra G2 and non-associative algebras using Clifford algebra
+  authors:
+  - G. P. Wilmot
+  date: '2025-05-09'
+  venue: arXiv
+  venue_type: arxiv
+  links:
+    arxiv: https://arxiv.org/abs/2505.06011
+  topics:
+  - architecture
+  status: inbox
+  relevance: null
+  summary: This article uses Clifford algebra of definite signature to derive octonions and the Lie exceptional
+    algebra G2 from calibrations using Pin(7). This is simpler than the usual exterior algebra derivation and uncovers
+    a subalgebra of Spin(7) that enables G2 and an invertible element used to classify six other algebras which
+    are found to be related to the symmetries of G2 in a way that breaks the sym
+  triage:
+    score: 4
+    ga_terms:
+    - clifford algebra
+    - pin(7
+    - spin(7
+    ml_context: true
+    excluded_terms: []
+    title_hit: true
+  found_by:
+  - arxiv:all:"clifford algebra"
+  added: '2026-10-31'
+- id: doi:10.1109/jbhi.2024.3490664
+  title: 'Hypercomplex Graph Neural Network: Towards Deep Intersection of Multi-Modal Brain Networks'
+  authors:
+  - Yanwu Yang
+  - Chenfei Ye
+  - Guoqing Cai
+  - Kunru Song
+  - Jintao Zhang
+  - Yang Xiang
+  - Ting Ma
+  date: '2025-05-01'
+  venue: IEEE Journal of Biomedical and Health Informatics
+  venue_type: journal
+  links:
+    doi: https://doi.org/10.1109/jbhi.2024.3490664
+  topics:
+  - graphs
+  - hypercomplex
+  status: inbox
+  relevance: null
+  summary: ''
+  triage:
+    score: 3
+    ga_terms:
+    - hypercomplex
+    ml_context: true
+    excluded_terms: []
+    title_hit: true
+  found_by:
+  - crossref:hypercomplex neural network
+  added: '2026-10-31'
+- id: doi:10.1016/j.softx.2025.102163
+  title: 'KHNN: Hypercomplex-valued neural networks computations via Keras using TensorFlow and PyTorch'
+  authors:
+  - Agnieszka Niemczynowicz
+  - Radosław A. Kycia
+  date: '2025-05-01'
+  venue: SoftwareX
+  venue_type: journal
+  links:
+    doi: https://doi.org/10.1016/j.softx.2025.102163
+  topics:
+  - hypercomplex
+  status: inbox
+  relevance: null
+  summary: ''
+  triage:
+    score: 3
+    ga_terms:
+    - hypercomplex
+    ml_context: true
+    excluded_terms: []
+    title_hit: true
+  found_by:
+  - crossref:Clifford-valued neural networks
+  - crossref:hypercomplex neural network
+  added: '2026-10-31'
+- id: doi:10.1007/s10440-025-00729-7
+  title: Synchronization of WPAA-Solution of Clifford-Valued Neural Network with Multiple Time-Varying Delays and
+    Impulse Effects on Hybrid Domains
+  authors:
+  - Divya Agrawal
+  - Syed Abbas
+  date: '2025-04-25'
+  venue: Acta Applicandae Mathematicae
+  venue_type: journal
+  links:
+    doi: https://doi.org/10.1007/s10440-025-00729-7
+  topics:
+  - clifford-valued-dynamics
+  status: inbox
+  relevance: null
+  summary: ''
+  triage:
+    score: 3
+    ga_terms:
+    - clifford-valued
+    ml_context: true
+    excluded_terms: []
+    title_hit: true
+  found_by:
+  - crossref:Clifford algebra neural network
+  - crossref:Clifford neural
+  - crossref:Clifford-valued neural networks
+  added: '2026-10-31'
+- id: arxiv:2504.15773
+  title: Clifford Group Equivariant Diffusion Models for 3D Molecular Generation
+  authors:
+  - Cong Liu
+  - Sharvaree Vadgama
+  - David Ruhe
+  - Erik Bekkers
+  - Patrick Forré
+  date: '2025-04-22'
+  venue: arXiv
+  venue_type: arxiv
+  links:
+    arxiv: https://arxiv.org/abs/2504.15773
+    openreview: https://openreview.net/forum?id=XxIDwO5H5q
+  topics:
+  - scientific-ml
+  - theory
+  status: inbox
+  relevance: null
+  summary: This paper explores leveraging the Clifford algebra's expressive power for $\E(n)$-equivariant diffusion
+    models. We utilize the geometric products between Clifford multivectors and the rich geometric information encoded
+    in Clifford subspaces in \emph{Clifford Diffusion Models} (CDMs). We extend the diffusion process beyond just
+    Clifford one-vectors to incorporate all higher-grade multivector subsp
+  triage:
+    score: 6
+    ga_terms:
+    - clifford algebra
+    - clifford group
+    - geometric product
+    - multivector
+    ml_context: true
+    excluded_terms: []
+    title_hit: true
+  found_by:
+  - arxiv:abs:clifford AND cat:cs.LG
+  - arxiv:all:"clifford algebra"
+  - arxiv:all:"clifford group"
+  - arxiv:all:"clifford" AND all:"machine learning"
+  - arxiv:all:clifford AND all:equivariant
+  - arxiv:all:clifford AND all:learning
+  - arxiv:all:multivector
+  - arxiv:all:multivectors
+  - openreview:Clifford
+  - openreview:Clifford algebra
+  - openreview:geometric algebra
+  - openreview:multivector
+  - openreview:Clifford group
+  added: '2026-10-31'
+  aliases:
+  - openreview:XxIDwO5H5q
+  - openreview:wAy0gKaoND
+- id: doi:10.20944/preprints202504.0902.v1
+  title: 'Mass Law of Leptons and Quarks based on Hypercomplex Algebra: Topological Scaling and Generation Geometry'
+  authors:
+  - Jau Tang
+  - Qiang Tang
+  date: '2025-04-11'
+  venue: ''
+  venue_type: preprint-server
+  links:
+    doi: https://doi.org/10.20944/preprints202504.0902.v1
+  topics:
+  - hep
+  - hypercomplex
+  status: inbox
+  relevance: null
+  summary: 'This study presents an empirical and geometric approach to accurately modeling the mass hierarchy of
+    leptons and quarks using a three-parameter logarithmic relation involving the fine-Structure constant (&amp;alpha;
+    &amp;asymp; 1/137), the mathematical constant &amp;pi;, and internal spinor projection geometry. The mass of
+    each fermion is fitted to the form: log(m) = A&amp;middot;log(&amp;alpha;⁻&'
+  triage:
+    score: 4
+    ga_terms:
+    - clifford algebra
+    - hypercomplex
+    ml_context: true
+    excluded_terms: []
+    title_hit: true
+  found_by:
+  - crossref:hypercomplex neural network
+  added: '2026-10-31'
+- id: arxiv:2504.07201
+  title: Hecke-Clifford algebras at roots of unity and conformal embeddings
+  authors:
+  - Cain Edie-Michell
+  - Hans Wenzl
+  date: '2025-04-09'
+  venue: arXiv
+  venue_type: arxiv
+  links:
+    arxiv: https://arxiv.org/abs/2504.07201
+  topics:
+  - architecture
+  status: inbox
+  relevance: null
+  summary: In this paper we give a combinatorial description of the Cauchy completion of the categories $\mathcal{E}_q$
+    and $\overline{\mathcal{SE}_N}$ recently introduced by the first author and Snyder. This in turns gives a combinatorial
+    description of the categories $\overline{\operatorname{Rep}(U_q(\mathfrak{sl}_N))}_{A}$ where $A$ is the ètale
+    algebra object corresponding to the conformal embedding $\ma
+  triage:
+    score: -1
+    ga_terms:
+    - clifford algebra
+    ml_context: true
+    excluded_terms:
+    - hecke-clifford
+    title_hit: true
+  found_by:
+  - arxiv:all:"clifford algebra"
+  added: '2026-10-31'
+- id: arxiv:2504.04286
+  title: 'Comparison of Methods for Rotating a Point in $\mathbb{R}^3$: From Vector Algebra to Geometric Algebra'
+  authors:
+  - Tom Verhoeff
+  date: '2025-04-05'
+  venue: arXiv
+  venue_type: arxiv
+  links:
+    arxiv: https://arxiv.org/abs/2504.04286
+  topics:
+  - architecture
+  status: inbox
+  relevance: null
+  summary: 'This article starts by presenting and comparing four methods for computing the rotation of a point about
+    an axis by an angle in $\mathbb{R}^3$. We illustrate these methods by computing, by hand, the rotation of point
+    $P=(1,0,1)^T$ about axis $\mathbf{a}=(1,1,1)^T$ by angle $θ=60^\circ$ (following the right-hand rule). The four
+    methods considered are: (1) an ad hoc geometric method exploiting a sym'
+  triage:
+    score: 2
+    ga_terms:
+    - geometric algebra
+    ml_context: true
+    excluded_terms: []
+    title_hit: true
+  found_by:
+  - arxiv:abs:"geometric algebra"
+  - arxiv:all:"clifford algebra"
+  - arxiv:all:"geometric algebra"
+  added: '2026-10-31'
+- id: doi:10.1063/5.0246146
+  title: Power-series dynamics equation of fields based on geometric algebra and high-order covariant-derivative
+    schemes
+  authors:
+  - R. W. Haase
+  date: '2025-04-01'
+  venue: AIP Advances
+  venue_type: journal
+  links:
+    doi: https://doi.org/10.1063/5.0246146
+  topics:
+  - architecture
+  status: inbox
+  relevance: null
+  summary: Based on previous work, we explore in the context of quantum field theory and cosmology a geometric algebra
+    (GA)-based approach to field dynamics through a multi-derivative power-series equation. By decomposing the power
+    series into a partial sum of order four and a residual power series, we derive two separate equations involving
+    high-order covariant derivatives, suggesting an emergent scale inva
+  triage:
+    score: 3
+    ga_terms:
+    - geometric algebra
+    ml_context: true
+    excluded_terms: []
+    title_hit: true
+  found_by:
+  - crossref:conformal geometric algebra learning
+  - crossref:geometric algebra attention
+  - crossref:geometric algebra learning
+  - crossref:geometric algebra neural network
+  - crossref:geometric algebra transformer
+  added: '2026-10-31'
+- id: doi:10.1016/j.neucom.2025.129500
+  title: Mean-square stability of stochastic Clifford-valued Cohen-Grossberg neural networks with variable coefficients
+    and time-varying delays
+  authors:
+  - Mingbing Luo
+  - Zili Jiang
+  - Manchun Tan
+  date: '2025-04-01'
+  venue: Neurocomputing
+  venue_type: journal
+  links:
+    doi: https://doi.org/10.1016/j.neucom.2025.129500
+  topics:
+  - clifford-valued-dynamics
+  status: inbox
+  relevance: null
+  summary: ''
+  triage:
+    score: 3
+    ga_terms:
+    - clifford-valued
+    ml_context: true
+    excluded_terms: []
+    title_hit: true
+  found_by:
+  - crossref:Clifford algebra neural network
+  - crossref:Clifford neural
+  - crossref:Clifford-valued neural networks
+  added: '2026-10-31'
+- id: doi:10.1016/j.ins.2024.121773
+  title: Global Mittag-Leffler stability and synchronization of fractional-order Clifford-valued delayed neural
+    networks with reaction-diffusion terms and its application to image encryption
+  authors:
+  - N. Manoj
+  - R. Sriraman
+  date: '2025-04-01'
+  venue: Information Sciences
+  venue_type: journal
+  links:
+    doi: https://doi.org/10.1016/j.ins.2024.121773
+  topics:
+  - vision
+  - clifford-valued-dynamics
+  status: inbox
+  relevance: null
+  summary: ''
+  triage:
+    score: 3
+    ga_terms:
+    - clifford-valued
+    ml_context: true
+    excluded_terms: []
+    title_hit: true
+  found_by:
+  - crossref:Clifford neural
+  - crossref:Clifford-valued neural networks
+  added: '2026-10-31'
+- id: arxiv:2503.07301
+  title: E(n)-coactions on semisimple Clifford algebras
+  authors:
+  - Fabio Renda
+  date: '2025-03-10'
+  venue: arXiv
+  venue_type: arxiv
+  links:
+    arxiv: https://arxiv.org/abs/2503.07301
+    doi: https://doi.org/10.1007/s00006-025-01399-2
+  topics:
+  - architecture
+  status: inbox
+  relevance: null
+  summary: In this article we prove that $E(n)$-coactions over a finite-dimensional algebra $A$ are classified by
+    tuples $(\varphi, d_1, ... , d_n)$ consisting of an involution $\varphi$ and a family $(d_i)_{i=1,...,n}$ of
+    $\varphi$-derivations satisfying appropriate conditions. Tuples of maps can be replaced by tuples of suitable
+    elements $(c, u_1, . . . , u_n)$, whenever $A$ is a semisimple Clifford algebr
+  triage:
+    score: 2
+    ga_terms:
+    - clifford algebra
+    ml_context: true
+    excluded_terms: []
+    title_hit: true
+  found_by:
+  - arxiv:all:"clifford algebra"
+  - crossref:Clifford algebra neural network
+  - crossref:Clifford equivariant neural
+  - crossref:Clifford convolution
+  - crossref:Clifford neural
+  - crossref:Clifford algebra transformer
+  added: '2026-10-31'
+  aliases:
+  - doi:10.1007/s00006-025-01399-2
+- id: arxiv:2503.05063
+  title: 'Lightweight Hypercomplex MRI Reconstruction: A Generalized Kronecker-Parameterized Approach'
+  authors:
+  - Haosen Zhang
+  - Jiahao Huang
+  - Yinzhe Wu
+  - Congren Dai
+  - Fanwen Wang
+  - Zhenxuan Zhang
+  - Guang Yang
+  date: '2025-03-07'
+  venue: arXiv
+  venue_type: arxiv
+  links:
+    arxiv: https://arxiv.org/abs/2503.05063
+  topics:
+  - hypercomplex
+  status: inbox
+  relevance: null
+  summary: 'Magnetic Resonance Imaging (MRI) is crucial for clinical diagnostics but is hindered by prolonged scan
+    times. Current deep learning models enhance MRI reconstruction but are often memory-intensive and unsuitable
+    for resource-limited systems. This paper introduces a lightweight MRI reconstruction model leveraging Kronecker-Parameterized
+    Hypercomplex Neural Networks to achieve high performance with '
+  triage:
+    score: 3
+    ga_terms:
+    - hypercomplex
+    ml_context: true
+    excluded_terms: []
+    title_hit: true
+  found_by:
+  - arxiv:all:hypercomplex AND all:neural
+  added: '2026-10-31'
+- id: openreview:Eb7fQBdA3D
+  title: 'ViNE-GATr: scaling geometric algebra transformers with virtual nodes embeddings'
+  authors:
+  - Julian Suk
+  - Thomas Hehn
+  - Arash Behboodi
+  - Gabriele Cesa
+  date: '2025-03-06'
+  venue: ICLR 2025 Workshop MLMP Poster
+  venue_type: openreview
+  links:
+    openreview: https://openreview.net/forum?id=Eb7fQBdA3D
+  topics:
+  - architecture
+  status: inbox
+  relevance: null
+  summary: Equivariant neural networks can effectively model physical systems by naturally handling the underlying
+    geometric quantities and preserving their symmetries, but scaling them to large geometric data remains challenging.
+    Naive downsampling typically disrupts features’ transformation laws, limiting their applicability in large scale
+    settings. In this work, we propose a scalable equivariant transform
+  triage:
+    score: 4
+    ga_terms:
+    - gatr
+    - geometric algebra
+    ml_context: true
+    excluded_terms: []
+    title_hit: true
+  found_by:
+  - openreview:Clifford algebra
+  - openreview:GATr
+  - openreview:geometric algebra
+  - openreview:geometric product
+  added: '2026-10-31'
+- id: arxiv:2503.04123
+  title: 'GAGrasp: Geometric Algebra Diffusion for Dexterous Grasping'
+  authors:
+  - Tao Zhong
+  - Christine Allen-Blanchette
+  date: '2025-03-06'
+  venue: arXiv
+  venue_type: arxiv
+  links:
+    arxiv: https://arxiv.org/abs/2503.04123
+    openreview: https://openreview.net/forum?id=t67yG4Kkxg
+    doi: https://doi.org/10.1109/icra55743.2025.11127957
+  topics:
+  - robotics
+  - clifford-valued-dynamics
+  status: inbox
+  relevance: null
+  summary: We propose GAGrasp, a novel framework for dexterous grasp generation that leverages geometric algebra
+    representations to enforce equivariance to SE(3) transformations. By encoding the SE(3) symmetry constraint
+    directly into the architecture, our method improves data and parameter efficiency while enabling robust grasp
+    generation across diverse object poses. Additionally, we incorporate a different
+  triage:
+    score: 3
+    ga_terms:
+    - geometric algebra
+    ml_context: true
+    excluded_terms: []
+    title_hit: true
+  found_by:
+  - arxiv:abs:"geometric algebra"
+  - arxiv:all:"geometric algebra"
+  - arxiv:all:"geometric algebra" AND all:"machine learning"
+  - arxiv:all:"geometric algebra" AND all:equivariant
+  - arxiv:all:"geometric algebra" AND all:learning
+  - arxiv:all:"geometric algebra" AND all:transformer
+  - openreview:Clifford algebra
+  - openreview:geometric algebra
+  - crossref:geometric algebra neural network
+  - crossref:geometric algebra transformer
+  - crossref:geometric algebra attention
+  - crossref:geometric algebra learning
+  - crossref:conformal geometric algebra learning
+  - crossref:projective geometric algebra learning
+  added: '2026-10-31'
+  aliases:
+  - openreview:t67yG4Kkxg
+  - openreview:W6NwEOVju2
+  - doi:10.1109/icra55743.2025.11127957
+- id: arxiv:2502.16630
+  title: Probing a Quarkophobic ${\mathbf{W}}^\prime$ at the High-Luminosity LHC via Vector Boson Fusion and Lorentz-Equivariant
+    Point Cloud Learning
+  authors:
+  - Qureshi, U.S.
+  - Gurrola, A.
+  - Ruiz-Álvarez, J.D.
+  date: '2025-02-23'
+  venue: arXiv
+  venue_type: arxiv
+  links:
+    inspire: https://inspirehep.net/literature/2893828
+    arxiv: https://arxiv.org/abs/2502.16630
+  topics:
+  - hep
+  status: inbox
+  relevance: null
+  summary: 'The addition of a heavy charged vector gauge boson ${\mathbf{W}}^\prime$ to the Standard Model (SM)
+    with negligible quark couplings ("quarkophobic") and triple gauge couplings can address issues with the SM,
+    such as the B-meson anomalies and recent discrepancies in the W boson mass measurements. We present a phenomenology
+    study probing ${\mathbf{W}}^\prime$ production through weak boson fusion in '
+  triage:
+    score: 3
+    ga_terms:
+    - geometric algebra
+    ml_context: true
+    excluded_terms: []
+    title_hit: false
+  found_by:
+  - inspire:cites L-GATr (Spinner et al. 2024)
+  - inspire:cites L-GATr for all of the LHC (Brehmer et al. 2024)
+  added: '2026-10-31'
+- id: doi:10.1186/s13662-025-03911-1
+  title: Fixed-time synchronization of Clifford-valued neural networks with D operator via aperiodic semi-intermittent
+    control
+  authors:
+  - Pan Wang
+  - Xuechen Li
+  - Qianqian Zheng
+  date: '2025-02-13'
+  venue: Advances in Continuous and Discrete Models
+  venue_type: journal
+  links:
+    doi: https://doi.org/10.1186/s13662-025-03911-1
+  topics:
+  - clifford-valued-dynamics
+  status: inbox
+  relevance: null
+  summary: ''
+  triage:
+    score: 3
+    ga_terms:
+    - clifford-valued
+    ml_context: true
+    excluded_terms: []
+    title_hit: true
+  found_by:
+  - crossref:Clifford neural
+  - crossref:Clifford-valued neural networks
+  added: '2026-10-31'
+- id: openreview:VM8bNd5A09
+  title: CNN Interpretability with Multivector Tucker Saliency Maps for Self-Supervised Models
+  authors:
+  - Aymene Mohammed Bouayed
+  - Samuel Deslauriers-gauthier
+  - Adrian IACOVELLI
+  - David Naccache
+  date: '2025-02-11'
+  venue: Accepted by TMLR
+  venue_type: openreview
+  links:
+    openreview: https://openreview.net/forum?id=VM8bNd5A09
+  topics:
+  - architecture
+  status: inbox
+  relevance: null
+  summary: Interpreting the decisions of Convolutional Neural Networks (CNNs) is essential for understanding their
+    behavior, yet it remains a significant challenge, particularly for self-supervised models. Most existing methods
+    for generating saliency maps rely on reference labels, restricting their use to supervised tasks. EigenCAM is
+    the only notable label-independent alternative, leveraging Singular Value
+  triage:
+    score: 3
+    ga_terms:
+    - multivector
+    ml_context: true
+    excluded_terms: []
+    title_hit: true
+  found_by:
+  - openreview:multivector
+  added: '2026-10-31'
+  aliases:
+  - openreview:PcXCUCOX92
+- id: arxiv:2502.01696
+  title: Local Quantum Mechanical Prediction of the Singlet State Using Geometric Algebra
+  authors:
+  - Carl F. Diether
+  date: '2025-02-02'
+  venue: arXiv
+  venue_type: arxiv
+  links:
+    arxiv: https://arxiv.org/abs/2502.01696
+    doi: https://doi.org/10.4236/jqis.2025.154010
+  topics:
+  - architecture
+  status: inbox
+  relevance: null
+  summary: We deduce the quantum mechanical prediction of $-{\bf a}\cdot{\bf b}$ for the singlet spin state employing
+    local measurement functions following Bell's approach. This result represents the quantum mechanical expectation
+    value for the joint measurement of spin projections in the singlet state. And is equal to the negative cosine
+    of the angle between vectors {\bf a} and {\bf b}. Our derivation is co
+  triage:
+    score: 2
+    ga_terms:
+    - geometric algebra
+    ml_context: true
+    excluded_terms: []
+    title_hit: true
+  found_by:
+  - arxiv:abs:"geometric algebra"
+  - arxiv:all:"geometric algebra"
+  - crossref:geometric algebra transformer
+  - crossref:geometric algebra attention
+  - crossref:geometric algebra learning
+  added: '2026-10-31'
+  aliases:
+  - doi:10.4236/jqis.2025.154010
+- id: openreview:VsxbWTDHjh
+  title: 'Fengbo: a Clifford Neural Operator pipeline for 3D PDEs in Computational Fluid Dynamics'
+  authors:
+  - Alberto Pepe
+  - Mattia Montanari
+  - Joan Lasenby
+  date: '2025-01-22'
+  venue: ICLR 2025 Poster
+  venue_type: openreview
+  links:
+    openreview: https://openreview.net/forum?id=VsxbWTDHjh
+  topics:
+  - scientific-ml
+  status: inbox
+  relevance: null
+  summary: We introduce Fengbo, a pipeline entirely in Clifford Algebra to solve 3D partial differential equations
+    (PDEs) specifically for computational fluid dynamics (CFD). Fengbo is an architecture composed of only 3D convolutional
+    and Fourier Neural Operator (FNO) layers, all working in 3D Clifford Algebra. It models the PDE solution problem
+    as an interpretable mapping from the geometry to the physics of
+  triage:
+    score: 4
+    ga_terms:
+    - clifford algebra
+    - clifford neural
+    ml_context: true
+    excluded_terms: []
+    title_hit: true
+  found_by:
+  - openreview:Clifford
+  - openreview:Clifford algebra
+  - openreview:Clifford group
+  added: '2026-10-31'
+- id: doi:10.1038/s41598-024-84483-0
+  title: Graph Geometric Algebra networks for graph representation learning
+  authors:
+  - Jianqi Zhong
+  - Wenming Cao
+  date: '2025-01-02'
+  venue: Scientific Reports
+  venue_type: journal
+  links:
+    doi: https://doi.org/10.1038/s41598-024-84483-0
+  topics:
+  - architecture
+  status: inbox
+  relevance: null
+  summary: ''
+  triage:
+    score: 3
+    ga_terms:
+    - geometric algebra
+    ml_context: true
+    excluded_terms: []
+    title_hit: true
+  found_by:
+  - crossref:conformal geometric algebra learning
+  - crossref:geometric algebra attention
+  - crossref:geometric algebra deep learning
+  - crossref:geometric algebra graph neural network
+  - crossref:geometric algebra learning
+  - crossref:geometric algebra machine learning
+  - crossref:geometric algebra neural network
+  - crossref:geometric algebra transformer
+  - crossref:projective geometric algebra learning
+  added: '2026-10-31'
+- id: openreview:fZhr1S6Jli
+  title: Expressiveness Analysis and Enhancing Framework for Geometric Knowledge Graph Embedding Models
+  authors:
+  - Tengwei Song
+  - Long Yin
+  - Yang Liu
+  - Long Liao
+  - Jie Luo
+  - Zhiqiang Xu
+  date: '2025-01-01'
+  venue: IEEE Trans. Knowl. Data Eng. 2025
+  venue_type: openreview
+  links:
+    openreview: https://openreview.net/forum?id=fZhr1S6Jli
+  topics:
+  - graphs
+  - theory
+  status: inbox
+  relevance: null
+  summary: 'Existing geometric knowledge graph embedding methods employ various relational transformations, such
+    as translation, rotation, and projection, to model different relation patterns, which aims to enhance the expressiveness
+    of models. In contrast to current approaches that treat the expressiveness of the model as a binary issue, we
+    aim to delve deeper into analyzing the level of difficulty in which '
+  triage:
+    score: 3
+    ga_terms:
+    - geometric algebra
+    ml_context: true
+    excluded_terms: []
+    title_hit: false
+  found_by:
+  - openreview:geometric algebra
+  added: '2026-10-31'
+- id: openreview:053lHSab8h
+  title: A Geometric Algebra-Based Model for Enhanced Hyperspectral Anomaly Detection
+  authors:
+  - Yilin Liu
+  - Yong Luo
+  - Rui Wang
+  - Yao Huang
+  - Ming Ju
+  - Wei Xiang
+  date: '2025-01-01'
+  venue: IEEE Trans. Geosci. Remote. Sens. 2025
+  venue_type: openreview
+  links:
+    openreview: https://openreview.net/forum?id=053lHSab8h
+  topics:
+  - vision
+  status: inbox
+  relevance: null
+  summary: Hyperspectral anomaly detection (HAD) is of great significance in remote sensing by identifying spectrally
+    distinct pixels as anomalies without prior information, while the majority of pixels with similar spectral characteristics
+    are classified as background. While existing approaches combine the strengths of deep learning (DL) in feature
+    extraction and background suppression with the effectivenes
+  triage:
+    score: 3
+    ga_terms:
+    - geometric algebra
+    ml_context: true
+    excluded_terms: []
+    title_hit: true
+  found_by:
+  - openreview:Clifford algebra
+  - openreview:geometric algebra
+  added: '2026-10-31'
+- id: doi:10.4236/jamp.2025.1310199
+  title: Embedding the Einstein Tensor in the Klein-Gordon Equation Using Geometric Algebra Cl&lt;sub&gt;3,0&lt;/sub&gt;
+  authors:
+  - Jesús Sánchez
+  date: '2025-01-01'
+  venue: Journal of Applied Mathematics and Physics
+  venue_type: journal
+  links:
+    doi: https://doi.org/10.4236/jamp.2025.1310199
+  topics:
+  - architecture
+  status: inbox
+  relevance: null
+  summary: ''
+  triage:
+    score: 3
+    ga_terms:
+    - geometric algebra
+    ml_context: true
+    excluded_terms: []
+    title_hit: true
+  found_by:
+  - crossref:geometric algebra attention
+  - crossref:geometric algebra transformer
+  added: '2026-10-31'
+- id: doi:10.3934/math.2025549
+  title: Besicovitch almost periodic solutions to Clifford-valued high-order Hopfield fuzzy neural networks with
+    a $ D $ operator
+  authors:
+  - Bing Li
+  - ''
+  - Yuan Ning
+  - Yongkun Li
+  - ''
+  date: '2025-01-01'
+  venue: AIMS Mathematics
+  venue_type: journal
+  links:
+    doi: https://doi.org/10.3934/math.2025549
+  topics:
+  - clifford-valued-dynamics
+  status: inbox
+  relevance: null
+  summary: ''
+  triage:
+    score: 3
+    ga_terms:
+    - clifford-valued
+    ml_context: true
+    excluded_terms: []
+    title_hit: true
+  found_by:
+  - crossref:Clifford-valued neural networks
+  added: '2026-10-31'
+- id: doi:10.24310/riuma.40581
+  title: 'Dataset: Multivector Model Predictive Control for Multiphase Induction Machines with Dead-Time Knowledge.'
+  authors:
+  - Manuel Córdoba Ramos
+  date: '2025-01-01'
+  venue: Datasets
+  venue_type: other
+  links:
+    doi: https://doi.org/10.24310/riuma.40581
+  topics:
+  - architecture
+  status: inbox
+  relevance: null
+  summary: ''
+  triage:
+    score: 0
+    ga_terms:
+    - multivector
+    ml_context: true
+    excluded_terms:
+    - multivector model predictive
+    title_hit: true
+  found_by:
+  - crossref:multivector neural network
+  added: '2026-10-31'
+- id: doi:10.2139/ssrn.5084804
+  title: 'Generalized Hypercomplex Neural Networks: Advancing Multi-Dimensional Feature Representation with Adaptive
+    Quaternion-Based Architectures'
+  authors:
+  - Dr Vani Hiremani
+  - Raghavendra Devadas
+  - N. Shobha Rani
+  - Bhavya K.R
+  - Praveen Gujjar
+  date: '2025-01-01'
+  venue: ''
+  venue_type: preprint-server
+  links:
+    doi: https://doi.org/10.2139/ssrn.5084804
+  topics:
+  - hypercomplex
+  status: inbox
+  relevance: null
+  summary: ''
+  triage:
+    score: 3
+    ga_terms:
+    - hypercomplex
+    ml_context: true
+    excluded_terms: []
+    title_hit: true
+  found_by:
+  - crossref:hypercomplex neural network
+  added: '2026-10-31'
+- id: doi:10.11588/heidok.00036846
+  title: Symmetry-aware networks for the LHC
+  authors:
+  - Spinner, Jonas Simon
+  date: '2025-01-01'
+  venue: INSPIRE record
+  venue_type: other
+  links:
+    inspire: https://inspirehep.net/literature/2961245
+    doi: https://doi.org/10.11588/heidok.00036846
+  topics:
+  - hep
+  - robotics
+  status: inbox
+  relevance: null
+  summary: Of all scientific fields, few rival high-energy physics in the degree to which symmetries dictate its
+    concepts, methods, and discoveries. Surprisingly, while particle-physics researchers were early enthusiasts
+    of machine learning, they paid limited attention to models engineered around the discipline’s built-in symmetries.
+    Transformers implement the permutation symmetry of particles in an efficien
+  triage:
+    score: 4
+    ga_terms:
+    - geometric algebra
+    - l-gatr
+    ml_context: true
+    excluded_terms: []
+    title_hit: false
+  found_by:
+  - inspire:cites Clifford Group Equivariant Neural Networks (Ruhe et al. 2023)
+  - inspire:cites L-GATr (Spinner et al. 2024)
+  - inspire:cites L-GATr for all of the LHC (Brehmer et al. 2024)
+  added: '2026-10-31'
 - id: openreview:Tkny3U2iEZ
   title: Stability and synchronization of octonion-valued neural networks with leakage and mixed delays on time
     scales
@@ -3097,6 +5614,7 @@
   venue_type: arxiv
   links:
     arxiv: https://arxiv.org/abs/2412.20566
+    doi: https://doi.org/10.1007/s00006-025-01407-5
   topics:
   - theory
   status: inbox
@@ -3116,7 +5634,12 @@
   found_by:
   - arxiv:abs:"geometric algebra"
   - arxiv:all:"geometric algebra"
+  - crossref:Clifford convolution
+  - crossref:Clifford neural
+  - crossref:Clifford algebra transformer
   added: '2026-10-31'
+  aliases:
+  - doi:10.1007/s00006-025-01407-5
 - id: doi:10.1007/s11227-024-06833-z
   title: A Geometric algebra-enhanced network for skin lesion detection with diagnostic prior
   authors:
@@ -3375,6 +5898,8 @@
   added: '2026-10-31'
   aliases:
   - openreview:mVOz28mPHr
+  - openreview:yHpWI6a2xT
+  - openreview:6VBVEF70oD
 - id: doi:10.1038/s41598-024-77412-8
   title: Parameterized hypercomplex convolutional network for accurate protein backbone torsion angle prediction
   authors:
@@ -3826,6 +6351,7 @@
   venue_type: openreview
   links:
     openreview: https://openreview.net/forum?id=PgVo0t9rC2
+    doi: https://doi.org/10.1051/epjconf/202533701125
   topics:
   - hep
   - graphs
@@ -3849,7 +6375,11 @@
   - openreview:GATr
   - openreview:geometric algebra
   - openreview:geometric product
+  - crossref:geometric algebra neural network
+  - crossref:geometric algebra graph neural network
   added: '2026-10-31'
+  aliases:
+  - doi:10.1051/epjconf/202533701125
 - id: doi:10.1109/mlsp58920.2024.10734815
   title: Hierarchical Hypercomplex Network for Multimodal Emotion Recognition
   authors:
@@ -4050,6 +6580,7 @@
   venue_type: arxiv
   links:
     arxiv: https://arxiv.org/abs/2408.13441
+    doi: https://doi.org/10.1007/s00006-025-01392-9
   topics:
   - architecture
   status: inbox
@@ -4072,7 +6603,20 @@
   - arxiv:all:"clifford algebra"
   - arxiv:all:"geometric algebra"
   - arxiv:all:"projective geometric algebra"
+  - crossref:Clifford algebra neural network
+  - crossref:geometric algebra neural network
+  - crossref:Clifford convolution
+  - crossref:geometric algebra transformer
+  - crossref:Clifford algebra machine learning
+  - crossref:Clifford neural
+  - crossref:geometric algebra attention
+  - crossref:Clifford algebra transformer
+  - crossref:geometric algebra learning
+  - crossref:conformal geometric algebra learning
+  - crossref:projective geometric algebra learning
   added: '2026-10-31'
+  aliases:
+  - doi:10.1007/s00006-025-01392-9
 - id: doi:10.1109/iciea61579.2024.10664949
   title: Auxiliary Learning for Hypercomplex Neural Networks
   authors:
@@ -4113,6 +6657,7 @@
   links:
     arxiv: https://arxiv.org/abs/2408.02275
     openreview: https://openreview.net/forum?id=Wnsv1aVC6y
+    doi: https://doi.org/10.1109/isemv67326.2025.00018
   topics:
   - sequence-nlp
   status: inbox
@@ -4137,9 +6682,13 @@
   - arxiv:all:"geometric algebra" AND all:transformer
   - openreview:Clifford algebra
   - openreview:geometric algebra
+  - crossref:geometric algebra transformer
+  - crossref:geometric algebra attention
+  - crossref:geometric algebra learning
   added: '2026-10-31'
   aliases:
   - openreview:Wnsv1aVC6y
+  - doi:10.1109/isemv67326.2025.00018
 - id: doi:10.1016/j.amc.2024.128710
   title: Stability analysis of Clifford-valued memristor-based neural networks with impulsive disturbances and its
     application to image encryption
@@ -4387,6 +6936,7 @@
   venue_type: arxiv
   links:
     arxiv: https://arxiv.org/abs/2406.14995
+    openreview: https://openreview.net/forum?id=9TClCDZXeh
   topics:
   - wireless
   - clifford-valued-dynamics
@@ -4412,7 +6962,11 @@
   - arxiv:all:"geometric algebra" AND all:learning
   - arxiv:all:"geometric algebra" AND all:transformer
   - arxiv:all:GATr
+  - openreview:geometric algebra
+  - openreview:GATr
   added: '2026-10-31'
+  aliases:
+  - openreview:9TClCDZXeh
 - id: openreview:dlz5lzhpE7
   title: Geometric Wireless Simulation with Equivariant Transformers
   authors:
@@ -4964,7 +7518,12 @@
   - crossref:geometric algebra machine learning
   - crossref:geometric algebra transformer
   - crossref:projective geometric algebra learning
+  - crossref:Clifford algebra neural network
+  - crossref:Clifford neural
+  - crossref:Clifford algebra transformer
   added: '2026-10-31'
+  aliases:
+  - doi:10.1007/s00006-025-01400-y
 - id: doi:10.1109/msp.2024.3401622
   title: 'Demystifying the Hypercomplex: Inductive biases in hypercomplex deep learning'
   authors:
@@ -5978,6 +8537,7 @@
   added: '2026-10-31'
   aliases:
   - doi:10.1007/978-3-031-73013-9_13
+  - openreview:tKaUtevlpX
 - id: openreview:Up4l39tZqZ
   title: 'GASSF-Net: Geometric Algebra Based Spectral-Spatial Hierarchical Fusion Network for Hyperspectral and
     LiDAR Image Classification'
@@ -6691,6 +9251,7 @@
   links:
     arxiv: https://arxiv.org/abs/2312.04598
     openreview: https://openreview.net/forum?id=yXvnjyeH90
+    doi: https://doi.org/10.1007/s10703-025-00486-1
   topics:
   - robotics
   - sequence-nlp
@@ -6714,9 +9275,12 @@
   - openreview:Clifford algebra
   - openreview:geometric algebra
   - openreview:geometric product
+  - crossref:conformal geometric algebra learning
   added: '2026-10-31'
   aliases:
   - openreview:yXvnjyeH90
+  - openreview:88752yp99X
+  - doi:10.1007/s10703-025-00486-1
 - id: doi:10.1109/icecs58634.2023.10382920
   title: Fast hypercomplex neural networks for modeling Venus planetary orbit
   authors:
