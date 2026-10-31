@@ -78,3 +78,22 @@ def test_padding_grows_for_a_set_with_more_equivalents(tmp_path):
         assert int(item["n_eq"]) == 1000 and item["rots_eq"].shape == (1000, 3, 3)
     finally:
         del symsol.SHAPE_SETS[99], symsol.SET_DIRS[99]
+
+
+def test_adding_shapes_keeps_the_poses_of_the_first_release(tmp_path):
+    """pyr7 / pyr10 / pyr13 must get the same poses alone (the first release's set) and next to pyr4..pyr6."""
+    generate(str(tmp_path / "old"), "test", 3, shapes=("pyr7", "pyr10", "pyr13"), log=lambda *_: None)
+    generate(str(tmp_path / "new"), "test", 3, log=lambda *_: None)
+    old = np.load(tmp_path / "old" / "symsol_chile" / "test" / "rotations.npz")
+    new = np.load(tmp_path / "new" / "symsol_chile" / "test" / "rotations.npz")
+    assert sorted(new.files) == sorted(("pyr4", "pyr5", "pyr6", "pyr7", "pyr10", "pyr13"))
+    for s in ("pyr7", "pyr10", "pyr13"):
+        np.testing.assert_array_equal(old[s], new[s])
+    assert not np.allclose(new["pyr4"][:, 0], new["pyr7"][:, 0])                  # the new shapes have their own poses
+
+
+def test_set_6_reads_all_six_pyramids(tmp_path):
+    generate(str(tmp_path), "test", 2, log=lambda *_: None)
+    test = Symsol(str(tmp_path), train=False, set_number=6, workers=2)
+    assert test.shapes == ("pyr4", "pyr5", "pyr6", "pyr7", "pyr10", "pyr13") and len(test) == 12
+    assert [int(test[2 * c]["n_eq"]) for c in range(6)] == [4, 5, 6, 7, 10, 13]

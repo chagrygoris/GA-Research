@@ -8,10 +8,12 @@ renderer, camera or lighting, so those below are matched to the released images 
 Why (reports/symmetry_spectrum.md): an n-gonal pyramid looks the same after a turn of 360/n degrees about its
 axis, so its symmetry group is the cyclic group C_n and its pose density needs the Wigner-D degree l = n to be
 told apart from a cone's. A model that only reaches degrees below n gets the axis right and guesses the turn, an
-error spread evenly over [0, 180/n] degrees: up to 25.7 deg for pyr7, 18 deg for pyr10, 13.8 deg for pyr13
-(0.18 deg for the chiliagon, which is why it is not in the default set; --shapes pyr1000 renders it).
+error spread evenly over [0, 180/n] degrees: up to 45 deg for pyr4, 36 for pyr5, 30 for pyr6, 25.7 for pyr7, 18
+for pyr10, 13.8 for pyr13 (0.18 deg for the chiliagon, which is why it is not in the default set; --shapes pyr1000
+renders it).
 
-Shapes (SHAPES, the default set and --symsol_set 5): "pyr<n>", a pyramid with a regular n-gon base. Proportions as the SYMSOL cone of
+Shapes (SHAPES, the default set and --symsol_set 6: pyr4, pyr5, pyr6, pyr7, pyr10, pyr13; --symsol_set 5 is the
+first SYMSOL-CHILE, pyr7, pyr10, pyr13): "pyr<n>", a pyramid with a regular n-gon base. Proportions as the SYMSOL cone of
 datasets/symsol_points.py: apex (0, 0, 1), base vertices at radius 1 in the plane z = -1 (the k-th at angle 2 pi k / n),
 all scaled by 1 / sqrt 2 into the unit ball. Its rotations are the n turns about e3 (pyramid_group); equivalent
 poses of a view at pose R are R g for those g, as in SYMSOL.
@@ -24,24 +26,30 @@ pinhole camera at the origin. Every pixel is a ray o + t v; since a pyramid is c
 attaining t_in gives the normal. Shading as SYMSOL's renders (untextured grey solid on black): a point light at the
 camera, ambient + Lambert + Blinn-Phong specular. 2 x 2 supersampling, then 224 x 224 RGB, uint8.
 
-Output, the layout of the official SYMSOL zip, so datasets/symsol.Symsol reads it (--symsol_set 5):
+Output, the layout of the official SYMSOL zip, so datasets/symsol.Symsol reads it (--symsol_set 5 or 6):
     <root>/symsol_chile/{train,test}/rotations.npz      {shape: (n_views, n, 3, 3)}, index 0 = rendered pose
     <root>/symsol_chile/{train,test}/images/<shape>_<index:05d>.png
-Poses are uniform on SO(3), seeded per split and shape, so a run regenerates the same data.
+Poses are uniform on SO(3), seeded per split and shape (SEEDS: fixed per shape name, so adding shapes never changes
+the poses of the others; pyr7 / pyr10 / pyr13 keep the seeds of the first release), so a run regenerates the same data.
 
-usage: python -m pose3d.datasets.symsol_chile --root DIR [--train 45000] [--test 5000] [--shapes pyr7,pyr10,pyr13]
+usage: python -m pose3d.datasets.symsol_chile --root DIR [--train 45000] [--test 5000] [--shapes pyr4,...,pyr13]
+       (or python pose3d/datasets/symsol_chile.py ...: the file needs only torch, numpy and Pillow)
 """
 
 import argparse
 import math
 import os
 import time
+from concurrent.futures import ThreadPoolExecutor
 
 import numpy as np
 import torch
 from PIL import Image
 
-SHAPES = ("pyr7", "pyr10", "pyr13")
+SHAPES = ("pyr4", "pyr5", "pyr6", "pyr7", "pyr10", "pyr13")
+# Pose seed per shape (plus 1000 for the test split). pyr7 / pyr10 / pyr13 keep the values of the first release, which
+# seeded by position in ("pyr7", "pyr10", "pyr13"); any other shape uses 100 + its number of sides.
+SEEDS = {"pyr7": 0, "pyr10": 1, "pyr13": 2}
 SIZE = 224
 SUPERSAMPLE = 2
 CAM_DIST = 4.0
@@ -125,19 +133,20 @@ def generate(root: str, split: str, views: int, shapes=SHAPES, batch: int = 16, 
     os.makedirs(os.path.join(path, "images"), exist_ok=True)
     rays = _rays(device)
     rotations = {}
-    for k, shape in enumerate(shapes):
+    pool = ThreadPoolExecutor(8)                                              # PNG encoding is the CPU-bound part
+    for shape in shapes:
         n = sides(shape)
-        gen = torch.Generator().manual_seed(1000 * (split == "test") + k)
+        gen = torch.Generator().manual_seed(1000 * (split == "test") + SEEDS.get(shape, 100 + n))
         R = random_rotations(views, gen)
         rotations[shape] = np.einsum("vij,gjk->vgik", R.numpy(), pyramid_group(n)).astype(np.float32)
         faces, t0 = pyramid_faces(n), time.time()
         step = max(1, min(batch, int(3e7 // (len(rays) * 0.3 * len(faces)))))   # rays x faces per batch: memory
         for i in range(0, views, step):
             imgs = render(faces, R[i:i + step].to(device), rays).cpu().numpy()
-            for j, img in enumerate(imgs):
-                Image.fromarray(np.repeat(img[..., None], 3, -1)).save(
-                    os.path.join(path, "images", f"{shape}_{i + j:05d}.png"))
+            list(pool.map(lambda j: Image.fromarray(np.repeat(imgs[j][..., None], 3, -1)).save(
+                os.path.join(path, "images", f"{shape}_{i + j:05d}.png")), range(len(imgs))))
         log(f"{split} {shape}: {views} views in {time.time() - t0:.0f} s")
+    pool.shutdown()
     np.savez(os.path.join(path, "rotations.npz"), **rotations)
 
 
@@ -148,7 +157,7 @@ def main():
     ap.add_argument("--test", type=int, default=5000, help="views per shape (SYMSOL: 5,000)")
     ap.add_argument("--shapes", default=",".join(SHAPES))
     ap.add_argument("--device", default="cuda" if torch.cuda.is_available() else "cpu")
-    ap.add_argument("--batch", type=int, default=16)
+    ap.add_argument("--batch", type=int, default=64)
     args = ap.parse_args()
     shapes = tuple(args.shapes.split(","))
     for split, views in (("test", args.test), ("train", args.train)):
