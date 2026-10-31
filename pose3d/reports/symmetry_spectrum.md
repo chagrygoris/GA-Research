@@ -235,7 +235,7 @@ Rendering cost on this 4-core CPU: about 40 images/s for these pyramids (2.5 ima
 planes per ray). The 10 % setting (4,500 training + 1,000 scored test views per shape, 16,500 images) takes a few
 minutes on a GPU, so `notebooks/symsol-chile-runner.ipynb` renders it inside each training kernel.
 
-**Planned runs** (`notebooks/symsol-chile-runner.ipynb`, one variant per kernel, the 10 % protocol of the
+**Runs** (`notebooks/symsol-chile-runner.ipynb`, one variant per kernel, the 10 % protocol of the
 `symsol1_10pct_*` runs: ResNet-50, AdamW, 40 epochs, batch 64):
 
 | variant | model | reaches | prediction | est. RTX Pro 6000 / T4 |
@@ -259,6 +259,33 @@ above predicts: every per-shape median is within 0.25° of `90°/n`. The error w
 class mean), so this is the model's ceiling, not undertraining. Its log-likelihood (4.24) stays high because the
 density puts its mass on the right ring of poses, spread evenly over the turn. acc@15 only looks good for the 13-gon,
 whose largest possible error (13.8°) is under 15°, which is why the median, not acc@15, is the metric to read here.
+
+**Result: Clifford Flow + STF track, ranks up to 10** (`chile_10pct_gatr_stf_l10`, Kaggle kernel
+`syfry5suvzovvakmuj/symsol-chile-stf-l10-rtx`, RTX Pro 6000, 40 epochs at about 104 s each, about 87 min all-in;
+32-sample final evaluation, same test views; no log-likelihood, `--no-symsol_likelihood` as in the SYMSOL I STF runs):
+
+| pyramid | guessing the turn, `90°/n` | Image2Sphere L = 6 | **STF flow, rank ≤ 10** | STF acc@15 | STF acc@30 |
+|---|---|---|---|---|---|
+| 7-gon | 12.9° | 12.67° | **13.46°** | 0.560 | 1.000 |
+| 10-gon | 9.0° | 8.97° | **9.26°** | 0.847 | 1.000 |
+| 13-gon | 6.9° | 6.94° | **7.19°** | 0.994 | 1.000 |
+| mean | 9.6° | 9.53° | **9.97°** | 0.800 | 1.000 |
+
+The STF flow also finds the axis on every image and guesses the turn, on all three pyramids. Its STF track
+reaches rank 10, which covers the 7- and 10-gon's degree, but having tensors of that rank in the model was not
+enough. It learned more slowly than Image2Sphere (class-mean median 57° after 5 epochs, 17.5° after 10, 10.7° after
+30, against Image2Sphere's 10.4° after 5) and ended on the same plateau, slightly above it. So on SYMSOL-CHILE at 10 %
+of the data neither model resolves the turn. Image2Sphere cannot (proved above); for the STF flow the run shows it
+did not, not that it cannot. Candidate reasons, untested:
+* **How the tensors enter.** They reach the GATr vector field only as the invariants `<S_c, R·S_c'>`
+  (`--stf_inject gram`). These contain degree-`l` functions of the pose, but whether they can express the specific
+  `m = ±n` components about the shape's axis depends on what `S` the image encoder learns to produce.
+* **Training budget.** The flow was still improving slowly at epoch 40 (10.7° at epoch 30, 10.1° at epoch 40), while
+  the turn-resolving component is a small part of the loss: a 9° median error is already close to the axis-only
+  optimum.
+
+What a follow-up would need: the same flow without the STF track (to see whether rank 10 changed anything), the
+`--stf_inject frame` variant, and longer training.
 
 The STF flow is not a band-limited readout, so the prediction for it is weaker. The GATr vector field can build higher
 degrees nonlinearly, and on SYMSOL I the plain flow stalled on the polyhedra (`symsol_p1_stall.md`). For it
