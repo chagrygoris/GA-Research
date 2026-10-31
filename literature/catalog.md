@@ -2,7 +2,7 @@
 
 Generated from `literature/papers.yaml` on 2026-10-31 by `python -m ga_lit render`. Do not edit by hand; edit the YAML or use the CLI.
 
-**145 accepted papers** (50 core, 43 adjacent, 52 context), 1 waiting in the inbox. Browse interactively: `literature/site/index.html`.
+**145 accepted papers** (50 core, 43 adjacent, 52 context), 66 waiting in the inbox. Browse interactively: `literature/site/index.html`.
 
 Relevance: **core** = geometric algebra inside the model or method; **adjacent** = GA-related machine learning or a GA method next to a learned component; **context** = cites or benchmarks against GA models without using one.
 

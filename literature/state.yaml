@@ -112,3 +112,17 @@ runs:
   known_updated: 0
   inbox_new: 0
   below_threshold: 677
+- date: '2026-10-31'
+  window:
+  - '2023-01-01'
+  - '2023-12-31'
+  sources:
+  - arxiv
+  - openreview
+  - crossref
+  - inspire
+  candidates: 1984
+  known: 27
+  known_updated: 27
+  inbox_new: 65
+  below_threshold: 1892
