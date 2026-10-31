@@ -304,7 +304,9 @@ about 68 s per training epoch, 40 epochs, 32-sample final evaluation):
 
 Every 5-epoch evaluation sat at the guessing level from epoch 5 on (7-gon 13.6° → 13.2° → 13.4° → 13.1° → 13.3° →
 13.2°), including after the learning-rate step at epoch 20 that took the same model from 3.5° to 1.1° on SYMSOL I.
-So the model that resolves all five SYMSOL I shapes finds the pyramids' axis and guesses their turn. That fits its
+A repeat on 4×L4 (DDP on 4 GPUs at the same global batch 64, same seed; kernel
+`arynabiaroza/symsol-chile-native-stf6-l4x4`) gives the same picture: 13.01° / 9.06° / 6.83° (mean 9.64°, acc@15
+0.569 / 0.834 / 1.000, acc@30 1.0). So the model that resolves all five SYMSOL I shapes finds the pyramids' axis and guesses their turn. That fits its
 tensor ranks stopping at 6, below every pyramid's `n ≥ 7`, but the run does not show that the rank limit is the
 cause. A rank-`n` version of the native track is the experiment that would.
 
