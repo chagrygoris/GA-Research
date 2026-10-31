@@ -280,6 +280,13 @@ The model's best turn lands uniformly within each 51.4° period (mean 26.3°, un
 room for the turn, but training puts nothing there. The training grid is not the reason: HEALPix level 3 (36,864
 rotations, about 7.5° apart) has about 7 points per 51.4° period, enough to tell a 7-fold pattern from a uniform ring.
 
+Against the correct answer (`figures/symmetry_spectrum/i2s_l10_7gon_target_vs_learned.png`; script
+`probes/symmetry_spectrum/i2s_density_probe.py`): the learned density (softmax of the logits on the training grid) and
+the target (equal mass on the 7 correct poses) as expected Wigner-D coefficients, analysed the same way. The axis
+part matches (learned 1.0 / 2.99 / … / 17.7 against the target's 2l + 1 = 1 / 3 / … / 21). The turn part, which the
+target has only at degrees 7–10 (30 / 34 / 38 / 42), is 0.36 / 0.40 / 0.44 / 0.47 in the learned density: about 1 %.
+The rest of the learned density's variation along the ring sits at frequencies the target does not have.
+
 **Result: Clifford Flow + STF track, ranks up to 10** (`chile_10pct_gatr_stf_l10`, Kaggle kernel
 `syfry5suvzovvakmuj/symsol-chile-stf-l10-rtx`, RTX Pro 6000, 40 epochs at about 104 s each, about 87 min all-in;
 32-sample final evaluation, same test views; no log-likelihood, `--no-symsol_likelihood` as in the SYMSOL I STF runs):
