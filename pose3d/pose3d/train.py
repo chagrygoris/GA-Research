@@ -124,6 +124,9 @@ def main(argv=None):
 
     torch.backends.cudnn.benchmark = True
     distributed.setup(cfg)
+    if distributed.is_main():
+        from pose3d.engine.resume import install_sigterm_exit
+        install_sigterm_exit()   # SIGTERM -> exit code 75, the last epoch's resume checkpoint kept
     distributed.seed_everything(cfg)
 
     train_loader, val_loader, model, optimizer, scheduler, criterion, run = instantiate(cfg)

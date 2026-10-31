@@ -88,6 +88,12 @@ class RunConfig:
     platform: Literal["kaggle", "colab"] = "kaggle"
     run_name: Optional[str] = None
     path_to_checkpoint: Optional[str] = None   # evaluate this checkpoint before training
+    # Resumable training (engine/resume.py): after every epoch write <resume_dir>/<run_name>_resume.pth (model,
+    # optimizer, scheduler, EMA, RNG, next epoch; atomic); --resume PATH continues such a run at its next epoch.
+    # SIGTERM stops the run with exit code 75 and keeps the last epoch's checkpoint.
+    resume: Optional[str] = None
+    resume_dir: str = "."
+    save_resume: bool = True
     sanity_check: bool = False                 # one tiny batch; no checkpoint saved
     save_checkpoint: bool = True
     wandb_project: str = "3D Pose Estimation"

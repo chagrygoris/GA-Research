@@ -649,6 +649,8 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
     parser.add_argument("--notebook", help="push an existing .ipynb instead of --repo")
     parser.add_argument("--accelerator", default="t4", choices=sorted(ACCELERATORS))
     parser.add_argument("--dataset", action="append", default=[], help="owner/slug (repeatable)")
+    parser.add_argument("--kernel-source", action="append", default=[],
+                        help="owner/kernel whose output to attach (repeatable), e.g. a stopped run to resume")
     parser.add_argument(
         "--competition",
         action="append",
@@ -678,6 +680,7 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
     common = dict(
         accelerator=args.accelerator,
         datasets=args.dataset,
+        kernel_sources=args.kernel_source,
         competitions=args.competition,
         is_private=not args.public,
         enable_internet=not args.no_internet,

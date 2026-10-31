@@ -160,7 +160,15 @@ def train(model, train_loader, val_loader, optimizer, scheduler, criterion, run,
     ema = (AveragedModel(model, multi_avg_fn=get_ema_multi_avg_fn(cfg.train.ema_decay), use_buffers=True)
            if cfg.features.ema else None)
     eval_model = ema.module if ema is not None else model
-    for i in range(n_epochs):
+    start = 0
+    if cfg.run.resume:
+        from pose3d.engine.resume import load_resume
+        start = load_resume(cfg, model, optimizer, scheduler, ema)
+        if is_main():
+            print(f"Resumed {cfg.run.resume}: epochs 1..{start} done, continuing at epoch {start + 1} / {n_epochs}",
+                  flush=True)
+    save_every_epoch = cfg.run.save_resume and not cfg.run.sanity_check and is_main()
+    for i in range(start, n_epochs):
         t0 = time.time()
         sampler = getattr(train_loader, "sampler", None)
         if hasattr(sampler, "set_epoch"):
@@ -201,6 +209,9 @@ def train(model, train_loader, val_loader, optimizer, scheduler, criterion, run,
             if macro is not None:
                 print(f"Class-mean median rotation error {macro['class_mean_median_error']}")
             log_offline_sync(run, cfg, step=i, metrics=metrics)
+        if save_every_epoch:
+            from pose3d.engine.resume import save_resume
+            save_resume(cfg, model, optimizer, scheduler, ema, next_epoch=i + 1)
 
     final_evaluation(eval_model, val_loader, run, cfg, raw_model=model if ema is not None else None)
     log_viz(eval_model, val_loader, run, cfg, final=True, commit=True)

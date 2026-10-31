@@ -193,6 +193,31 @@ Design, tests, the SYMSOL protocol, run commands and the time estimates: `report
 `notebooks/symsol-stf-runner.ipynb` (offline mode for the RTX kernels; the repo snapshot comes from
 `scripts/make_snapshot.py`).
 
+## Stopping and resuming a run
+
+Every epoch writes `<resume_dir>/<run_name>_resume.pth` (model, optimizer, scheduler, EMA copy, RNG states and the
+next epoch; written to a temporary file and renamed, so a kill during the write cannot corrupt it; `--no-save_resume`
+turns it off). `--resume PATH` continues such a run at its next epoch with the same learning-rate schedule; a
+checkpoint taken after the last epoch goes straight to the final evaluation. The checkpoint is refused if any
+training option differs (only the run name, paths and `--num_workers` may change). SIGTERM stops a run at once with
+exit code 75 and keeps the last epoch's checkpoint, so at most the interrupted epoch is lost.
+
+```bash
+python -m pose3d ... --run_name=myrun --resume_dir=/kaggle/working          # writes /kaggle/working/myrun_resume.pth
+python -m pose3d ... --run_name=myrun --resume=/kaggle/working/myrun_resume.pth
+```
+
+On Kaggle (`notebooks/symsol-chile-runner.ipynb`): the watchdog sends SIGTERM (SIGKILL only after 60 s), the kernel
+then ends cleanly with `STOPPED, RESUMABLE` and keeps the checkpoint as its output. To continue, launch the same
+notebook with the stopped kernel attached:
+
+```bash
+python gpu_pool/launcher.py --notebook <runner.ipynb> --title <new-title> --accelerator rtx6000 --no-internet \
+    --account <account> --dataset ... --kernel-source <owner>/<stopped-kernel>
+```
+
+The runner finds `<run_name>_resume.pth` among its inputs and passes `--resume`. The continuation is a new W&B run.
+
 ## Multi-GPU
 
 Training uses every visible GPU by default (torch DistributedDataParallel, `--ddp`). The run relaunches
