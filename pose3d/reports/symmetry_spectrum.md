@@ -260,6 +260,14 @@ class mean), so this is the model's ceiling, not undertraining. Its log-likeliho
 density puts its mass on the right ring of poses, spread evenly over the turn. acc@15 only looks good for the 13-gon,
 whose largest possible error (13.8°) is under 15°, which is why the median, not acc@15, is the metric to read here.
 
+**Result: Image2Sphere, L = 10** (`chile_10pct_i2s_l10_adamw`, kernel `samson12345423/symsol-chile-i2s-l10-rtx`, RTX Pro 6000,
+same recipe as L = 6 with `--lmax 10`; about 17 s per epoch): 7-gon **13.60°** (acc@15 0.565), 10-gon **8.94°** (0.828),
+13-gon **7.05°** (1.000); mean of per-shape medians 9.86°, acc@30 1.0, log-likelihood 4.02 (4.00 / 4.04 / 4.00).
+Degrees 7–10 make the 7- and 10-gon's turn representable, but the model still guesses it: its errors match L = 6 and
+`90°/n`, and its per-epoch curve (`figures/symmetry_spectrum/i2s_l6_vs_l10_curves.png`) follows L = 6 onto the same
+plateau. So for Image2Sphere the band limit is not the only obstacle; with the band raised, the turn is still not learned
+from 4,500 views per shape in 40 epochs.
+
 **Result: Clifford Flow + STF track, ranks up to 10** (`chile_10pct_gatr_stf_l10`, Kaggle kernel
 `syfry5suvzovvakmuj/symsol-chile-stf-l10-rtx`, RTX Pro 6000, 40 epochs at about 104 s each, about 87 min all-in;
 32-sample final evaluation, same test views; no log-likelihood, `--no-symsol_likelihood` as in the SYMSOL I STF runs):
