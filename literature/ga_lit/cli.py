@@ -52,7 +52,8 @@ def cmd_update(args: argparse.Namespace) -> int:
         cache.write_text(json.dumps({"since": since.isoformat(), "until": until.isoformat(), "candidates": candidates}))
     counts = triage(db, candidates, min_score=args.min_score)
     db.save()
-    state["last_run"] = until.isoformat()
+    # A backfill (window ending before the last run) must not move the daily sweep's start point back.
+    state["last_run"] = max(until.isoformat(), state.get("last_run") or "")
     state.setdefault("runs", []).append({"date": date.today().isoformat(), "window": [since.isoformat(), until.isoformat()],
                                          "sources": sources, **counts})
     state["runs"] = state["runs"][-50:]
