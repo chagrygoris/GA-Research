@@ -229,6 +229,14 @@ chiliagon) pads to its own maximum. `tests/test_symsol_chile.py` checks the geom
 rows down = `e2`), that every labelled equivalent pose renders the same image while half a step does not, and the
 loader.
 
+**Six pyramids (31 October 2026).** SYMSOL-CHILE now also has pyramids with 4, 5 and 6 sides (`--symsol_set 6` = pyr4, pyr5,
+pyr6, pyr7, pyr10, pyr13; `--symsol_set 5` stays the three used by the runs above). Pose seeds are fixed per shape name, so
+the 7-, 10- and 13-gon data are unchanged (checked: poses and images identical). The full dataset, SYMSOL's size
+(45,000 train + 5,000 test views per shape, 300,000 images), was rendered on a T4 in about 9.5 min by Kaggle kernel
+`pepeschneyne/symsol-chile-6-generate-t4`; its output holds `symsol_chile_train.tar` (1.05 GB) and
+`symsol_chile_test.tar` (116 MB), each unpacking to `symsol_chile/{train,test}/` in SYMSOL's layout. Attach that kernel as
+input (`gpu_pool/launcher.py --kernel-source pepeschneyne/symsol-chile-6-generate-t4`) and unpack into the dataset root.
+
 ![SYMSOL-CHILE samples: rows pyr7, pyr10, pyr13](figures/symmetry_spectrum/symsol_chile_samples.png)
 
 Rendering cost on this 4-core CPU: about 40 images/s for these pyramids (2.5 images/s for the chiliagon, 1001 face
