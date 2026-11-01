@@ -307,6 +307,7 @@ class CliffordFlow(nn.Module):
                  rotorcorr: dict = None,
                  n_points: int = 256,
                  gatr_pose_harmonics: int = 0,
+                 gatr_spherical_lmax: int = 0,
                  gatr_encoder: dict = None,
                  stf_track: bool = False,
                  stf_lmax: int = 3,
@@ -439,7 +440,8 @@ class CliffordFlow(nn.Module):
             from pose3d.models.gatr_denoiser import GATrCloudField
             # Scalar channels per condition token: the cell features plus the constant tokens' flags.
             self.vector_field = GATrCloudField(self.adapter.conv_adapter.width - 8, final_norm=gatr_final_norm,
-                                               pose_lmax=gatr_pose_harmonics, **gatr_plain)
+                                               pose_lmax=gatr_pose_harmonics, spherical_lmax=gatr_spherical_lmax,
+                                               **gatr_plain)
         elif vector_field == "gatr":
             from pose3d.models.gatr_denoiser import GATrVectorField
             stf_blocks = stf_feature_blocks(stf_lmax, stf_channels, stf_inject) if stf_track else None

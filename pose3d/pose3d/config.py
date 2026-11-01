@@ -404,6 +404,10 @@ class FlowConfig:
     # the current pose's frame as extra invariant scalars (49 for L = 6): explicit high angular frequencies in the
     # pose for the GATr field (the test of reports/frequency_hypothesis_ru.md). 0 = off.
     gatr_pose_harmonics: int = 0
+    # Spherical GATr (models/gatr_denoiser.SphericalActivation): L > 0 adds, after every GATr block of the P1 field
+    # (pose_tokens=frame_pin), invariants of the spherical harmonics up to degree L of each token's vectors, fed back
+    # as a residual to its scalars and vectors. 0: plain GATr. Only with pose_tokens=frame_pin.
+    gatr_spherical_lmax: int = 0
     # cond_tokens=pointgatrsphere (GA-encoder + Fourier hybrid, vector_field=so3fourier): a GATr encoder of
     # gatr_enc_blocks blocks (gatr_mv/s_channels, gatr_heads) gives every point so3f_s2_channels invariant weights
     # for the harmonics at its own direction (models/so3fourier_head.py, PointGATrSphereHead).
