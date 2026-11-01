@@ -85,3 +85,11 @@ def test_sigterm_exits_with_the_resumable_code(tmp_path):
     assert proc.stdout.readline().strip() == "ready"
     proc.send_signal(signal.SIGTERM)
     assert proc.wait(timeout=30) == RESUMABLE_EXIT
+
+
+def test_scoring_epochs_follow_eval_every():
+    from pose3d.engine.trainer import should_score
+    assert [e + 1 for e in range(40) if should_score(e, 40, 5)] == [1, 5, 10, 15, 20, 25, 30, 35, 40]
+    assert [e + 1 for e in range(7) if should_score(e, 7, 5)] == [1, 5, 7]
+    assert all(should_score(e, 40, 1) for e in range(40))
+    assert parse_args(["--path_to_datasets=/tmp", "--eval_every", "5"]).run.eval_every == 5

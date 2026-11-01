@@ -105,6 +105,11 @@ class RunConfig:
     log_viz: bool = False
     viz_every: int = 10          # 0: only after the last epoch
     viz_images: int = 6
+    # Score the validation set by sampling (median error, acc@15 / acc@30: one ODE solve per image, the expensive part of
+    # an epoch) after epoch 1, every eval_every-th epoch and the last one; the other epochs log train and val loss only.
+    # 1: every epoch. 5 matches the native STF runs (gatr_native_stf_eval_every there). With --fixed_val_noise the
+    # scoring runs in a forked RNG, so the frequency does not change training.
+    eval_every: int = 1
     # Base seed for the run. None: torch's default. Under --ddp every rank adds its rank,
     # so the flow's (t, r0) noise differs between GPUs.
     seed: Optional[int] = None

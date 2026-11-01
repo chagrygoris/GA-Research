@@ -178,20 +178,22 @@ def train(model, train_loader, val_loader, optimizer, scheduler, criterion, run,
         if ema is not None:
             sync_buffers(ema)
         val_loss = validate_epoch(eval_model, val_loader, criterion, cfg)
-        err, cls = calculate_evaluation_metrics(eval_model, val_loader, cfg, return_classes=True)
-        mre = np.median(err).__float__()
-        macro = macro_metrics(err, cls) if cls is not None else None
-
+        scored = should_score(i, n_epochs, cfg.run.eval_every)
         metrics = {
             "train_loss": train_loss,
             "val_loss": val_loss,
-            "median_rotation_error": mre,
-            "acc@15": acc_at(err, 15),   # the share of validation images within 15 deg (primary metric on SYMSOL)
-            "acc@30": acc_at(err, 30),
             "learning_rate": scheduler.get_last_lr()[0],
             "gradient_norm": grad_norm(model),
-            "epoch_time": time.time() - t0,
         }
+        macro = None
+        if scored:
+            err, cls = calculate_evaluation_metrics(eval_model, val_loader, cfg, return_classes=True)
+            mre = np.median(err).__float__()
+            macro = macro_metrics(err, cls) if cls is not None else None
+            metrics.update({"median_rotation_error": mre,
+                            "acc@15": acc_at(err, 15),   # share of validation images within 15 deg (SYMSOL's primary)
+                            "acc@30": acc_at(err, 30)})
+        metrics["epoch_time"] = time.time() - t0
         if macro is not None:
             metrics["class_mean_median_error"] = macro["class_mean_median_error"]
         if cfg.run.viz_every > 0 and (i + 1) % cfg.run.viz_every == 0:
@@ -203,8 +205,9 @@ def train(model, train_loader, val_loader, optimizer, scheduler, criterion, run,
             print(
                 f"Training on {cfg.device} epoch {i + 1} / {n_epochs}. \n"
                 f"Train loss {train_loss}, val loss {val_loss}\n"
-                f"Median rotation error {mre}, acc@15 {metrics['acc@15']:.4f}, acc@30 {metrics['acc@30']:.4f} "
-                f"({time.time() - t0:.0f}s)"
+                + (f"Median rotation error {mre}, acc@15 {metrics['acc@15']:.4f}, acc@30 {metrics['acc@30']:.4f} "
+                   f"({time.time() - t0:.0f}s)" if scored
+                   else f"Scored every {cfg.run.eval_every} epochs ({time.time() - t0:.0f}s)")
             )
             if macro is not None:
                 print(f"Class-mean median rotation error {macro['class_mean_median_error']}")
@@ -219,6 +222,11 @@ def train(model, train_loader, val_loader, optimizer, scheduler, criterion, run,
         from pose3d.engine.symsol_ll import symsol_final_log_likelihood
         symsol_final_log_likelihood(eval_model, cfg, run)
     return eval_model
+
+
+def should_score(epoch: int, n_epochs: int, eval_every: int) -> bool:
+    """Whether 0-based `epoch` samples the validation metrics: the first, every eval_every-th and the last epoch."""
+    return eval_every <= 1 or epoch == 0 or epoch + 1 == n_epochs or (epoch + 1) % eval_every == 0
 
 
 PASCAL3D_CLASSES = ('aeroplane', 'bicycle', 'boat', 'bottle', 'bus', 'car', 'chair',

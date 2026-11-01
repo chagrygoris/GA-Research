@@ -34,7 +34,8 @@ RESUMABLE_EXIT = 75
 # Options that may differ between the stopped run and its continuation (where to read and write, how
 # long to wait, what to call it); every other option must match, or the checkpoint is refused.
 RESUME_FREE = {("run", "resume"), ("run", "resume_dir"), ("run", "path_to_checkpoint"), ("run", "run_name"),
-               ("run", "path_to_datasets"), ("data", "num_workers")}
+               ("run", "path_to_datasets"), ("data", "num_workers"),
+               ("run", "eval_every")}
 
 
 def resume_path(cfg) -> Path:
