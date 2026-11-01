@@ -271,6 +271,60 @@ class _NormThenLinear(nn.Module):
         return self.linear(multivectors, scalars=scalars)
 
 
+class SphericalActivation(nn.Module):
+    """Spherical GATr's activation: high angular frequencies from each token's vectors, added back as a residual.
+
+    GATr's features are scalars and multivectors, i.e. angular degree l <= 1 in each direction they carry. After every
+    GATr block this layer, per token:
+      1. mixes the token's grade-1 (polar vector, e1 e2 e3) channels into K vectors u_k and takes their directions
+         n_k = u_k / |u_k|;
+      2. computes the real spherical harmonics Y_l(n_k) of degrees l = 1..lmax (e3nn, unit norm per degree) and their
+         pairwise invariants <Y_l(n_j), Y_l(n_k)> = P_l(n_j . n_k), j < k (the addition theorem: the Legendre
+         polynomial of the angle between them, degree l in each direction), plus log(1 + |u_k|);
+      3. maps them, with the token's LayerNorm-ed scalars, through an MLP to (a) a scalar update and (b) one invariant
+         coefficient per (vector channel, k), and adds both as residuals: s <- s + ds, vec_c <- vec_c + sum_k a_ck n_k.
+    Every feature is invariant under rotations and reflections and the vector update is a combination of the
+    token's own vectors with invariant weights, so the layer is O(3)-equivariant like GATr. The MLP's last layer is
+    zero-initialised: at step 0 Spherical GATr equals plain GATr.
+    """
+
+    def __init__(self, mv_channels: int, s_channels: int, lmax: int = 6, n_vectors: int = 4, hidden: int = 64):
+        super().__init__()
+        if lmax < 1 or n_vectors < 2:
+            raise ValueError("SphericalActivation needs lmax >= 1 and n_vectors >= 2")
+        self.lmax, self.k, self.mv_channels, self.s_channels = int(lmax), int(n_vectors), mv_channels, s_channels
+        self.mix = nn.Linear(mv_channels, n_vectors, bias=False)
+        self.register_buffer("_pairs", torch.triu_indices(n_vectors, n_vectors, offset=1), persistent=False)
+        n_feat = self.lmax * self._pairs.shape[1] + n_vectors
+        self.norm = nn.LayerNorm(n_feat + s_channels)
+        self.mlp = nn.Sequential(nn.Linear(n_feat + s_channels, hidden), nn.SiLU(),
+                                 nn.Linear(hidden, s_channels + mv_channels * n_vectors))
+        nn.init.zeros_(self.mlp[-1].weight); nn.init.zeros_(self.mlp[-1].bias)
+
+    def features(self, vec):
+        """vec (..., C, 3) -> invariants (..., lmax * K(K-1)/2 + K) and the directions n (..., K, 3)."""
+        from e3nn import o3
+        u = self.mix(vec.transpose(-1, -2)).transpose(-1, -2)                      # (..., K, 3)
+        r = u.norm(dim=-1)
+        n = u / r.clamp(min=1e-6).unsqueeze(-1)
+        y = o3.spherical_harmonics(list(range(1, self.lmax + 1)), n, normalize=True, normalization="norm")
+        j, k = self._pairs
+        prods = y[..., j, :] * y[..., k, :]                                        # (..., P, sum_l (2l+1))
+        sizes = [2 * l + 1 for l in range(1, self.lmax + 1)]
+        inv = torch.stack([blk.sum(-1) for blk in prods.split(sizes, dim=-1)], -1)  # (..., P, lmax) = P_l(n_j . n_k)
+        return torch.cat([inv.flatten(-2), torch.log1p(r)], -1), n
+
+    def forward(self, mv, s):
+        vec = mv[..., list(_VECTOR)]                                               # (..., C, 3)
+        feats, n = self.features(vec)
+        out = self.mlp(self.norm(torch.cat([feats, s], -1)))
+        ds, coef = out.split([self.s_channels, self.mv_channels * self.k], -1)
+        dvec = torch.einsum("...ck,...kd->...cd", coef.unflatten(-1, (self.mv_channels, self.k)), n)
+        mv = mv.clone()
+        mv[..., list(_VECTOR)] = vec + dvec
+        return mv, s + ds
+
+
 class GATrCloudField(nn.Module):
     """Pose + time + a direction cloud -> the spatial angular velocity as a bivector (P1).
 
@@ -289,7 +343,7 @@ class GATrCloudField(nn.Module):
 
     def __init__(self, cond_scalars: int, mv_channels: int = 8, s_channels: int = 32,
                  num_blocks: int = 4, num_heads: int = 4, final_norm: bool = False, cond_mv: int = 8,
-                 pose_lmax: int = 0):
+                 pose_lmax: int = 0, spherical_lmax: int = 0, spherical_vectors: int = 4):
         super().__init__()
         GATr = _import_gatr()
         self.cond_scalars = cond_scalars
@@ -309,6 +363,10 @@ class GATrCloudField(nn.Module):
         )
         self.register_buffer("_pga_index", torch.tensor(_PGA_INDEX), persistent=False)
         self.register_buffer("_rot_index", torch.tensor(_ROTATION_BIVECTOR), persistent=False)
+        # Spherical GATr (spherical_lmax = L > 0): a SphericalActivation with harmonics up to degree L after every
+        # GATr block, added as a residual; 0 is plain GATr, bit for bit.
+        self.spherical = (nn.ModuleList([SphericalActivation(mv_channels, s_channels, spherical_lmax, spherical_vectors)
+                                         for _ in range(num_blocks)]) if spherical_lmax else None)
         if final_norm:
             # GATr goes from its last block straight to linear_out, so a token's output can be switched off by
             # shrinking its hidden state, which also shrinks its gradients. On SYMSOL P1 did exactly that to
@@ -342,8 +400,25 @@ class GATrCloudField(nn.Module):
         scalars[:, 1:, :self.cond_scalars + self.n_harm] = cond[..., self.cond_mv:]
         scalars[..., -2] = t.to(pose.dtype).unsqueeze(1)
         scalars[:, 0, -1] = 1.0
-        out_mv, _ = self.net(mv, scalars=scalars)   # (B, 1 + n, 1, 16)
+        if self.spherical is None:
+            out_mv, _ = self.net(mv, scalars=scalars)   # (B, 1 + n, 1, 16)
+        else:
+            out_mv = self._spherical_forward(mv, scalars)
         return out_mv[:, 0, 0][:, self._rot_index]
+
+    def _spherical_forward(self, mv, scalars):
+        """GATr.forward with a SphericalActivation after every block (gatr.nets.GATr.forward, no checkpointing)."""
+        from gatr.utils.tensors import construct_reference_multivector
+        net = self.net
+        reference_mv = construct_reference_multivector("data", mv)
+        add_mv, add_s = net._construct_reinserted_channels(mv, scalars)
+        h_mv, h_s = net.linear_in(mv, scalars=scalars)
+        for block, act in zip(net.blocks, self.spherical):
+            h_mv, h_s = block(h_mv, scalars=h_s, reference_mv=reference_mv, additional_qk_features_mv=add_mv,
+                              additional_qk_features_s=add_s, attention_mask=None)
+            h_mv, h_s = act(h_mv, h_s)
+        out_mv, _ = net.linear_out(h_mv, scalars=h_s)
+        return out_mv
 
 
 class PointGATrEncoder(nn.Module):
