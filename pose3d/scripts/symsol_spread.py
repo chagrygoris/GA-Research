@@ -92,12 +92,17 @@ def main():
 
     summary = {}
     print(f"\nspread (deg), K = {args.samples} samples per view, {args.steps} Euler steps")
-    print(f"{'shape':>6} {'views':>6} {'spread':>8} {'median of per-view':>19} {'1-sample median err':>20}")
+    print(f"{'shape':>6} {'views':>6} {'spread':>8} {'median of per-view':>19} {'1-sample median err':>20} "
+          f"{'1-sample acc@15':>16} {'1-sample acc@30':>16}")
     for c in keep:
         s, m = shapes[c], cls == c
         summary[s] = dict(views=int(m.sum()), spread=float(spread[m].mean()), spread_median=float(np.median(spread[m])),
-                          one_sample_median_error=float(np.median(first[m])))
-        print(f"{s:>6} {m.sum():>6} {spread[m].mean():>8.2f} {np.median(spread[m]):>19.2f} {np.median(first[m]):>20.2f}")
+                          one_sample_median_error=float(np.median(first[m])),
+                          one_sample_acc15=float((first[m] < 15).mean()), one_sample_acc30=float((first[m] < 30).mean()))
+        print(f"{s:>6} {m.sum():>6} {spread[m].mean():>8.2f} {np.median(spread[m]):>19.2f} {np.median(first[m]):>20.2f} "
+              f"{(first[m] < 15).mean():>16.3f} {(first[m] < 30).mean():>16.3f}")
+    print(f"{'all':>6} {len(first):>6} {spread.mean():>8.2f} {np.median(spread):>19.2f} {np.median(first):>20.2f} "
+          f"{(first < 15).mean():>16.3f} {(first < 30).mean():>16.3f}")
     if args.out:
         with open(args.out, "w") as f:
             json.dump(dict(args=vars(args), summary=summary, spread_per_view=spread.tolist(),
