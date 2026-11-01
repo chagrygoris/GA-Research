@@ -421,6 +421,13 @@ class FlowConfig:
     # (pose_tokens=frame_pin), the spherical harmonics up to degree L of each token's vector directions, fed through an
     # MLP back as a residual to its scalars and vectors (not equivariant). 0: plain GATr. Only with pose_tokens=frame_pin.
     gatr_spherical_lmax: int = 0
+    # Spherical-attention GATr (models/gatr_denoiser.SphericalAttention): L > 0 adds, after every GATr block of the P1
+    # field (pose_tokens=frame_pin), self-attention between tokens on the spherical harmonics (degrees 0..L) of each
+    # token's vector directions, fed back through a LayerNorm + MLP as a residual. Alternative to gatr_spherical_lmax.
+    gatr_spherical_attn_lmax: int = 0
+    # True: per-degree attention weights and invariant read-out, exactly O(3)-equivariant. False: plain multi-head
+    # attention on the raw harmonic components and a full multivector update (not equivariant).
+    gatr_spherical_attn_equivariant: bool = True
     # cond_tokens=pointgatrsphere (GA-encoder + Fourier hybrid, vector_field=so3fourier): a GATr encoder of
     # gatr_enc_blocks blocks (gatr_mv/s_channels, gatr_heads) gives every point so3f_s2_channels invariant weights
     # for the harmonics at its own direction (models/so3fourier_head.py, PointGATrSphereHead).
