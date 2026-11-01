@@ -23,6 +23,7 @@ import functools
 import sys
 import types
 
+import math
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
@@ -320,6 +321,100 @@ class SphericalActivation(nn.Module):
         return mv, s + ds
 
 
+class SphericalAttention(nn.Module):
+    """Spherical-attention GATr's layer: high angular frequencies exchanged BETWEEN tokens, added back as a residual.
+
+    After every GATr block, per token i:
+      1. mix the token's grade-1 (polar vector) channels v_c into K vectors u_ik = sum_c W_kc v_ic and take their
+         directions n_ik = u_ik / |u_ik|; compute y_ik = (Y_0, ..., Y_lmax)(n_ik), the real spherical harmonics (e3nn,
+         unit norm per degree), (lmax + 1)^2 numbers (49 for lmax = 6). Unit length per degree: no input norm needed.
+      2. self-attention over the tokens on these harmonics (H heads), so token i receives the harmonics of the
+         directions of the tokens it attends to;
+      3. a LayerNorm + MLP on the result (with the token's scalars) gives a scalar update ds and, per vector channel c
+         and direction k, a coefficient a_ck; residual: s <- s + ds, v_c <- v_c + sum_k a_ck n_ik (equivariant), or
+         a full multivector update (non-equivariant). The MLP's last layer starts at zero: step 0 is plain GATr.
+
+    equivariant=True (exact O(3), like GATr): queries, keys and values mix the K channels with one weight per degree
+    and head, q_i^l = sum_k Wq[h, l, k] y_ik^l, so score_ij = sum_l <q_i^l, k_j^l> is a sum of Legendre polynomials
+    P_l of the angles between the two tokens' directions. The attention output o_i^{h,l} (2l+1 numbers per head and
+    degree) enters the MLP only through invariants: its length |o_i^{h,l}| and its agreement <o_i^{h,l}, y_ik^l> with
+    the token's own directions; those (H (lmax+1) (K+1) numbers) are LayerNorm-ed with the scalars.
+    equivariant=False: the K (lmax+1)^2 raw components of each token are LayerNorm-ed and passed through a standard
+    multi-head self-attention (with residual), LayerNorm again, then an MLP to ds and a full multivector update per
+    channel (16 numbers). Not equivariant: the components are numbers in the fixed camera frame.
+    """
+
+    def __init__(self, mv_channels: int, s_channels: int, lmax: int = 6, n_vectors: int = 4, num_heads: int = 4,
+                 equivariant: bool = True, hidden: int = 64):
+        super().__init__()
+        if lmax < 1 or n_vectors < 1:
+            raise ValueError("SphericalAttention needs lmax >= 1 and n_vectors >= 1")
+        self.lmax, self.k, self.h = int(lmax), int(n_vectors), int(num_heads)
+        self.mv_channels, self.s_channels, self.equivariant = mv_channels, s_channels, bool(equivariant)
+        self.mix = nn.Linear(mv_channels, n_vectors, bias=False)
+        self.dim = (self.lmax + 1) ** 2
+        deg = torch.cat([torch.full((2 * l + 1,), l) for l in range(self.lmax + 1)])
+        self.register_buffer("_deg", deg, persistent=False)                         # degree of each component
+        if self.equivariant:
+            w = lambda: nn.Parameter(torch.randn(self.h, self.lmax + 1, self.k) / math.sqrt(self.k))
+            self.wq, self.wk, self.wv = w(), w(), w()
+            n_inv = self.h * (self.lmax + 1) * (self.k + 1)
+            out = s_channels + mv_channels * n_vectors
+        else:
+            d = self.k * self.dim
+            heads = max(h for h in range(1, self.h + 1) if d % h == 0)
+            self.norm_in = nn.LayerNorm(d)
+            self.attn = nn.MultiheadAttention(d, heads, batch_first=True)
+            n_inv = d
+            out = s_channels + mv_channels * 16
+        self.norm = nn.LayerNorm(n_inv + s_channels)
+        self.mlp = nn.Sequential(nn.Linear(n_inv + s_channels, hidden), nn.SiLU(), nn.Linear(hidden, out))
+        nn.init.zeros_(self.mlp[-1].weight); nn.init.zeros_(self.mlp[-1].bias)
+
+    def harmonics(self, vec):
+        """vec (B, N, C, 3) -> y (B, N, K, (lmax+1)^2) and the directions n (B, N, K, 3)."""
+        from e3nn import o3
+        u = self.mix(vec.transpose(-1, -2)).transpose(-1, -2)                      # (B, N, K, 3)
+        n = u / u.norm(dim=-1, keepdim=True).clamp(min=1e-6)
+        y = o3.spherical_harmonics(list(range(self.lmax + 1)), n, normalize=True, normalization="norm")
+        return y, n
+
+    def _per_degree(self, w, y):
+        """w (H, L+1, K), y (B, N, K, D) -> (B, H, N, D): channels mixed with one weight per head and degree."""
+        return torch.einsum("hek,bnke->bhne", w[:, self._deg], y)
+
+    def invariants(self, y):
+        """The equivariant path up to the MLP input: (B, N, H (lmax+1) (K+1))."""
+        q, k, v = (self._per_degree(w, y) for w in (self.wq, self.wk, self.wv))
+        score = torch.einsum("bhie,bhje->bhij", q, k) / math.sqrt(self.lmax + 1)
+        o = torch.einsum("bhij,bhje->bhie", score.softmax(-1), v)                  # (B, H, N, D)
+        sizes = [2 * l + 1 for l in range(self.lmax + 1)]
+        norms = torch.stack([blk.norm(dim=-1) for blk in o.split(sizes, -1)], -1)   # (B, H, N, L+1)
+        prod = o.unsqueeze(3) * y.unsqueeze(1)                                      # (B, H, N, K, D)
+        agree = torch.stack([blk.sum(-1) for blk in prod.split(sizes, -1)], -1)    # (B, H, N, K, L+1)
+        b, _, n = norms.shape[:3]
+        return torch.cat([norms.permute(0, 2, 1, 3).reshape(b, n, -1),
+                          agree.permute(0, 2, 1, 3, 4).reshape(b, n, -1)], -1)
+
+    def forward(self, mv, s):
+        vec = mv[..., list(_VECTOR)]                                               # (B, N, C, 3)
+        y, n = self.harmonics(vec)
+        if self.equivariant:
+            feats = self.invariants(y)
+        else:
+            x = self.norm_in(y.flatten(-2))
+            feats = x + self.attn(x, x, x, need_weights=False)[0]
+        out = self.mlp(self.norm(torch.cat([feats, s], -1)))
+        ds, rest = out.split([self.s_channels, out.shape[-1] - self.s_channels], -1)
+        mv = mv.clone()
+        if self.equivariant:
+            coef = rest.unflatten(-1, (self.mv_channels, self.k))
+            mv[..., list(_VECTOR)] = vec + torch.einsum("...ck,...kd->...cd", coef, n)
+        else:
+            mv = mv + rest.unflatten(-1, (self.mv_channels, 16))
+        return mv, s + ds
+
+
 class GATrCloudField(nn.Module):
     """Pose + time + a direction cloud -> the spatial angular velocity as a bivector (P1).
 
@@ -338,7 +433,8 @@ class GATrCloudField(nn.Module):
 
     def __init__(self, cond_scalars: int, mv_channels: int = 8, s_channels: int = 32,
                  num_blocks: int = 4, num_heads: int = 4, final_norm: bool = False, cond_mv: int = 8,
-                 pose_lmax: int = 0, spherical_lmax: int = 0, spherical_vectors: int = 4):
+                 pose_lmax: int = 0, spherical_lmax: int = 0, spherical_vectors: int = 4,
+                 spherical_attn_lmax: int = 0, spherical_attn_equivariant: bool = True):
         super().__init__()
         GATr = _import_gatr()
         self.cond_scalars = cond_scalars
@@ -362,6 +458,13 @@ class GATrCloudField(nn.Module):
         # GATr block, added as a residual; 0 is plain GATr, bit for bit.
         self.spherical = (nn.ModuleList([SphericalActivation(mv_channels, s_channels, spherical_lmax, spherical_vectors)
                                          for _ in range(num_blocks)]) if spherical_lmax else None)
+        # Spherical-attention GATr (spherical_attn_lmax = L > 0): a SphericalAttention after every GATr block instead.
+        if spherical_attn_lmax:
+            if spherical_lmax:
+                raise ValueError("spherical_lmax and spherical_attn_lmax are alternatives: set one")
+            self.spherical = nn.ModuleList([SphericalAttention(mv_channels, s_channels, spherical_attn_lmax,
+                                                               spherical_vectors, num_heads, spherical_attn_equivariant)
+                                            for _ in range(num_blocks)])
         if final_norm:
             # GATr goes from its last block straight to linear_out, so a token's output can be switched off by
             # shrinking its hidden state, which also shrinks its gradients. On SYMSOL P1 did exactly that to

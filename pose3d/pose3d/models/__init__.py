@@ -55,6 +55,8 @@ def _clifford_flow(cfg: Config, algebra) -> nn.Module:
         n_points=cfg.data.points_n,
         gatr_pose_harmonics=fl.gatr_pose_harmonics,
         gatr_spherical_lmax=fl.gatr_spherical_lmax,
+        gatr_spherical_attn_lmax=fl.gatr_spherical_attn_lmax,
+        gatr_spherical_attn_equivariant=fl.gatr_spherical_attn_equivariant,
         gatr_encoder=dict(num_blocks=fl.gatr_enc_blocks, mv_channels=fl.gatr_mv_channels,
                           s_channels=fl.gatr_s_channels, num_heads=fl.gatr_heads),
         stf_track=fl.stf_track, stf_lmax=fl.stf_lmax, stf_channels=fl.stf_channels,
@@ -364,7 +366,7 @@ def validate(cfg: Config) -> None:
 
     if cfg.flow.stf_track and cfg.model.name != "clifford_flow":
         raise ValueError("--stf_track is a CliffordFlow option: use --model clifford_flow")
-    if cfg.flow.gatr_spherical_lmax and cfg.flow.pose_tokens != "frame_pin":
+    if (cfg.flow.gatr_spherical_lmax or cfg.flow.gatr_spherical_attn_lmax) and cfg.flow.pose_tokens != "frame_pin":
         raise ValueError("--gatr_spherical_lmax (Spherical GATr) is built into the P1 field: use --pose_tokens frame_pin")
     if cfg.flow.stf_track and not 2 <= cfg.flow.stf_lmax <= 6:
         raise ValueError(f"--stf_lmax must be in 2..6, got {cfg.flow.stf_lmax}")
