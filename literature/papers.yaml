@@ -56,6 +56,16 @@
   summary: GA-enhanced twin-branch contrastive network for few-shot hyperspectral classification.
   found_by:
   - crossref
+  - crossref:Clifford algebra neural network
+  - crossref:geometric algebra neural network
+  - crossref:geometric algebra deep learning
+  - crossref:geometric algebra transformer
+  - crossref:geometric algebra machine learning
+  - crossref:geometric algebra attention
+  - crossref:geometric algebra graph neural network
+  - crossref:geometric algebra learning
+  - crossref:conformal geometric algebra learning
+  - crossref:projective geometric algebra learning
   added: 2026-10-25
 - id: doi:10.1016/j.ins.2026.123796
   title: Fully tensorial approach to hypercomplex-valued neural networks
@@ -77,6 +87,8 @@
   found_by:
   - crossref
   - arxiv:all:hypercomplex AND all:neural
+  - crossref:Clifford-valued neural networks
+  - crossref:hypercomplex neural network
   added: 2026-10-25
   aliases:
   - arxiv:2407.00449
