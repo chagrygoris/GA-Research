@@ -278,41 +278,36 @@ class SphericalActivation(nn.Module):
     GATr block this layer, per token:
       1. mixes the token's grade-1 (polar vector, e1 e2 e3) channels into K vectors u_k and takes their directions
          n_k = u_k / |u_k|;
-      2. computes the real spherical harmonics Y_l(n_k) of degrees l = 1..lmax (e3nn, unit norm per degree) and their
-         pairwise invariants <Y_l(n_j), Y_l(n_k)> = P_l(n_j . n_k), j < k (the addition theorem: the Legendre
-         polynomial of the angle between them, degree l in each direction), plus log(1 + |u_k|);
-      3. maps them, with the token's LayerNorm-ed scalars, through an MLP to (a) a scalar update and (b) one invariant
+      2. computes the real spherical harmonics Y_l(n_k) of degrees l = 1..lmax (e3nn, unit norm per degree), all
+         (lmax + 1)^2 - 1 components per direction, plus log(1 + |u_k|);
+      3. maps them, with the token's LayerNorm-ed scalars, through an MLP to (a) a scalar update and (b) one
          coefficient per (vector channel, k), and adds both as residuals: s <- s + ds, vec_c <- vec_c + sum_k a_ck n_k.
-    Every feature is invariant under rotations and reflections and the vector update is a combination of the
-    token's own vectors with invariant weights, so the layer is O(3)-equivariant like GATr. The MLP's last layer is
-    zero-initialised: at step 0 Spherical GATr equals plain GATr.
+    The harmonics are fed to the MLP as plain numbers in the fixed world frame, not as rotation invariants, so this
+    layer is NOT equivariant: with it switched on the field loses GATr's O(3) equivariance (the turn / flip
+    equivariance of the P1 flow). The MLP's last layer is zero-initialised: at step 0 Spherical GATr equals plain GATr.
     """
 
     def __init__(self, mv_channels: int, s_channels: int, lmax: int = 6, n_vectors: int = 4, hidden: int = 64):
         super().__init__()
-        if lmax < 1 or n_vectors < 2:
-            raise ValueError("SphericalActivation needs lmax >= 1 and n_vectors >= 2")
+        if lmax < 1 or n_vectors < 1:
+            raise ValueError("SphericalActivation needs lmax >= 1 and n_vectors >= 1")
         self.lmax, self.k, self.mv_channels, self.s_channels = int(lmax), int(n_vectors), mv_channels, s_channels
         self.mix = nn.Linear(mv_channels, n_vectors, bias=False)
-        self.register_buffer("_pairs", torch.triu_indices(n_vectors, n_vectors, offset=1), persistent=False)
-        n_feat = self.lmax * self._pairs.shape[1] + n_vectors
+        n_feat = n_vectors * ((self.lmax + 1) ** 2 - 1) + n_vectors
         self.norm = nn.LayerNorm(n_feat + s_channels)
         self.mlp = nn.Sequential(nn.Linear(n_feat + s_channels, hidden), nn.SiLU(),
                                  nn.Linear(hidden, s_channels + mv_channels * n_vectors))
         nn.init.zeros_(self.mlp[-1].weight); nn.init.zeros_(self.mlp[-1].bias)
 
     def features(self, vec):
-        """vec (..., C, 3) -> invariants (..., lmax * K(K-1)/2 + K) and the directions n (..., K, 3)."""
+        """vec (..., C, 3) -> features (..., K ((lmax+1)^2 - 1) + K): Y_1..Y_lmax of each n_k, then log(1 + |u_k|);
+        and the directions n (..., K, 3)."""
         from e3nn import o3
         u = self.mix(vec.transpose(-1, -2)).transpose(-1, -2)                      # (..., K, 3)
         r = u.norm(dim=-1)
         n = u / r.clamp(min=1e-6).unsqueeze(-1)
         y = o3.spherical_harmonics(list(range(1, self.lmax + 1)), n, normalize=True, normalization="norm")
-        j, k = self._pairs
-        prods = y[..., j, :] * y[..., k, :]                                        # (..., P, sum_l (2l+1))
-        sizes = [2 * l + 1 for l in range(1, self.lmax + 1)]
-        inv = torch.stack([blk.sum(-1) for blk in prods.split(sizes, dim=-1)], -1)  # (..., P, lmax) = P_l(n_j . n_k)
-        return torch.cat([inv.flatten(-2), torch.log1p(r)], -1), n
+        return torch.cat([y.flatten(-2), torch.log1p(r)], -1), n                  # y: (..., K, (lmax+1)^2 - 1)
 
     def forward(self, mv, s):
         vec = mv[..., list(_VECTOR)]                                               # (..., C, 3)
