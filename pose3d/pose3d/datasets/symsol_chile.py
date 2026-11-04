@@ -32,7 +32,12 @@ Output, the layout of the official SYMSOL zip, so datasets/symsol.Symsol reads i
 Poses are uniform on SO(3), seeded per split and shape (SEEDS: fixed per shape name, so adding shapes never changes
 the poses of the others; pyr7 / pyr10 / pyr13 keep the seeds of the first release), so a run regenerates the same data.
 
+2D variant (--view bottom, --symsol_set 7): the poses are only the turns Rz(theta) about the axis, so every image is
+the base seen from straight below; written to <root>/symsol_chile_bottom/. It separates "can the backbone see the
+turn" from "can the model represent it": the n-gon outline is plainly visible, and the turn still needs degree l = n.
+
 usage: python -m pose3d.datasets.symsol_chile --root DIR [--train 45000] [--test 5000] [--shapes pyr4,...,pyr13]
+       [--view random|bottom]
        (or python pose3d/datasets/symsol_chile.py ...: the file needs only torch, numpy and Pillow)
 """
 
@@ -127,9 +132,24 @@ def random_rotations(n: int, generator: torch.Generator) -> torch.Tensor:
                         2 * (x * z - y * w), 2 * (y * z + x * w), 1 - 2 * (x * x + y * y)], -1).view(n, 3, 3)
 
 
-def generate(root: str, split: str, views: int, shapes=SHAPES, batch: int = 16, device: str = "cpu", log=print):
-    """Render `views` poses of every shape into <root>/symsol_chile/<split>/, writing rotations.npz last."""
-    path = os.path.join(root, "symsol_chile", split)
+VIEW_DIRS = {"random": "symsol_chile", "bottom": "symsol_chile_bottom"}
+
+
+def bottom_rotations(n: int, generator: torch.Generator) -> torch.Tensor:
+    """n turns Rz(theta) about the pyramid's axis, theta uniform on [0, 2 pi), (n, 3, 3) float64. With R = Rz(theta)
+    the base (outward normal -e3) faces the camera at the origin: every image is the base n-gon seen from below,
+    turned by theta in the image plane (the 2D pose problem; only the turn varies)."""
+    theta = 2 * math.pi * torch.rand(n, generator=generator, dtype=torch.float64)
+    c, s = torch.cos(theta), torch.sin(theta)
+    o, z = torch.ones_like(theta), torch.zeros_like(theta)
+    return torch.stack([c, -s, z, s, c, z, z, z, o], -1).view(n, 3, 3)
+
+
+def generate(root: str, split: str, views: int, shapes=SHAPES, batch: int = 16, device: str = "cpu", log=print,
+             view: str = "random"):
+    """Render `views` poses of every shape into <root>/<VIEW_DIRS[view]>/<split>/, writing rotations.npz last.
+    view "random": poses uniform on SO(3) (SYMSOL-CHILE); "bottom": only turns about the axis, seen from below."""
+    path = os.path.join(root, VIEW_DIRS[view], split)
     os.makedirs(os.path.join(path, "images"), exist_ok=True)
     rays = _rays(device)
     rotations = {}
@@ -137,7 +157,7 @@ def generate(root: str, split: str, views: int, shapes=SHAPES, batch: int = 16, 
     for shape in shapes:
         n = sides(shape)
         gen = torch.Generator().manual_seed(1000 * (split == "test") + SEEDS.get(shape, 100 + n))
-        R = random_rotations(views, gen)
+        R = random_rotations(views, gen) if view == "random" else bottom_rotations(views, gen)
         rotations[shape] = np.einsum("vij,gjk->vgik", R.numpy(), pyramid_group(n)).astype(np.float32)
         faces, t0 = pyramid_faces(n), time.time()
         step = max(1, min(batch, int(3e7 // (len(rays) * 0.3 * len(faces)))))   # rays x faces per batch: memory
@@ -158,11 +178,14 @@ def main():
     ap.add_argument("--shapes", default=",".join(SHAPES))
     ap.add_argument("--device", default="cuda" if torch.cuda.is_available() else "cpu")
     ap.add_argument("--batch", type=int, default=64)
+    ap.add_argument("--view", choices=sorted(VIEW_DIRS), default="random",
+                    help="random: poses uniform on SO(3); bottom: only turns about the axis, base facing the camera "
+                         "(writes <root>/symsol_chile_bottom/, read by --symsol_set 7)")
     args = ap.parse_args()
     shapes = tuple(args.shapes.split(","))
     for split, views in (("test", args.test), ("train", args.train)):
         if views:
-            generate(args.root, split, views, shapes, args.batch, args.device)
+            generate(args.root, split, views, shapes, args.batch, args.device, view=args.view)
 
 
 if __name__ == "__main__":

@@ -97,3 +97,22 @@ def test_set_6_reads_all_six_pyramids(tmp_path):
     test = Symsol(str(tmp_path), train=False, set_number=6, workers=2)
     assert test.shapes == ("pyr4", "pyr5", "pyr6", "pyr7", "pyr10", "pyr13") and len(test) == 12
     assert [int(test[2 * c]["n_eq"]) for c in range(6)] == [4, 5, 6, 7, 10, 13]
+
+
+def test_bottom_view_set_is_the_turned_base(tmp_path):
+    """--view bottom / set 7: the poses are turns about e3, the image is the base seen from below, an equivalent
+    pose renders the same image, half a step does not, and the loader reads it as a one-shape set."""
+    generate(str(tmp_path), "test", 3, shapes=("pyr7",), log=lambda *_: None, view="bottom")
+    generate(str(tmp_path), "train", 3, shapes=("pyr7",), log=lambda *_: None, view="bottom")
+    rots = np.load(tmp_path / "symsol_chile_bottom" / "test" / "rotations.npz")["pyr7"]
+    assert rots.shape == (3, 7, 3, 3)
+    np.testing.assert_allclose(rots[:, 0, 2], np.tile([0.0, 0.0, 1.0], (3, 1)), atol=1e-6)   # R e3 = e3: a pure turn
+    R = torch.from_numpy(rots[:, 0]).double()
+    a = render(pyramid_faces(7), R).int(); b = render(pyramid_faces(7), R @ torch.from_numpy(pyramid_group(7)[2])).int()
+    assert (a - b).abs().max() <= 2
+    half = render(pyramid_faces(7), R @ _turn_z(math.pi / 7)).int()
+    assert ((a - half).abs() > 20).float().mean() > 0.005
+    centre = a[:, SIZE // 2 - 5:SIZE // 2 + 5, SIZE // 2 - 5:SIZE // 2 + 5]
+    assert (centre > 0).all()                                                       # the base fills the centre
+    test = Symsol(str(tmp_path), train=False, set_number=7, workers=1)
+    assert test.shapes == ("pyr7",) and len(test) == 3 and int(test[0]["n_eq"]) == 7
