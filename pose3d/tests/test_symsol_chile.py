@@ -116,3 +116,11 @@ def test_bottom_view_set_is_the_turned_base(tmp_path):
     assert (centre > 0).all()                                                       # the base fills the centre
     test = Symsol(str(tmp_path), train=False, set_number=7, workers=1)
     assert test.shapes == ("pyr7",) and len(test) == 3 and int(test[0]["n_eq"]) == 7
+
+
+def test_bottom_view_sets_8_and_9_read_their_pyramid(tmp_path):
+    generate(str(tmp_path), "test", 2, shapes=("pyr10", "pyr13"), log=lambda *_: None, view="bottom")
+    for set_number, n in ((8, 10), (9, 13)):
+        test = Symsol(str(tmp_path), train=False, set_number=set_number, workers=1)
+        assert test.shapes == (f"pyr{n}",) and int(test[0]["n_eq"]) == n
+        assert torch.allclose(test[0]["rot"][:, 2], torch.tensor([0.0, 0.0, 1.0]), atol=1e-6)   # a pure turn

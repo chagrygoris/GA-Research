@@ -32,7 +32,7 @@ Output, the layout of the official SYMSOL zip, so datasets/symsol.Symsol reads i
 Poses are uniform on SO(3), seeded per split and shape (SEEDS: fixed per shape name, so adding shapes never changes
 the poses of the others; pyr7 / pyr10 / pyr13 keep the seeds of the first release), so a run regenerates the same data.
 
-2D variant (--view bottom, --symsol_set 7): the poses are only the turns Rz(theta) about the axis, so every image is
+2D variant (--view bottom, --symsol_set 7 / 8 / 9 = pyr7 / pyr10 / pyr13): the poses are only the turns Rz(theta) about the axis, so every image is
 the base seen from straight below; written to <root>/symsol_chile_bottom/. It separates "can the backbone see the
 turn" from "can the model represent it": the n-gon outline is plainly visible, and the turn still needs degree l = n.
 
@@ -180,7 +180,7 @@ def main():
     ap.add_argument("--batch", type=int, default=64)
     ap.add_argument("--view", choices=sorted(VIEW_DIRS), default="random",
                     help="random: poses uniform on SO(3); bottom: only turns about the axis, base facing the camera "
-                         "(writes <root>/symsol_chile_bottom/, read by --symsol_set 7)")
+                         "(writes <root>/symsol_chile_bottom/, read by --symsol_set 7 / 8 / 9 for pyr7 / pyr10 / pyr13)")
     args = ap.parse_args()
     shapes = tuple(args.shapes.split(","))
     for split, views in (("test", args.test), ("train", args.train)):

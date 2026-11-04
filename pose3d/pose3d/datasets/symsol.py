@@ -34,8 +34,11 @@ SHAPE_SETS = {
     5: ("pyr7", "pyr10", "pyr13"),       # SYMSOL-CHILE, first release (the runs of 2026-10-31)
     6: ("pyr4", "pyr5", "pyr6", "pyr7", "pyr10", "pyr13"),   # SYMSOL-CHILE, all six pyramids
     7: ("pyr7",),                         # SYMSOL-CHILE bottom view: only the turn about the axis (2D pose)
+    8: ("pyr10",),                        # the same, 10-gonal pyramid
+    9: ("pyr13",),                        # the same, 13-gonal pyramid
 }
-SET_DIRS = {5: "symsol_chile", 6: "symsol_chile", 7: "symsol_chile_bottom"}   # under the dataset root; "symsol" otherwise
+SET_DIRS = {5: "symsol_chile", 6: "symsol_chile", 7: "symsol_chile_bottom", 8: "symsol_chile_bottom",
+            9: "symsol_chile_bottom"}   # directory under the dataset root; "symsol" otherwise
 MAX_EQUIVALENTS = 720                   # test-item padding; a set with more equivalents pads to its own maximum
 
 # R_camera = TO_CAMERA @ R_symsol. SYMSOL's poses already are in this frame: the projected axis of the
