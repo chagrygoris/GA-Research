@@ -1,8 +1,8 @@
 # Clifford / geometric algebra deep learning: paper catalogue
 
-Generated from `literature/papers.yaml` on 2026-11-03 by `python -m ga_lit render`. Do not edit by hand; edit the YAML or use the CLI.
+Generated from `literature/papers.yaml` on 2026-11-04 by `python -m ga_lit render`. Do not edit by hand; edit the YAML or use the CLI.
 
-**290 accepted papers** (125 core, 108 adjacent, 57 context), 0 waiting in the inbox. Browse interactively: `literature/site/index.html`.
+**290 accepted papers** (125 core, 108 adjacent, 57 context), 1 waiting in the inbox. Browse interactively: `literature/site/index.html`.
 
 Relevance: **core** = geometric algebra inside the model or method; **adjacent** = GA-related machine learning or a GA method next to a learned component; **context** = cites or benchmarks against GA models without using one.
 

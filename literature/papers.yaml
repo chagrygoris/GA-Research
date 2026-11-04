@@ -38,6 +38,37 @@
   found_by:
   - crossref
   added: 2026-10-25
+- id: doi:10.1080/00450618.2026.2749498
+  title: A robust misinformation-aware image forgery detection framework using a Pseudo-Label Clifford Graph Fusion
+    Convolutional Neural Network with Goat Optimization
+  authors:
+  - T. Sujatha
+  - S. P. Premnath
+  - A. Sajeev Ram
+  date: '2026-11-03'
+  venue: Australian Journal of Forensic Sciences
+  venue_type: journal
+  links:
+    doi: https://doi.org/10.1080/00450618.2026.2749498
+  topics:
+  - vision
+  status: inbox
+  relevance: null
+  summary: ''
+  triage:
+    score: 3
+    ga_terms:
+    - clifford graph
+    ml_context: true
+    excluded_terms: []
+    title_hit: true
+  found_by:
+  - crossref:Clifford algebra neural network
+  - crossref:Clifford convolution
+  - crossref:Clifford equivariant neural
+  - crossref:Clifford neural
+  - crossref:geometric algebra graph neural network
+  added: '2026-11-04'
 - id: doi:10.1016/j.patcog.2026.113549
   title: Geometric algebra enhanced twin-branch contrastive network design for few-shot hyperspectral image classification
   authors:
