@@ -142,8 +142,18 @@ def sync_buffers(model):
     """Copy rank 0's buffers (BatchNorm running statistics) to every rank before evaluation."""
     if not is_distributed():
         return
+    # NCCL broadcasts only contiguous CUDA tensors. Some buffers are neither: Image2Sphere's output_wigners is stored
+    # transposed (non-contiguous), AveragedModel keeps n_averaged on the CPU. Those go through a contiguous copy on
+    # the process's GPU and are written back in place.
+    gpu = torch.device("cuda", torch.cuda.current_device()) if dist.get_backend() == "nccl" else None
     for buf in model.buffers():
-        dist.broadcast(buf, src=0)
+        on_wrong_device = gpu is not None and buf.device.type != "cuda"
+        if buf.is_contiguous() and not on_wrong_device:
+            dist.broadcast(buf, src=0)
+        else:
+            tmp = buf.to(gpu if on_wrong_device else buf.device).contiguous()
+            dist.broadcast(tmp, src=0)
+            buf.copy_(tmp)
 
 
 def gather_errors(err, cfg=None):
