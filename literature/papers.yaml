@@ -69,6 +69,38 @@
   - crossref:Clifford neural
   - crossref:geometric algebra graph neural network
   added: '2026-11-04'
+- id: arxiv:2611.05463
+  title: Top Spin and CP from Equivariant Transformers
+  authors:
+  - Bahl, Henning
+  - Menen, Marco
+  - Petitjean, Antoine
+  - Plehn, Tilman
+  date: '2026-11-03'
+  venue: arXiv
+  venue_type: arxiv
+  links:
+    inspire: https://inspirehep.net/literature/3222932
+    arxiv: https://arxiv.org/abs/2611.05463
+  topics:
+  - hep
+  status: inbox
+  relevance: null
+  summary: Measurements of spin correlations and CP are an exciting and challenging part of the precision-LHC program.
+    We first show how L-GATr-slim, as a Lorentz-equivariant transformer, significantly boosts the spin analyzing
+    power for hadronic top quarks. We then show how adding a pseudoscalar channel to its architecture allows us
+    to learn and interpret optimal observables and their CP properties. We demo
+  triage:
+    score: 3
+    ga_terms:
+    - l-gatr
+    ml_context: true
+    excluded_terms: []
+    title_hit: false
+  found_by:
+  - inspire:cites Economical Jet Taggers (Petitjean et al. 2025)
+  - inspire:cites L-GATr for all of the LHC (Brehmer et al. 2024)
+  added: '2026-11-05'
 - id: doi:10.1016/j.patcog.2026.113549
   title: Geometric algebra enhanced twin-branch contrastive network design for few-shot hyperspectral image classification
   authors:
