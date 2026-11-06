@@ -38,6 +38,39 @@
   found_by:
   - crossref
   added: 2026-10-25
+- id: arxiv:2611.07585
+  title: 'CasHyper: Modeling Multi-Factor Interactions and Asymmetric Influence in Cascade Prediction via Hypercomplex
+    Algebra'
+  authors:
+  - Yansong Wang
+  - Qisen Chai
+  - Junjie Huang
+  - Tao Jia
+  date: '2026-11-05'
+  venue: arXiv
+  venue_type: arxiv
+  links:
+    arxiv: https://arxiv.org/abs/2611.07585
+  topics:
+  - graphs
+  - sequence-nlp
+  - hypercomplex
+  status: inbox
+  relevance: null
+  summary: Cascade prediction aims to forecast the future evolution of information diffusion and is an important
+    task in social network analysis. Most existing methods represent users and cascades in real-valued Euclidean
+    spaces, which may offer limited capacity to model multi-factor interactions and asymmetric influence in complex
+    diffusion processes. To address these challenges, we propose CasHyper, a hype
+  triage:
+    score: 3
+    ga_terms:
+    - hypercomplex
+    ml_context: true
+    excluded_terms: []
+    title_hit: true
+  found_by:
+  - arxiv:all:hypercomplex AND all:neural
+  added: '2026-11-06'
 - id: doi:10.1080/00450618.2026.2749498
   title: A robust misinformation-aware image forgery detection framework using a Pseudo-Label Clifford Graph Fusion
     Convolutional Neural Network with Goat Optimization
@@ -100,6 +133,7 @@
   found_by:
   - inspire:cites Economical Jet Taggers (Petitjean et al. 2025)
   - inspire:cites L-GATr for all of the LHC (Brehmer et al. 2024)
+  - arxiv:all:GATr
   added: '2026-11-05'
 - id: doi:10.1016/j.patcog.2026.113549
   title: Geometric algebra enhanced twin-branch contrastive network design for few-shot hyperspectral image classification
