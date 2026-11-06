@@ -124,3 +124,11 @@ def test_bottom_view_sets_8_and_9_read_their_pyramid(tmp_path):
         test = Symsol(str(tmp_path), train=False, set_number=set_number, workers=1)
         assert test.shapes == (f"pyr{n}",) and int(test[0]["n_eq"]) == n
         assert torch.allclose(test[0]["rot"][:, 2], torch.tensor([0.0, 0.0, 1.0]), atol=1e-6)   # a pure turn
+
+
+def test_bottom_view_sets_10_to_13_read_the_small_pyramids(tmp_path):
+    generate(str(tmp_path), "test", 2, shapes=("pyr3", "pyr4", "pyr5", "pyr6"), log=lambda *_: None, view="bottom")
+    for set_number, n in ((10, 3), (11, 4), (12, 5), (13, 6)):
+        test = Symsol(str(tmp_path), train=False, set_number=set_number, workers=1)
+        assert test.shapes == (f"pyr{n}",) and int(test[0]["n_eq"]) == n
+        assert test[0]["img"].max() > 0.5
