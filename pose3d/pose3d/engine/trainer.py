@@ -4,6 +4,8 @@ import inspect
 import time
 
 import numpy as np
+import os
+
 import torch
 from torch.optim.swa_utils import AveragedModel, get_ema_multi_avg_fn
 from tqdm import tqdm
@@ -89,15 +91,20 @@ def train_epoch(model, loader, optimizer, criterion, cfg, step=None, ema=None):
     n_objects = 0
     device_type = "cuda" if cfg.device.type == "cuda" else "cpu"
 
-    scaler = torch.amp.GradScaler(device_type) if device_type == "cuda" else None
+    # POSE3D_AMP=bf16|fp16: autocast the training forward (evaluation stays FP32). Unset: FP32 as before
+    # (the scaler alone does nothing without autocast).
+    amp = os.environ.get("POSE3D_AMP", "")
+    amp_dtype = {"bf16": torch.bfloat16, "fp16": torch.float16}.get(amp)
+    scaler = torch.amp.GradScaler(device_type, enabled=amp_dtype is not torch.bfloat16) if device_type == "cuda" else None
 
     if step is None:
         step = build_step(model, criterion, cfg)
     step.train()
-    for data in tqdm(loader, disable=not is_main() or cfg.run.platform == "kaggle"):
+    for batch_i, data in enumerate(tqdm(loader, disable=not is_main() or cfg.run.platform == "kaggle")):
         optimizer.zero_grad(set_to_none=True)
 
-        loss = step(data)
+        with torch.autocast(device_type, dtype=amp_dtype or torch.float32, enabled=amp_dtype is not None):
+            loss = step(data)
 
         if scaler is not None:
             scaler.scale(loss).backward()
@@ -115,6 +122,8 @@ def train_epoch(model, loader, optimizer, criterion, cfg, step=None, ema=None):
         if ema is not None:
             ema.update_parameters(model)
 
+        if cfg.flow.gatr_native_stf and is_main() and batch_i in (0, 9, 99):
+            print(f'NATIVE_STF_UPDATE batch={batch_i+1} loss={float(loss.detach()):.6f}',flush=True)
         bs = data["img"].shape[0]
         total_loss += float(loss.detach().item()) * bs
         n_objects += bs
@@ -160,7 +169,21 @@ def train(model, train_loader, val_loader, optimizer, scheduler, criterion, run,
     ema = (AveragedModel(model, multi_avg_fn=get_ema_multi_avg_fn(cfg.train.ema_decay), use_buffers=True)
            if cfg.features.ema else None)
     eval_model = ema.module if ema is not None else model
-    for i in range(n_epochs):
+    start = 0
+    if cfg.run.resume_from:
+        state = torch.load(cfg.run.resume_from, map_location=cfg.device, weights_only=False)
+        model.load_state_dict(state["model"])
+        optimizer.load_state_dict(state["optimizer"])
+        scheduler.load_state_dict(state["scheduler"])
+        if ema is not None:
+            if "ema" not in state:
+                raise RuntimeError(f"{cfg.run.resume_from} has no EMA state; it cannot resume an --ema run")
+            ema.load_state_dict(state["ema"])
+        start = int(state["next_epoch"])
+        print(f"RESUMED from {cfg.run.resume_from} at epoch {start + 1} / {n_epochs}", flush=True)
+    end = min(n_epochs, cfg.run.stop_after_epoch) if cfg.run.stop_after_epoch else n_epochs
+    session_start, longest_epoch = time.time(), 0.0
+    for i in range(start, end):
         t0 = time.time()
         sampler = getattr(train_loader, "sampler", None)
         if hasattr(sampler, "set_epoch"):
@@ -170,38 +193,77 @@ def train(model, train_loader, val_loader, optimizer, scheduler, criterion, run,
         if ema is not None:
             sync_buffers(ema)
         val_loss = validate_epoch(eval_model, val_loader, criterion, cfg)
-        err, cls = calculate_evaluation_metrics(eval_model, val_loader, cfg, return_classes=True)
-        mre = np.median(err).__float__()
-        macro = macro_metrics(err, cls) if cls is not None else None
+        # MRE sampling is expensive; its fixed-noise RNG scope restores both RNGs,
+        # so changing its logging frequency does not change optimization draws.
+        measure_mre = (not cfg.flow.gatr_native_stf or i == 0 or i+1 == n_epochs
+                       or (i+1) % cfg.flow.gatr_native_stf_eval_every == 0)
+        if measure_mre:
+            err, cls = calculate_evaluation_metrics(eval_model, val_loader, cfg, return_classes=True)
+            mre = np.median(err).__float__()
+            macro = macro_metrics(err, cls) if cls is not None else None
+        else:
+            mre, macro = None, None
 
         metrics = {
             "train_loss": train_loss,
             "val_loss": val_loss,
-            "median_rotation_error": mre,
-            "acc@15": acc_at(err, 15),   # the share of validation images within 15 deg (primary metric on SYMSOL)
-            "acc@30": acc_at(err, 30),
+            "mre_evaluated": measure_mre,
             "learning_rate": scheduler.get_last_lr()[0],
             "gradient_norm": grad_norm(model),
             "epoch_time": time.time() - t0,
         }
+        if mre is not None:
+            metrics["median_rotation_error"] = mre
+            metrics["acc@15"] = acc_at(err, 15)   # the share of validation images within 15 deg (primary metric on SYMSOL)
+            metrics["acc@30"] = acc_at(err, 30)
         if macro is not None:
             metrics["class_mean_median_error"] = macro["class_mean_median_error"]
+            for c, value in macro["class_medians"].items():
+                metrics[f"median_error_class{c}"] = value
         if cfg.run.viz_every > 0 and (i + 1) % cfg.run.viz_every == 0:
             log_viz(model, val_loader, run, cfg, commit=False)   # joins this epoch's step instead of opening one
         if run is not None:
             run.log(metrics)
         scheduler.step()
+        if is_main() and cfg.flow.gatr_native_stf:
+            import os
+            from pathlib import Path
+            checkpoint = dict(model=model.state_dict(), optimizer=optimizer.state_dict(),
+                              scheduler=scheduler.state_dict(), config=cfg.to_dict(), next_epoch=i+1,
+                              torch_rng=torch.get_rng_state(), cuda_rng=torch.cuda.get_rng_state_all())
+            if ema is not None:
+                checkpoint["ema"] = ema.state_dict()
+            target=Path(os.environ.get('NATIVE_STF_CHECKPOINT_DIR', '/kaggle/working'))/(cfg.run.run_name+'.latest.pth')
+            temporary=target.with_suffix('.partial')
+            torch.save(checkpoint,temporary)
+            os.replace(temporary,target)
+            print(f'NATIVE_STF_CHECKPOINT epoch={i+1} path={target}',flush=True)
         if is_main():
             print(
                 f"Training on {cfg.device} epoch {i + 1} / {n_epochs}. \n"
                 f"Train loss {train_loss}, val loss {val_loss}\n"
-                f"Median rotation error {mre}, acc@15 {metrics['acc@15']:.4f}, acc@30 {metrics['acc@30']:.4f} "
-                f"({time.time() - t0:.0f}s)"
+                + (f"Median rotation error {mre}, acc@15 {metrics['acc@15']:.4f}, acc@30 {metrics['acc@30']:.4f} "
+                   f"({time.time() - t0:.0f}s)" if mre is not None
+                   else f"MRE scheduled every {cfg.flow.gatr_native_stf_eval_every} epochs ({time.time()-t0:.0f}s)")
             )
             if macro is not None:
                 print(f"Class-mean median rotation error {macro['class_mean_median_error']}")
             log_offline_sync(run, cfg, step=i, metrics=metrics)
+        longest_epoch = max(longest_epoch, time.time() - t0)
+        if cfg.run.segment_hours and i + 1 < end:
+            # Rank 0 decides and every rank follows, so all processes leave the loop at the same epoch.
+            stop = torch.tensor([float(time.time() - session_start + longest_epoch > cfg.run.segment_hours * 3600)],
+                                device=cfg.device)
+            if torch.distributed.is_available() and torch.distributed.is_initialized():
+                torch.distributed.broadcast(stop, src=0)
+            if stop.item():
+                end = i + 1
+                break
 
+    if end < n_epochs:
+        if is_main():
+            print(f"SEGMENT_DONE: epochs {start + 1}..{end} of {n_epochs}; continue with --resume_from", flush=True)
+        return None
     final_evaluation(eval_model, val_loader, run, cfg, raw_model=model if ema is not None else None)
     log_viz(eval_model, val_loader, run, cfg, final=True, commit=True)
     if cfg.run.dataset == "symsol" and hasattr(eval_model, "grid_logits") and is_main():

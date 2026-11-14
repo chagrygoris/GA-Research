@@ -37,6 +37,8 @@ def _clifford_flow(cfg: Config, algebra) -> nn.Module:
                   dense_linear=fl.gatr_dense_linear, compile=fl.gatr_compile),
         gatr_zero_readout=fl.gatr_zero_readout,
         gatr_final_norm=fl.gatr_final_norm,
+        native_stf=(dict(stf_lmax=fl.gatr_native_stf_lmax, stf_channels=fl.gatr_native_stf_channels)
+                    if fl.gatr_native_stf else None),
         mlp_heads=f.mlp_heads,
         fisher_checkpoint=fl.fisher_checkpoint if f.fisher_prior else None,
         backbone_bf16=f.backbone_bf16,
