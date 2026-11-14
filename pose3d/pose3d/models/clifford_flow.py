@@ -57,6 +57,11 @@ class StfCondition(NamedTuple):
                             tuple(s.repeat_interleave(repeats, dim=dim) for s in self.stf))
 
 
+def _full(x):
+    """x in full precision: half / bf16 tensors (autocast) are raised to float32, float32 and float64 are kept."""
+    return x if x.dtype in (torch.float32, torch.float64) else x.float()
+
+
 def _native_bf16(device):
     """CPU, or a GPU from sm_80 (Ampere) on; older GPUs such as the T4 only emulate bf16."""
     if device.type == "cuda":
@@ -587,7 +592,7 @@ class CliffordFlow(nn.Module):
         symmetry matches the physical one. The body velocity v = r~ w r is returned, as before.
         """
         with torch.autocast(rotor.device.type, enabled=False):   # pose geometry in FP32 under autocast
-            frame = rotor_to_matrix(rotor.float(), self.algebra).transpose(-1, -2)   # rows: R e1, R e2, R e3
+            frame = rotor_to_matrix(_full(rotor), self.algebra).transpose(-1, -2)   # rows: R e1, R e2, R e3
             frame_mv = self.algebra.embed(frame, (1, 2, 3))
         if self.pose_tokens == "frame_ch":
             # The whole frame as 3 channels of token 0; time and condition tokens use channel 0.
@@ -598,7 +603,7 @@ class CliffordFlow(nn.Module):
             inp = torch.cat([frame_mv, t_mv, cond_mv], dim=1)
         spatial = self.algebra.get_grade(self.vector_field(inp)[:, 0], 2)  # e12, e13, e23
         with torch.autocast(rotor.device.type, enabled=False):
-            return self._spatial_to_body(rotor.float(), spatial.float())
+            return self._spatial_to_body(_full(rotor), _full(spatial))
 
     def _pin_velocity(self, rotor, t, cond):
         """P1: the pose as l = (R e1) e123 (axial), R e2, R e3 (polar), a bivector velocity out."""
@@ -631,7 +636,7 @@ class CliffordFlow(nn.Module):
             get = getattr(torch, "get_autocast_dtype", None)
             amp_dtype = get(img.device.type) if get else torch.get_autocast_gpu_dtype()
         with torch.autocast(img.device.type, enabled=False):
-            return self._flow_loss(cond_mv, fisher_a, rot_gt.float(), rots_eq, n_eq, amp_dtype)
+            return self._flow_loss(cond_mv, fisher_a, _full(rot_gt), rots_eq, n_eq, amp_dtype)
 
     def _flow_loss(self, cond_mv, fisher_a, rot_gt, rots_eq, n_eq, amp_dtype=None):
         r1 = matrix_to_rotor(rot_gt)
@@ -666,7 +671,7 @@ class CliffordFlow(nn.Module):
         with torch.autocast(rt.device.type, dtype=amp_dtype or torch.float32, enabled=amp_dtype is not None):
             pred = self.velocity(rt, t, cond_mv)
         # Still a per-sample mean, so the value stays comparable across k.
-        loss = (pred.float() - target).pow(2).sum(-1).mean()
+        loss = (_full(pred) - target).pow(2).sum(-1).mean()
         if fisher_loss is not None:
             loss = loss + fisher_loss
         return loss

@@ -93,14 +93,16 @@ class SO2ConditionHead(nn.Module):
         b, _, h, w = fmap.shape
         if (h, w) != (self.grid, self.grid):
             raise ValueError(f"SO2ConditionHead expects a {self.grid}x{self.grid} map, got {h}x{w}")
-        weights = self.maps(self.reduce(fmap)).flatten(2).float()        # (B, 6k, cells)
-        # Token assembly in FP32 even under autocast (POSE3D_AMP): mixed dtypes break the index writes below.
+        # Token assembly in full precision even under autocast (POSE3D_AMP): mixed dtypes break the index writes
+        # below. Half / bf16 maps are raised to float32; a float64 map (the equivariance tests) stays float64.
+        dtype = fmap.dtype if fmap.dtype in (torch.float32, torch.float64) else torch.float32
+        weights = self.maps(self.reduce(fmap)).flatten(2).to(dtype)      # (B, 6k, cells)
         with torch.autocast(fmap.device.type, enabled=False):
             return self._assemble(weights, b)
 
     def _assemble(self, weights, b):
-        weights = (weights * self.radial[:, self.ridx].float()).view(b, self.k, 6, -1)
-        direction = self.direction.float()
+        weights = (weights * self.radial[:, self.ridx].to(weights.dtype)).view(b, self.k, 6, -1)
+        direction = self.direction.to(weights.dtype)
         tokens = weights.new_zeros(b, self.k, 8)
         tokens[..., list(self._INVARIANT)] = weights[:, :, :4].sum(-1)
         tokens[..., list(self._VECTOR)] = weights[:, :, 4] @ direction
