@@ -81,7 +81,7 @@ data therefore do learn the square's turn.
 adds a gradient noise of norm 8.7 per batch of 64, on top of a batch-to-batch scatter of 16 that the exact target
 has as well; and the control in 5 follows the exact-target run with a delay of about one pass.
 
-## Pentagon and 7-gon: the same test does not work
+## Pentagon and 7-gon: the frozen-encoder test does not move them
 
 The continuation test of finding 5 was repeated on the final checkpoints of the pentagon (`n` = 5) and 7-gon
 (`n` = 7) runs, one thread or two per run, so 3 to 5 minutes per pass. Median error in degrees after the last pass
@@ -95,8 +95,8 @@ The continuation test of finding 5 was repeated on the final checkpoints of the 
 | field + projection, exact velocity `v*` as the target, 1.41e-4 | 9 | 18.7 | 13.8 |
 
 Nothing leaves the plateau, and the distance to the exact field does not shrink (pentagon 0.62 to 0.67, 7-gon 0.44
-to 0.48). The square, under the first row's setting, was at 12 degrees after 8 passes and 3.4 after 10. So the
-learning-rate schedule explains the square only.
+to 0.48). The square, under the first row's setting, was at 12 degrees after 8 passes and 3.4 after 10. (The end-to-end run in the next section shows that this test was too
+restrictive for the pentagon.)
 
 What differs, measured on the two checkpoints with `bottom_diag.py` (1,000 test images each):
 
@@ -116,15 +116,40 @@ the pose token can read but cannot compare with its own turn at frequency `n`.
 A likely reason the square is special, not tested: the 7x7 feature map, the lift and the HEALPix grid all have
 four-fold symmetry, so a four-lobed pattern fits them, while a five- or seven-lobed pattern does not.
 
+## Pentagon, end to end with a constant learning rate: it learns the turn
+
+Kaggle kernel `saudic/bottom5-gatr-cosdir-h8-constlr-e120-t4x2` (2026-11-16): the original pentagon run with two
+changes, a constant learning rate (`--lr_schedule step --lr_step_gamma 1.0`) and 120 epochs instead of 40. Same
+code snapshot, 2xT4, batch 64, seed 0, ResNet trainable; 72 s per epoch.
+
+| epochs | median error, degrees |
+|---|---|
+| 1 to 14 | 74 down to 40 (first plateau) |
+| 15, 16 | 28, 19.5 |
+| 17 to 36 | 18 (guessed turn: 20 epochs) |
+| 37 to 43 | 17.7, 17.6, 17.5, 16.7, 16.2, 14.0, 14.0 |
+| 44, 45, 46 | 4.8, 2.2, 1.6 |
+| 47 to 120 | 0.5 to 2.5, about 0.7 at the end (0.65 at epoch 120) |
+
+The second plateau lasts about 27 epochs (1,900 steps of batch 512); the 40-epoch run had 22 epochs left when it
+reached it, at a decaying rate. So the schedule explains the pentagon too, and the CPU test above was misleading
+for it: it froze the ResNet and stopped after about 800 steps of batch 64. Which of the two (frozen ResNet, short
+budget) made the difference is not known.
+
+The same run for the 7-gon (`cheesewaffler/bottom7-gatr-cosdir-h8-constlr-e120-t4x2`) was launched on 2026-11-16.
+
 ## Conclusion
 
-* **Square**: a training-schedule failure. Learning proceeds in two steps separated by plateaus. The first (the
-  pose is a turn about the optical axis, which does not depend on the image) takes 17 to 18 of the 40 epochs. By
-  then the cosine schedule has lowered the learning rate to 60 %, and to 19 % by epoch 30; the 22 remaining epochs
-  amount to about 410 steps at the full rate, where the continued runs only begin to leave the plateau.
-* **Pentagon and 7-gon**: not explained by the schedule. Full learning rate, a noise-free target and a trainable
-  projection together did not move them in 9 to 11 passes. The measured difference is that their turn is not
-  present on the sphere as an `n`-lobed pattern.
+* **Square and pentagon**: a training-schedule failure. Learning proceeds in steps separated by plateaus. The
+  first (the pose is a turn about the optical axis, which does not depend on the image) takes 14 to 18 epochs. The
+  second plateau, at the guessed-turn level, takes hundreds to thousands of further steps at the full rate (about
+  700 for the square with the encoder frozen, about 1,900 for the pentagon end to end), and the 40-epoch cosine
+  schedule has lowered the rate to 60 % when that plateau starts and to 19 % by epoch 30.
+* **7-gon**: open. The frozen-encoder test did not move it, but neither did it move the pentagon, which then
+  learned end to end.
+* The difference between the square and the others in how the turn is laid out on the sphere (table above) is
+  real for the 40-epoch checkpoints, but it is not an obstacle to learning: it probably describes a model that has
+  not started the second step, not one that cannot take it.
 
 ## Limits
 
