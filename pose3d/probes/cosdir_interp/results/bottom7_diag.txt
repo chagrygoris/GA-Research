@@ -1,0 +1,13 @@
+turn decodable from (held-out R2 of cos/sin of n*theta):
+  trained ResNet map 7x7x2048                    linear R2 =  1.00   nonlinear R2 =  0.73
+  trained ResNet map, mean over cells            linear R2 =  1.00   nonlinear R2 =  0.55
+  cloud scalars 88x64 (what the GATr sees)       linear R2 =  1.00   nonlinear R2 =  0.58
+  cloud scalars, mean over tokens                linear R2 =  0.95   nonlinear R2 =  0.81
+rings: polar angle, points, share of ring variance at azimuthal frequency n, phase coherence with the turn
+   11.7 deg,  4 points: cannot hold frequency 7 (needs more than 7 points)
+   23.6 deg,  8 points: share 0.854, coherence 0.04
+   35.7 deg, 12 points: share 0.006, coherence 0.09
+   48.2 deg, 16 points: share 0.002, coherence 0.10
+   60.0 deg, 16 points: share 0.008, coherence 0.10
+   70.5 deg, 16 points: share 0.010, coherence 0.05
+   80.4 deg, 16 points: share 0.012, coherence 0.09

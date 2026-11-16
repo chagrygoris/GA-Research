@@ -81,25 +81,57 @@ data therefore do learn the square's turn.
 adds a gradient noise of norm 8.7 per batch of 64, on top of a batch-to-batch scatter of 16 that the exact target
 has as well; and the control in 5 follows the exact-target run with a delay of about one pass.
 
+## Pentagon and 7-gon: the same test does not work
+
+The continuation test of finding 5 was repeated on the final checkpoints of the pentagon (`n` = 5) and 7-gon
+(`n` = 7) runs, one thread or two per run, so 3 to 5 minutes per pass. Median error in degrees after the last pass
+(start: 19.0 and 13.5; a guessed turn gives 18 and 12.9):
+
+| what is trained, target, learning rate | passes | pentagon | 7-gon |
+|---|---|---|---|
+| field, standard flow matching, 1.41e-4 | 11 | 19.7 | 12.9 |
+| field, standard flow matching, 7.07e-6 (the rate the runs ended with) | 8 | 19.4 | 13.0 |
+| field + projection onto the sphere (1x1 convolution and lift, on cached ResNet maps), standard, 1.41e-4 | 10 | 19.8 | 12.8 |
+| field + projection, exact velocity `v*` as the target, 1.41e-4 | 9 | 18.7 | 13.8 |
+
+Nothing leaves the plateau, and the distance to the exact field does not shrink (pentagon 0.62 to 0.67, 7-gon 0.44
+to 0.48). The square, under the first row's setting, was at 12 degrees after 8 passes and 3.4 after 10. So the
+learning-rate schedule explains the square only.
+
+What differs, measured on the two checkpoints with `bottom_diag.py` (1,000 test images each):
+
+| | square | pentagon | 7-gon |
+|---|---|---|---|
+| turn readable from the tokens, linear R² | 1.00 | 1.00 | 1.00 |
+| share of the signal along a 16-point ring at azimuthal frequency `n` | 0.15 to 0.25 | 0.01 to 0.04 | 0.002 to 0.012 |
+| coherence of that component's phase with the turn (1 = perfect) | 0.76 to 0.80 | 0.34 to 0.41 | 0.05 to 0.10 |
+
+In all three cases the encoder knows the turn, but only for the square is it laid out on the sphere as a pattern
+with `n` lobes around the optical axis that turns with the object. The attention windows of
+`reports/cosdir_mechanism.md` read exactly such a pattern: the pose token looks at the sphere where its own body
+direction points, so the value it reads depends on the pose's turn only if the features vary along the ring. For
+the pentagon and 7-gon the turn is in the tokens as a code that is nearly the same at every ring position, which
+the pose token can read but cannot compare with its own turn at frequency `n`.
+
+A likely reason the square is special, not tested: the 7x7 feature map, the lift and the HEALPix grid all have
+four-fold symmetry, so a four-lobed pattern fits them, while a five- or seven-lobed pattern does not.
+
 ## Conclusion
 
-The failure of these runs is a training-schedule failure, not a limit of the representation:
-
-* Learning proceeds in two steps separated by plateaus. The first step (the pose is a turn about the optical
-  axis, which does not depend on the image) takes 17 to 18 of the 40 epochs in every run.
-* When the model reaches the second plateau, the cosine schedule has already lowered the learning rate to 60 %,
-  and to 19 % by epoch 30. The 22 remaining epochs amount to about 410 steps at the full rate, the number of steps
-  after which the continued runs above only begin to leave the plateau.
-
-This also answers the earlier prediction from `reports/cosdir_mechanism.md`: the square and the pentagon are within
-the model's reach, as the window argument said. Whether the 7-, 10- and 13-gon follow with more training is open:
-for those the sphere grid (at most 16 points per ring) and the window width are real limits.
+* **Square**: a training-schedule failure. Learning proceeds in two steps separated by plateaus. The first (the
+  pose is a turn about the optical axis, which does not depend on the image) takes 17 to 18 of the 40 epochs. By
+  then the cosine schedule has lowered the learning rate to 60 %, and to 19 % by epoch 30; the 22 remaining epochs
+  amount to about 410 steps at the full rate, where the continued runs only begin to leave the plateau.
+* **Pentagon and 7-gon**: not explained by the schedule. Full learning rate, a noise-free target and a trainable
+  projection together did not move them in 9 to 11 passes. The measured difference is that their turn is not
+  present on the sphere as an `n`-lobed pattern.
 
 ## Limits
 
-* Field-only training with the image encoder frozen and a fresh optimiser, on the square only. The original runs
-  train the encoder too, with batch 512 (8 samples per image); that should help rather than hurt, but it was not
-  run.
+* Field-only training (plus the projection in two rows) with the ResNet frozen and a fresh optimiser, batch 64.
+  The original runs train the ResNet too, with batch 512 (8 samples per image). A trainable ResNet might learn to
+  produce the `n`-lobed pattern for the pentagon and 7-gon; that was not run, and 9 to 11 passes is a short budget.
+* The pentagon and 7-gon diagnostics stopped before their velocity part; the ring and read-out numbers are complete.
 * Why the first, image-independent step takes 17 epochs was not investigated. It costs half the budget in every
   run and looks like the cheaper thing to fix.
 * A run with nearest coupling (each noise sample flows to its nearest equivalent pose) was started from the same
@@ -107,8 +139,9 @@ for those the sphere grid (at most 16 points per ring) and the window width are 
 
 ## Next experiments (GPU, need approval)
 
-1. The same bottom-view runs with a constant learning rate, or 120 epochs: `n` = 4 and 5 first. Expected from the
-   table above: the turn resolves soon after the first drop.
-2. The same for `n` = 7, 10, 13, to see where the grid and window limits start to bite.
+1. The square bottom-view run with a constant learning rate or 120 epochs, end to end. Expected: the turn resolves
+   soon after the first drop.
+2. The pentagon and 7-gon the same way, to see whether a trainable ResNet finds the `n`-lobed pattern by itself.
+   If not: a denser sphere grid and feature map without four-fold structure (HEALPix nside 8; a 14x14 map).
 3. Find out why the ring of possible poses takes 17 epochs (for instance: start from a checkpoint trained on
    another `n`; the first step should transfer).
