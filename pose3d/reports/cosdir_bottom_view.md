@@ -141,7 +141,26 @@ reached it, at a decaying rate. So the schedule explains the pentagon too, and t
 for it: it froze the ResNet and stopped after about 800 steps of batch 64. Which of the two (frozen ResNet, short
 budget) made the difference is not known.
 
-The same run for the 7-gon (`cheesewaffler/bottom7-gatr-cosdir-h8-constlr-e120-t4x2`) was launched on 2026-11-16.
+
+## 7-gon, end to end with a constant learning rate: it stays on the plateau
+
+Kaggle kernel `cheesewaffler/bottom7-gatr-cosdir-h8-constlr-e120-t4x2` (2026-11-16): the same two changes on the
+original 7-gon run.
+
+| epochs | median error, degrees |
+|---|---|
+| 1 to 15 | 72 down to 37 (first plateau) |
+| 16 | 18.7 |
+| 17 to 120 | 12.3 to 13.5 (guessed turn: 12.9); mean 12.7 over epochs 17 to 40, 12.6 over 41 to 80, 12.5 over 81 to 120 |
+
+Final evaluation (32 samples per image, 1,000 test views): median error 11.75 degrees, acc@15 0.623, log-likelihood
+7.84. The model stays on the guessed-turn plateau for 104 epochs, against 27 for the pentagon; the mean drifts down
+by about 0.1 degrees over the run. So within 120 epochs the schedule does not explain the 7-gon. This is the case
+that the grid argument singled out: 88 hemisphere points give at most 16 per ring around the optical axis, the
+bare minimum for a 7-fold pattern, and the attention windows pass degree 7 at 6 to 32 % of its amplitude.
+
+A run on a denser grid is prepared, not launched: `notebooks/bottom7-gatr-cosdir-nside8-runner.ipynb`
+(`--dircloud_nside 8`: 368 points, up to 32 per ring; cosine attention started at inverse temperature 60).
 
 ## Image2Sphere with L = 6 on the 7-gon: the constant rate changes nothing
 
@@ -170,8 +189,9 @@ put one broad peak on one of the seven equivalent poses.
   second plateau, at the guessed-turn level, takes hundreds to thousands of further steps at the full rate (about
   700 for the square with the encoder frozen, about 1,900 for the pentagon end to end), and the 40-epoch cosine
   schedule has lowered the rate to 60 % when that plateau starts and to 19 % by epoch 30.
-* **7-gon**: open. The frozen-encoder test did not move it, but neither did it move the pentagon, which then
-  learned end to end.
+* **7-gon**: not explained by the schedule within 120 epochs. With a constant rate it stays at the guessed-turn
+  level for 104 epochs (the pentagon needed 27). The remaining suspects are the 16 points per ring of the sphere grid
+  and the width of the attention windows; the denser-grid run above tests them.
 * The difference between the square and the others in how the turn is laid out on the sphere (table above) is
   real for the 40-epoch checkpoints, but it is not an obstacle to learning: it probably describes a model that has
   not started the second step, not one that cannot take it.
