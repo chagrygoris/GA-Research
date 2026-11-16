@@ -131,6 +131,9 @@ code snapshot, 2xT4, batch 64, seed 0, ResNet trainable; 72 s per epoch.
 | 44, 45, 46 | 4.8, 2.2, 1.6 |
 | 47 to 120 | 0.5 to 2.5, about 0.7 at the end (0.65 at epoch 120) |
 
+Final evaluation (32 samples per image, 1,000 test views): median error 0.50 degrees, acc@15 1.0, log-likelihood
+14.28 (uniform: -2.29).
+
 ![pentagon error by epoch](figures/cosdir_bottom5_mre.png)
 
 The second plateau lasts about 27 epochs (1,900 steps of batch 512); the 40-epoch run had 22 epochs left when it
