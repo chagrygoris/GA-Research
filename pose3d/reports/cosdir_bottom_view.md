@@ -143,6 +143,26 @@ budget) made the difference is not known.
 
 The same run for the 7-gon (`cheesewaffler/bottom7-gatr-cosdir-h8-constlr-e120-t4x2`) was launched on 2026-11-16.
 
+## Image2Sphere with L = 6 on the 7-gon: the constant rate changes nothing
+
+Kaggle kernel `arynabiaroza/symsol-bottom7-i2s-l6-constlr-e120-l4` (2026-11-16): the 40-epoch run
+`arynabiaroza/symsol-chile-bottom7-i2s-l6-l4` (Image2Sphere, spherical-harmonic degrees up to `L` = 6, so no degree-7
+component) with a constant learning rate after its 5 warm-up epochs and 120 epochs. Same snapshot, 4xL4.
+
+| | 40 epochs, cosine | 120 epochs, constant |
+|---|---|---|
+| median error, last 20 epochs | 5.7 to 6.7 | 5.6 to 7.0 |
+| final evaluation, 32 samples: median error | 6.49 | 6.74 |
+| acc@15 | 0.88 | 0.919 |
+| log-likelihood | 4.52 | 4.11 |
+
+Both runs reach 6 to 7 degrees by epoch 18 and stay there; 80 more epochs at the full rate move nothing. So for
+this model the level is a limit of the model, not of the schedule, as its band limit predicts.
+
+Note that this level is half the 12.9 degrees of a guessed turn. Why a degree-6 model does better than guessing on
+the bottom view was not investigated. One untested explanation: it cannot represent seven equal peaks, but it can
+put one broad peak on one of the seven equivalent poses.
+
 ## Conclusion
 
 * **Square and pentagon**: a training-schedule failure. Learning proceeds in steps separated by plateaus. The
