@@ -81,3 +81,32 @@ def test_spherecloud_flow_trains_and_samples():
     assert math.isfinite(loss.item())
     assert model.adapter.conv_adapter.lift.proj.weight.grad.abs().max() > 0
     assert model.eval().predict(img, n_samples=2, steps=2).shape == (2, 3, 3)
+
+
+def test_dircloud_nside_sets_the_density_of_the_sphere_tokens():
+    """--dircloud_nside 8: 368 hemisphere points (up to 32 per ring around the optical axis) + the e3 token."""
+    from pose3d.models.gatr_denoiser import _ensure_xformers_stub
+
+    _ensure_xformers_stub()
+    pytest.importorskip("gatr", reason="GATr package not installed")
+    from clifford.algebra.cliffordalgebra import CliffordAlgebra
+    from pose3d.models.clifford_flow import CliffordFlow
+
+    def build(nside):
+        torch.manual_seed(0)
+        return CliffordFlow(CliffordAlgebra((1, 1, 1)), hidden_dim=[8], pretrained_backbone=False,
+                            encoder_type="resnet50", conv_adapter=False, n_time_samples=2,
+                            vector_field="gatr", cond_tokens="spherecloud", pose_tokens="frame_pin",
+                            condition_head="none", dircloud_scalars=8, dircloud_nside=nside, gatr_zero_readout=False,
+                            gatr=dict(num_blocks=1, mv_channels=4, s_channels=8, num_heads=2)).eval()
+
+    coarse, dense = build(4), build(8)
+    assert coarse.adapter.conv_adapter.n_tokens == 89 and dense.adapter.conv_adapter.n_tokens == 369
+    points = dense.adapter.conv_adapter.lift.points
+    rings = torch.unique(points[:, 2].round(decimals=4), return_counts=True)[1]
+    assert rings.max() == 32
+    fmap = torch.randn(2, 2048, 7, 7)
+    with torch.no_grad():
+        cond = dense.condition_head(dense.adapter.conv_adapter(fmap))
+        v = dense.velocity(random_rotor(2), torch.tensor([0.3, 0.7]), cond)
+    assert cond.shape[1] == 369 and v.shape == (2, 3) and torch.isfinite(v).all()

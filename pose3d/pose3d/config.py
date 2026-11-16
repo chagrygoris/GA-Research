@@ -363,6 +363,9 @@ class FlowConfig:
     cond_tokens: Literal["pooled", "so2", "dircloud", "spherecloud", "sphere", "points", "pointsphere",
                          "pointcloud", "pointgatrsphere", "spheregatr"] = "pooled"   # sphere: so3fourier / rotorcorr
     dircloud_scalars: int = 64
+    # With cond_tokens=spherecloud: HEALPix nside of the hemisphere the tokens sit on. 4: 88 points, at most 16 per
+    # ring around the optical axis (azimuthal frequencies below 8); 8: 368 points, up to 32 per ring.
+    dircloud_nside: int = 4
     # With cond_tokens=dircloud: also feed a constant image-up token (-e2). Breaks P1's exact 90 deg turn
     # symmetry, keeps the flip, and lets the head read in-plane orientation from the ResNet's channels
     # (models/dircloud_head.py; reports/symsol_p1_stall.md).
