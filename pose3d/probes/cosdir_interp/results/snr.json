@@ -1,0 +1,1 @@
+{"indep": {"signal_norm": 3.487821578979492, "noise_norm_b64": 8.654555320739746, "exact_batch_scatter": 16.054914474487305}, "nearest": {"signal_norm": 12.63785457611084, "noise_norm_b64": 0.0, "exact_batch_scatter": 19.34090232849121}}

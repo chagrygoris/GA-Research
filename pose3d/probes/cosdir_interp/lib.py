@@ -10,7 +10,7 @@ os.environ["POSE3D_SYMSOL_COSMV"] = "1"; os.environ["POSE3D_SYMSOL_ATTENTION"] =
 import numpy as np, torch
 from PIL import Image
 from pose3d.models.gatr_denoiser import _ensure_xformers_stub; _ensure_xformers_stub()
-CKPT = SNAP + "/symsol1_10pct_gatr_spherecloud_cosdir_h8_coslr_adamw_l4x4.pth"
+CKPT = os.environ.get("COSDIR_CKPT", SNAP + "/symsol1_10pct_gatr_spherecloud_cosdir_h8_coslr_adamw_l4x4.pth")
 ARGS = ['--path_to_datasets', '/nonexistent', '--vector_field', 'gatr', '--cond_tokens', 'spherecloud', '--pose_tokens', 'frame_pin', '--condition_head', 'none', '--dircloud_scalars', '64', '--gatr_mv_channels', '8', '--gatr_s_channels', '32', '--no-gatr_zero_readout', '--encoder', 'resnet50', '--dataset', 'symsol', '--symsol_set', '1', '--no-use_warp', '--no-use_synth', '--no-ema', '--batch_size', '64', '--gatr_heads', '8', '--seed', '0']
 SHAPES = ("tet", "cube", "icosa", "cone", "cyl")
 
