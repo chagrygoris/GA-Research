@@ -200,7 +200,8 @@ instead of 7x7 (`notebooks/bottom7-gatr-cosdir-grid14-nside8-runner.ipynb`; 189 
 | 67, 68 | 1.8, 1.6 |
 | 69 to 120 | 0.5 to 2.1, mean 0.74 over the last 20 epochs (0.56 at epoch 120) |
 
-(The final 32-sample evaluation and log-likelihood were still running when this was written.) The run that differs only
+Final evaluation (32 samples per image, 1,000 test views): median error 0.40 degrees, acc@15 0.999, log-likelihood
+13.28. The run that differs only
 in the map size stayed at 12.4 to 13.1 degrees for all 120 epochs, so the 7x7 feature map was a limit for the
 7-gon. Whether the 14x14 map is enough without the denser sphere grid and sharper attention was not run. The
 second plateau lasts 45 epochs here against 27 for the pentagon.
@@ -221,6 +222,25 @@ component) with a constant learning rate after its 5 warm-up epochs and 120 epoc
 Both runs reach 6 to 7 degrees by epoch 18 and stay there; 80 more epochs at the full rate move nothing. So for
 this model the level is a limit of the model, not of the schedule, as its band limit predicts.
 
+![7-gon: GATr vs Image2Sphere](figures/cosdir_bottom7_gatr_vs_i2s.png)
+
+**The same scaling as for the GATr** (`cheesewaffler/bottom7-i2s-l6-grid14-proj3-constlr-e120-t4x2`, 2026-11-17;
+`notebooks/bottom7-i2s-l6-grid14-runner.ipynb`): `--i2s_grid 14` (the ResNet map at 14x14, as above) and
+`--i2s_proj_rec_level 3` (the map is projected onto 400 hemisphere points instead of upstream's 104), constant rate,
+120 epochs, `L` = 6 unchanged; 2xT4 instead of 4xL4, same global batch 64; 55 s per epoch.
+
+| | 7x7 map, 104 points | 14x14 map, 400 points |
+|---|---|---|
+| median error, epochs 21 to 120: mean | (6 to 7 throughout) | 6.66 |
+| median error, last 20 epochs | 5.6 to 7.0 | 5.4 to 7.2 (mean 6.65) |
+| epoch 120 | 6.8 | 6.25 |
+
+No change: the level is the same 6 to 7 degrees, reached at the same epoch (about 15). The larger map that took the
+cosine-attention GATr from 12.6 to 0.4 degrees does nothing for a model limited to degree 6. The kernel ended with an
+error after training, in the final evaluation (this snapshot calls the flow models' likelihood on Image2Sphere:
+`'I2SReal' object has no attribute 'condition'`), so there is no 32-sample evaluation or log-likelihood for this
+run; the per-epoch errors are complete.
+
 Note that this level is half the 12.9 degrees of a guessed turn. Why a degree-6 model does better than guessing on
 the bottom view was not investigated. One untested explanation: it cannot represent seven equal peaks, but it can
 put one broad peak on one of the seven equivalent poses.
@@ -232,11 +252,13 @@ put one broad peak on one of the seven equivalent poses.
   second plateau, at the guessed-turn level, takes hundreds to thousands of further steps at the full rate (about
   700 for the square with the encoder frozen, about 1,900 for the pentagon end to end), and the 40-epoch cosine
   schedule has lowered the rate to 60 % when that plateau starts and to 19 % by epoch 30.
-* **7-gon**: learned once the feature map is 14x14 (about 0.7 degrees). With the 7x7 map it stays at the
+* **7-gon**: learned once the feature map is 14x14 (0.40 degrees in the final evaluation). With the 7x7 map it stays at the
   guessed-turn level for 120 epochs at a constant rate, on the 88-point sphere grid and equally on a 4 times denser
   one with sharper attention. So for the 7-gon the limit was the resolution of the feature map, and the schedule,
   the points per ring and the window width were not sufficient fixes alone. Open: whether the 14x14 map suffices on
   the 88-point grid.
+* **Image2Sphere with L = 6** stays at 6 to 7 degrees on the 7-gon under every change tried (constant rate, 120
+  epochs, 14x14 map, denser projection): a limit of the model, as its band limit predicts.
 * The difference between the square and the others in how the turn is laid out on the sphere (table above) is
   real for the 40-epoch checkpoints, but it is not an obstacle to learning: it probably describes a model that has
   not started the second step, not one that cannot take it.
