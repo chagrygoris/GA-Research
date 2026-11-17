@@ -174,6 +174,10 @@ Kaggle kernel `cheesewaffler/bottom7-gatr-cosdir-nside8-s60-constlr-e120-t4x2` (
 | median error, epochs 17 to 120 | 12.3 to 13.5 | 12.4 to 13.1 |
 | mean over epochs 17-40 / 41-80 / 81-120 | 12.66 / 12.63 / 12.53 | 12.70 / 12.70 / 12.66 |
 
+Final evaluation (32 samples per image): median error 12.04 degrees, acc@15 0.614, log-likelihood 12.92 (88 points:
+11.75 degrees, 0.623, 7.84). The log-likelihood is much higher although the turn is still guessed: it rewards how
+tightly the poses are placed on the ring of turns about the axis, which the denser grid sharpens, not the turn.
+
 The two curves coincide (figure above). So neither the number of points per ring nor the width of the attention
 windows is what keeps the 7-gon at the guessed-turn level, which is what `reports/cosdir_mechanism.md` and the
 first version of this report predicted. That prediction is wrong for the bottom view.
@@ -182,6 +186,10 @@ What remains untested: the 7x7 ResNet feature map, which the lift only interpola
 sphere grid adds no information); and whether a model that reads the sphere through a few windows per block can
 build a 7-fold dependence on its own turn at all within 4 blocks. Two changes were made at once here, but since
 nothing moved there is nothing to attribute.
+
+A third run adds a 14x14 feature map (`--dircloud_grid 14`: the ResNet's last stage at stride 1 with dilation 2)
+to the denser grid and sharper attention: `cheesewaffler/bottom7-gatr-cosdir-grid14-nside8-s60-e120-t4x2`, launched
+2026-11-17 (`notebooks/bottom7-gatr-cosdir-grid14-nside8-runner.ipynb`).
 
 ## Image2Sphere with L = 6 on the 7-gon: the constant rate changes nothing
 
