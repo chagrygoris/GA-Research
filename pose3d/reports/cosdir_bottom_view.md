@@ -198,9 +198,9 @@ instead of 7x7 (`notebooks/bottom7-gatr-cosdir-grid14-nside8-runner.ipynb`; 189 
 | 16 to 60 | 12.4 to 13.1 (guessed turn 12.9: 45 epochs) |
 | 61 to 66 | 12.0, 12.1, 11.7, 10.6, 7.4, 5.6 |
 | 67, 68 | 1.8, 1.6 |
-| 69 to 111 | 0.5 to 2.1, mean 0.72 over the last 20 logged epochs |
+| 69 to 120 | 0.5 to 2.1, mean 0.74 over the last 20 epochs (0.56 at epoch 120) |
 
-(Epochs 112 to 120 and the final evaluation were still running when this was written.) The run that differs only
+(The final 32-sample evaluation and log-likelihood were still running when this was written.) The run that differs only
 in the map size stayed at 12.4 to 13.1 degrees for all 120 epochs, so the 7x7 feature map was a limit for the
 7-gon. Whether the 14x14 map is enough without the denser sphere grid and sharper attention was not run. The
 second plateau lasts 45 epochs here against 27 for the pentagon.
