@@ -161,8 +161,27 @@ by about 0.1 degrees over the run. So within 120 epochs the schedule does not ex
 that the grid argument singled out: 88 hemisphere points give at most 16 per ring around the optical axis, the
 bare minimum for a 7-fold pattern, and the attention windows pass degree 7 at 6 to 32 % of its amplitude.
 
-A run on a denser grid is prepared, not launched: `notebooks/bottom7-gatr-cosdir-nside8-runner.ipynb`
-(`--dircloud_nside 8`: 368 points, up to 32 per ring; cosine attention started at inverse temperature 60).
+## 7-gon on a denser sphere grid with sharper attention: no change
+
+Kaggle kernel `cheesewaffler/bottom7-gatr-cosdir-nside8-s60-constlr-e120-t4x2` (2026-11-17): the constant-rate
+7-gon run with `--dircloud_nside 8` (368 hemisphere points, up to 32 per ring around the optical axis, instead of
+88 with at most 16) and the cosine attention started at inverse temperature 60 instead of 30
+(`notebooks/bottom7-gatr-cosdir-nside8-runner.ipynb`; 180 s per epoch on 2xT4).
+
+| | 88 points, temperature 30 | 368 points, temperature 60 |
+|---|---|---|
+| first plateau ends | epoch 16 | epoch 16 |
+| median error, epochs 17 to 120 | 12.3 to 13.5 | 12.4 to 13.1 |
+| mean over epochs 17-40 / 41-80 / 81-120 | 12.66 / 12.63 / 12.53 | 12.70 / 12.70 / 12.66 |
+
+The two curves coincide (figure above). So neither the number of points per ring nor the width of the attention
+windows is what keeps the 7-gon at the guessed-turn level, which is what `reports/cosdir_mechanism.md` and the
+first version of this report predicted. That prediction is wrong for the bottom view.
+
+What remains untested: the 7x7 ResNet feature map, which the lift only interpolates onto the sphere (a denser
+sphere grid adds no information); and whether a model that reads the sphere through a few windows per block can
+build a 7-fold dependence on its own turn at all within 4 blocks. Two changes were made at once here, but since
+nothing moved there is nothing to attribute.
 
 ## Image2Sphere with L = 6 on the 7-gon: the constant rate changes nothing
 
@@ -191,9 +210,10 @@ put one broad peak on one of the seven equivalent poses.
   second plateau, at the guessed-turn level, takes hundreds to thousands of further steps at the full rate (about
   700 for the square with the encoder frozen, about 1,900 for the pentagon end to end), and the 40-epoch cosine
   schedule has lowered the rate to 60 % when that plateau starts and to 19 % by epoch 30.
-* **7-gon**: not explained by the schedule within 120 epochs. With a constant rate it stays at the guessed-turn
-  level for 104 epochs (the pentagon needed 27). The remaining suspects are the 16 points per ring of the sphere grid
-  and the width of the attention windows; the denser-grid run above tests them.
+* **7-gon**: not learned. A constant rate for 120 epochs leaves it at the guessed-turn level (104 epochs on the
+  plateau; the pentagon needed 27), and so does the same run on a 4 times denser sphere grid with sharper
+  attention. The schedule, the points per ring and the window width are therefore ruled out as the single cause;
+  the 7x7 feature map and the depth of the field are the remaining suspects.
 * The difference between the square and the others in how the turn is laid out on the sphere (table above) is
   real for the 40-epoch checkpoints, but it is not an obstacle to learning: it probably describes a model that has
   not started the second step, not one that cannot take it.
