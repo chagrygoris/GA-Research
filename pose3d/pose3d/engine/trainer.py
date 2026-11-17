@@ -195,7 +195,7 @@ def train(model, train_loader, val_loader, optimizer, scheduler, criterion, run,
         val_loss = validate_epoch(eval_model, val_loader, criterion, cfg)
         # MRE sampling is expensive; its fixed-noise RNG scope restores both RNGs,
         # so changing its logging frequency does not change optimization draws.
-        measure_mre = (not cfg.flow.gatr_native_stf or i == 0 or i+1 == n_epochs
+        measure_mre = (not (cfg.flow.gatr_native_stf or cfg.flow.gatr_harmonic_attn_lmax) or i == 0 or i+1 == n_epochs
                        or (i+1) % cfg.flow.gatr_native_stf_eval_every == 0)
         if measure_mre:
             err, cls = calculate_evaluation_metrics(eval_model, val_loader, cfg, return_classes=True)

@@ -120,43 +120,10 @@ def test_no_nc_launch_config():
     assert not cfg.data.symsol_nearest_coupling and not cfg.flow.gatr_zero_readout
 
 
-def _rotate_cl3(x,q):
-    """A rotation q acting on Cl(3,0) multivectors (blades 1, e1, e2, e3, e12, e13, e23, e123)."""
-    y=x.clone();y[...,1:4]=x[...,1:4]@q.T
-    w=torch.stack([x[...,6],-x[...,5],x[...,4]],-1)@q.T      # bivector -> dual vector, rotate, back
-    y[...,4],y[...,5],y[...,6]=w[...,2],-w[...,1],w[...,0]
-    return y
-
-def test_stf_vector_field_so2_frame_ch_covariant_and_trainable():
-    from pose3d.models.native_stf import STFVectorField
-    torch.manual_seed(5)
-    f=STFVectorField(6,mv_channels=4,s_channels=16,num_blocks=2,num_heads=2,stf_channels=3)
-    x=torch.randn(2,2+6,3,8)
-    x[:,1,:,1:]=0;x[:,1,1:]=0                                 # time token: a scalar in channel 0
-    x[:,2:,1:]=0                                              # so2 tokens live in channel 0
-    q,_=torch.linalg.qr(torch.randn(3,3));q=q*torch.sign(torch.linalg.det(q))
-    a=f(x);b=f(_rotate_cl3(x,q))
-    assert a.shape==(2,1,8) and a.abs().max()>1e-5
-    torch.testing.assert_close(b,_rotate_cl3(a,q),atol=3e-5,rtol=5e-4)
-    a.square().sum().backward()
-    for name,p in f.named_parameters():
-        if name.startswith(('stf_seed','stf_blocks')):
-            assert p.grad is not None and torch.isfinite(p.grad).all(),name
-
-def test_stf_vector_field_launch_config():
-    cfg=parse_args(['--path_to_datasets','/tmp','--vector_field','gatr','--cond_tokens','so2','--pose_tokens','frame_ch',
-        '--so2_split_norm','--condition_head','none','--gatr_native_stf','--gatr_native_stf_channels','8',
-        '--no-pretrained_backbone'])
-    from pose3d.models import build_model
-    from pose3d.train import make_algebra
-    from pose3d.models.native_stf import STFVectorField
-    model=build_model(cfg,make_algebra(cfg.model.algebra_dim))
-    assert isinstance(model.vector_field,STFVectorField)
-
-def test_stf_vector_field_full_model_bf16_autocast():
+def test_native_field_full_model_bf16_autocast():
     # The launch model end to end under bf16 autocast (POSE3D_AMP=bf16), on CPU: catches dtype mismatches before a GPU run.
-    cfg=parse_args(['--path_to_datasets','/tmp','--vector_field','gatr','--cond_tokens','so2','--pose_tokens','frame_ch',
-        '--so2_split_norm','--condition_head','none','--gatr_native_stf','--gatr_native_stf_channels','8',
+    cfg=parse_args(['--path_to_datasets','/tmp','--vector_field','gatr','--cond_tokens','spherecloud','--pose_tokens',
+        'frame_pin','--condition_head','none','--gatr_native_stf','--gatr_native_stf_channels','8',
         '--no-pretrained_backbone','--n_time_samples','2'])
     from pose3d.models import build_model
     from pose3d.train import make_algebra
@@ -170,3 +137,43 @@ def test_stf_vector_field_full_model_bf16_autocast():
     loss.backward()
     grads=[p.grad for n,p in model.named_parameters() if n.startswith('vector_field.stf_') and p.grad is not None]
     assert grads and all(torch.isfinite(g).all() for g in grads)
+
+
+def test_pin_pose_encoding_ablations():
+    """--pin_pose_encoding quat / quat_frame_seed: the quaternion in one channel; the default stays 'frame'."""
+    import pytest
+    import torch
+    from pose3d.config import parse_args
+    from pose3d.models import build_model
+    from pose3d.train import make_algebra
+    base = ['--path_to_datasets=/tmp', '--model', 'clifford_flow', '--encoder', 'resnet50', '--dataset', 'symsol',
+            '--vector_field', 'gatr', '--condition_head', 'none', '--cond_tokens', 'spherecloud', '--pose_tokens',
+            'frame_pin', '--gatr_native_stf', '--gatr_native_stf_lmax', '3', '--gatr_native_stf_channels', '2',
+            '--gatr_blocks', '1', '--gatr_mv_channels', '4', '--gatr_s_channels', '8', '--gatr_heads', '2',
+            '--no-gatr_zero_readout', '--no-pretrained_backbone', '--n_time_samples', '1']
+    assert parse_args(base).flow.pin_pose_encoding == 'frame'
+    q, _ = torch.linalg.qr(torch.randn(2, 3, 3))
+    rot = q * torch.sign(torch.linalg.det(q))[:, None, None]
+    for enc in ('quat', 'quat_frame_seed'):
+        cfg = parse_args(base + ['--pin_pose_encoding', enc])
+        torch.manual_seed(0)
+        model = build_model(cfg, make_algebra(cfg.model.algebra_dim))
+        vf, seen = model.vector_field, {}
+        orig = vf.native_seed
+        def spy(pose, t, cond, seed_pose=None):
+            out = orig(pose, t, cond, seed_pose)
+            seen['pose'], seen['tracks'] = pose.detach().clone(), {l: z.detach() for l, z in out[2].items()}
+            return out
+        vf.native_seed = spy
+        loss = model.compute_loss(torch.randn(2, 3, 224, 224), rot)
+        loss.backward()
+        assert torch.isfinite(loss)
+        pose = seen['pose']                                 # (B', 3, 8) Cl(3,0): 1, e1, e2, e3, e12, e13, e23, e123
+        assert pose[:, 1:].abs().max() == 0                 # channels 2-3 empty
+        assert pose[:, 0, [1, 2, 3, 7]].abs().max() == 0    # no vector / trivector part
+        assert torch.allclose(pose[:, 0, [0, 4, 5, 6]].norm(dim=-1), torch.ones(pose.shape[0]), atol=1e-4)
+        seed_size = sum(float(z[:, 0].abs().max()) for z in seen['tracks'].values())   # pose token's STF seed
+        assert (seed_size > 0) == (enc == 'quat_frame_seed')
+    with pytest.raises(ValueError):                         # quat_frame_seed needs the native STF track
+        build_model(parse_args([a for a in base if a != '--gatr_native_stf'] + ['--pin_pose_encoding',
+                    'quat_frame_seed']), make_algebra(3))

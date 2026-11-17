@@ -193,6 +193,64 @@ Design, tests, the SYMSOL protocol, run commands and the time estimates: `report
 `notebooks/symsol-stf-runner.ipynb` (offline mode for the RTX kernels; the repo snapshot comes from
 `scripts/make_snapshot.py`).
 
+## GATr cloud-field attention and pose options
+
+These options act on the **frame_pin GATr cloud fields** only: `GATrCloudField` and `NativeSTFCloudField`, i.e.
+`--vector_field gatr --pose_tokens frame_pin` with spherecloud / dircloud / points condition tokens. **All are off by
+default**: without them you get stock GATr attention and the equivariant frame pose, exactly as before they were added
+(checked bit-identical, with and without `--gatr_native_stf`). Set them explicitly, and only the ones you mean.
+
+| Flag (default) | What it does | Module |
+|---|---|---|
+| `--gatr_attention dot` | Stock GATr attention (Brehmer et al. 2023): PGA inner product + distance-aware term + scalar product. | (GATr) |
+| `--gatr_attention cosdir` | optimist1938's **cosine-directed attention**: the multivector dot product is replaced by `s_h * cos(theta)`, with theta the angle between a query's and a key's vector + bivector blades (all channels of the head together) and `s_h` a learnable inverse temperature per head and block (starts at 30, capped at 100). **Used by the champion model below.** | `models/cos_attention.py` |
+| `--gatr_attention cosmv` | The same with the cosine over all invariant multivector blades (his first variant; weaker on SYMSOL I). | `models/cos_attention.py` |
+| `--gatr_harmonic_attn_lmax L` (0 = off), `--gatr_harmonic_attn_lmin` (2) | Harmonics-aware attention: adds `sum_c sum_{l=lmin..L} w_hcl * P_l(cos theta_c)` to every logit, with theta_c the angle between the query's and key's vector parts in channel c, `P_l` the Legendre polynomial (computed as `<Y_l, Y_l>` of the real spherical harmonics) and `w_hcl > 0` learnable per head h, channel c and degree l (start at 1). `lmin 1` adds cos(theta) itself. Cannot be combined with `cosdir` / `cosmv`. | `models/harmonic_attention.py` |
+| `--pin_pose_encoding frame` | The pose token as (R e1) e123, R e2, R e3 in 3 multivector channels (R: the pose rotation): the equivariant layout. **Keep it.** | `models/clifford_flow.py` |
+| `--pin_pose_encoding quat` / `quat_frame_seed` | Ablations only: the pose quaternion in one channel (breaks rotation equivariance on purpose); `quat_frame_seed` (native STF only) still seeds the STF stream from the frame. Both lose the polyhedra on SYMSOL I. | `models/clifford_flow.py` |
+
+`models/cos_attention.py` is optimist1938's code, kept verbatim up to and including the fused path that the champion run
+used; its docstring says which parts were not recovered. His Kaggle kernels switched it on with the environment
+variables `POSE3D_SYMSOL_COSMV=1` / `POSE3D_SYMSOL_ATTENTION=cosdir`; **this repository ignores those variables: use
+`--gatr_attention cosdir`.** The so2 / frame_ch `STFVectorField` was removed (it never learned the polyhedra).
+
+### Champion recipe (SYMSOL I, 10 % train / full test): cosine-directed attention GATr
+
+Kaggle kernel [`arynabiaroza/symsol-gatr-spherecloud-cosdir-h8`](https://www.kaggle.com/code/arynabiaroza/symsol-gatr-spherecloud-cosdir-h8)
+(optimist1938, 2026-11-14, 4xL4). Plain spherecloud GATr flow, **no STF**, cosine-directed attention, **8 heads**,
+**cosine lr schedule**. Final evaluation (32 samples per image, 5,000 test views per shape), median rotation error to
+the nearest equivalent pose: **3.08 deg overall**, acc@15 0.766; tet 3.17, cube 16.52, icosa 13.79, cone 0.69, cyl 1.12.
+Every flag below matters; three of them differ from the defaults and are easy to forget: `--gatr_attention cosdir`,
+`--gatr_heads 8`, `--lr_schedule cosine`.
+
+```bash
+python -m pose3d --path_to_datasets=<folder holding symsol/> --model clifford_flow --encoder resnet50 \
+  --dataset symsol --symsol_set 1 --symsol_train_views 4500 --symsol_test_views 5000 \
+  --vector_field gatr --cond_tokens spherecloud --pose_tokens frame_pin --condition_head none \
+  --dircloud_scalars 64 --gatr_mv_channels 8 --gatr_s_channels 32 --no-gatr_zero_readout \
+  --gatr_attention cosdir --gatr_heads 8 \
+  --optimizer adamw --lr 1e-4 --lr_scaling sqrt --lr_schedule cosine --warmup_epochs 0 --n_epochs 40 \
+  --batch_size 64 --no-ema --fixed_val_noise --no-use_warp --no-use_synth --no-symsol_likelihood \
+  --ddp --num_gpus 4 --sync_bn --seed 0
+```
+
+(`--no-symsol_likelihood` only skips the likelihood evaluation, which his code did not have; nearest coupling stays
+off, its default.) Scores the validation set every epoch; about 4 h on 4xL4.
+
+What it does not do (runs of 2026-11-15, same recipe): on SYMSOL-CHILE (pyramids with 7 / 10 / 13 sides) and on the
+bottom views of the 4-, 5-, 7-, 10- and 13-gonal pyramids it finds the axis and guesses the turn, ending at the guessing
+level 90/n deg, as every other GATr model so far. (The SYMSOL-CHILE generator and its `--symsol_set 5..13` are on branch
+`claude/symsol-symsol2-differences-2dukos`, not yet on main.)
+
+Related results on SYMSOL I, for orientation (same data and evaluation; 32-sample final medians):
+
+| Model | Flags beyond the recipe base | tet | cube | icosa | cone | cyl | overall |
+|---|---|---|---|---|---|---|---|
+| native STF field | `--gatr_native_stf --gatr_native_stf_lmax 6 --gatr_native_stf_channels 8 --gatr_attention dot`, 4 heads, step lr, `--no-symsol_nearest_coupling` | 1.21 | 3.35 | 1.88 | 0.63 | 1.26 | **1.11** |
+| native STF + harmonics-aware attention | above + `--gatr_harmonic_attn_lmax 6` | 1.58 | 3.29 | 1.77 | 0.62 | 0.98 | 1.23 |
+| harmonics-aware attention, no STF | `--gatr_harmonic_attn_lmax 6 --gatr_harmonic_attn_lmin 1`, 4 heads, cosine lr | 17.31 | 23.24 | 25.90 | 0.61 | 0.79 | 9.31 |
+| plain spherecloud GATr (no STF, stock attention) | 4 heads, step lr | 54.5 | 42.2 | 31.6 | 0.38 | 0.37 | 26.9 (stalls on the polyhedra) |
+
 ## Multi-GPU
 
 Training uses every visible GPU by default (torch DistributedDataParallel, `--ddp`). The run relaunches

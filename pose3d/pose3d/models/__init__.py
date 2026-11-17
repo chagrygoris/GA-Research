@@ -36,6 +36,9 @@ def _clifford_flow(cfg: Config, algebra) -> nn.Module:
                   s_channels=fl.gatr_s_channels, num_heads=fl.gatr_heads,
                   dense_linear=fl.gatr_dense_linear, compile=fl.gatr_compile),
         gatr_zero_readout=fl.gatr_zero_readout,
+        gatr_attention=fl.gatr_attention,
+        gatr_harmonic_attn_lmax=fl.gatr_harmonic_attn_lmax,
+        gatr_harmonic_attn_lmin=fl.gatr_harmonic_attn_lmin,
         gatr_final_norm=fl.gatr_final_norm,
         native_stf=(dict(stf_lmax=fl.gatr_native_stf_lmax, stf_channels=fl.gatr_native_stf_channels)
                     if fl.gatr_native_stf else None),
@@ -47,6 +50,7 @@ def _clifford_flow(cfg: Config, algebra) -> nn.Module:
         so2_up_token=fl.so2_up_token,
         so2_split_norm=fl.so2_split_norm,
         pose_tokens=fl.pose_tokens,
+        pin_pose_encoding=fl.pin_pose_encoding,
         dircloud_scalars=fl.dircloud_scalars,
         dircloud_up_token=fl.dircloud_up_token,
         so3fourier=dict(lmax=fl.so3f_lmax, c_s=fl.so3f_s2_channels, c_f=fl.so3f_so3_channels,

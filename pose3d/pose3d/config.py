@@ -391,6 +391,26 @@ class FlowConfig:
     gatr_native_stf_lmax: int = 6
     gatr_native_stf_channels: int = 8
     gatr_native_stf_eval_every: int = 5
+    # ---- Options of the frame_pin GATr cloud fields (GATrCloudField, NativeSTFCloudField; spherecloud / dircloud /
+    # points condition tokens). ALL OFF BY DEFAULT: without them the model is stock GATr. pose3d/USAGE.md, section
+    # "GATr cloud-field attention and pose options", explains them and gives the exact champion recipe.
+    # gatr_attention: the similarity inside GATr's self-attention.
+    #   "dot"     stock GATr (default): PGA inner product + distance-aware term + scalar product (Brehmer et al. 2023).
+    #   "cosdir"  optimist1938's scaled cosine attention (models/cos_attention.py): the multivector dot product is
+    #             replaced by s_h * cos(angle between the queries' and keys' vector + bivector blades), s_h a learnable
+    #             inverse temperature per head and block (starts at 30). The champion SYMSOL I model uses it.
+    #   "cosmv"   the same with the cosine over all invariant multivector blades (his first variant; weaker).
+    gatr_attention: Literal["dot", "cosdir", "cosmv"] = "dot"
+    # Harmonics-aware attention (models/harmonic_attention.py): L > 0 adds to every attention logit
+    # sum_c sum_{l=lmin..L} w_hcl <Y_l(u(q_c)), Y_l(u(k_c))> (= P_l of the cosine between the query's and key's vector
+    # directions; w_hcl > 0 learnable, start at 1); lmin 1 adds cos(theta) itself. Needs gatr_attention "dot".
+    # Runs with it score the validation set every gatr_native_stf_eval_every epochs. 0: off.
+    gatr_harmonic_attn_lmax: int = 0
+    gatr_harmonic_attn_lmin: int = 2
+    # Ablation of the frame_pin pose token. "frame" (default): (R e1) e123, R e2, R e3 in 3 multivector channels, the
+    # equivariant layout. "quat": the pose quaternion in ONE channel (breaks rotation equivariance on purpose; SYMSOL I:
+    # polyhedra never learned). "quat_frame_seed" (native STF only): quaternion for GATr, frame axes for the STF seed.
+    pin_pose_encoding: Literal["frame", "quat", "quat_frame_seed"] = "frame"
     gatr_blocks: int = 4
     gatr_mv_channels: int = 8    # hidden multivector channels per token
     gatr_s_channels: int = 32    # hidden scalar channels per token

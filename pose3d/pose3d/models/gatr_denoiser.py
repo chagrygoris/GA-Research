@@ -434,7 +434,8 @@ class GATrCloudField(nn.Module):
     def __init__(self, cond_scalars: int, mv_channels: int = 8, s_channels: int = 32,
                  num_blocks: int = 4, num_heads: int = 4, final_norm: bool = False, cond_mv: int = 8,
                  pose_lmax: int = 0, spherical_lmax: int = 0, spherical_vectors: int = 4,
-                 spherical_attn_lmax: int = 0, spherical_attn_equivariant: bool = True):
+                 spherical_attn_lmax: int = 0, spherical_attn_equivariant: bool = True,
+                 harmonic_attn_lmax: int = 0, harmonic_attn_lmin: int = 2, attention: str = "dot"):
         super().__init__()
         GATr = _import_gatr()
         self.cond_scalars = cond_scalars
@@ -452,6 +453,15 @@ class GATrCloudField(nn.Module):
             in_s_channels=cond_scalars + 2, out_s_channels=None, hidden_s_channels=s_channels,
             attention={"num_heads": num_heads}, mlp={}, num_blocks=num_blocks,
         )
+        if harmonic_attn_lmax:   # harmonics-aware attention (models/harmonic_attention.py); FlowConfig.gatr_harmonic_attn_*
+            from pose3d.models.harmonic_attention import enable_harmonic_attention
+            enable_harmonic_attention(self.net, harmonic_attn_lmax, harmonic_attn_lmin)
+        if attention != "dot":   # optimist1938's scaled cosine attention (models/cos_attention.py); FlowConfig.gatr_attention
+            from pose3d.models.cos_attention import replace_attention
+            if harmonic_attn_lmax:
+                raise ValueError("cosine attention and harmonics-aware attention replace the same layer; pick one")
+            self.angular_attention = replace_attention(self.net, mode=attention, scale=30.0, fused=True)
+            assert len(self.angular_attention) == num_blocks
         self.register_buffer("_pga_index", torch.tensor(_PGA_INDEX), persistent=False)
         self.register_buffer("_rot_index", torch.tensor(_ROTATION_BIVECTOR), persistent=False)
         # Spherical GATr (spherical_lmax = L > 0): a SphericalActivation with harmonics up to degree L after every

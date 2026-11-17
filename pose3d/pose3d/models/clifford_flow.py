@@ -299,6 +299,9 @@ class CliffordFlow(nn.Module):
                  condition_head: str = "clifford",
                  gatr: dict = None,
                  gatr_zero_readout: bool = True,
+                 gatr_attention: str = "dot",
+                 gatr_harmonic_attn_lmax: int = 0,
+                 gatr_harmonic_attn_lmin: int = 2,
                  gatr_final_norm: bool = False,
                  native_stf: dict = None,
                  fisher_checkpoint: str = None,
@@ -308,6 +311,7 @@ class CliffordFlow(nn.Module):
                  so2_up_token: bool = False,
                  so2_split_norm: bool = False,
                  pose_tokens: str = "rotor",
+                 pin_pose_encoding: str = "frame",
                  dircloud_scalars: int = 64,
                  dircloud_up_token: bool = False,
                  so3fourier: dict = None,
@@ -331,10 +335,21 @@ class CliffordFlow(nn.Module):
         # The speed options (dense_linear, compile) exist for the two modules of the reference recipe
         # (GATrVectorField, GATrConditionHead); the other GATr modules of the SYMSOL stack take the sizes only.
         gatr_plain = {k: v for k, v in (gatr or {}).items() if k not in ("dense_linear", "compile")}
-        stf_layouts = (("spherecloud", "frame_pin"), ("so2", "frame_ch"))
-        if native_stf is not None and (vector_field != "gatr" or (cond_tokens, pose_tokens) not in stf_layouts
+        if native_stf is not None and (vector_field != "gatr" or (cond_tokens, pose_tokens) != ("spherecloud", "frame_pin")
                                        or condition_head != "none"):
-            raise ValueError("Native STF needs GATr + no condition head + (spherecloud, frame_pin) or (so2, frame_ch)")
+            raise ValueError("Native STF needs GATr + no condition head + spherecloud tokens + frame_pin pose")
+        if gatr_attention not in ("dot", "cosdir", "cosmv"):
+            raise ValueError(f"gatr_attention must be 'dot', 'cosdir' or 'cosmv', got {gatr_attention!r}")
+        if (gatr_attention != "dot" or gatr_harmonic_attn_lmax) and (vector_field != "gatr" or pose_tokens != "frame_pin"):
+            raise ValueError("--gatr_attention / --gatr_harmonic_attn_lmax act on the frame_pin GATr cloud fields only")
+        if gatr_attention != "dot" and gatr_harmonic_attn_lmax:
+            raise ValueError("--gatr_attention cosdir/cosmv and --gatr_harmonic_attn_lmax replace the same layer; pick one")
+        if pin_pose_encoding not in ("frame", "quat", "quat_frame_seed"):
+            raise ValueError(f"pin_pose_encoding must be 'frame', 'quat' or 'quat_frame_seed', got {pin_pose_encoding!r}")
+        if pin_pose_encoding != "frame" and pose_tokens != "frame_pin":
+            raise ValueError("pin_pose_encoding 'quat' / 'quat_frame_seed' are ablations of pose_tokens='frame_pin'")
+        if pin_pose_encoding == "quat_frame_seed" and native_stf is None:
+            raise ValueError("pin_pose_encoding='quat_frame_seed' seeds the native STF tracks: it needs --gatr_native_stf")
         so3f = dict(so3fourier or {})
         rc = dict(rotorcorr or {})
         sphere_fields = ("so3fourier", "rotorcorr")
@@ -381,6 +396,7 @@ class CliffordFlow(nn.Module):
         self.n_time_samples = max(1, int(n_time_samples))
         self.mlp_heads = mlp_heads
         self.pose_tokens = pose_tokens
+        self.pin_pose_encoding = pin_pose_encoding
         mv_dim = int(2**algebra.dim)
         vf_hidden_dim = hidden_dim if vector_field_hidden_dim is None else vector_field_hidden_dim
 
@@ -455,16 +471,16 @@ class CliffordFlow(nn.Module):
             if native_stf is not None:   # spherecloud + frame_pin: the native STF track inside the GATr cloud field
                 from pose3d.models.native_stf import NativeSTFCloudField
                 self.vector_field = NativeSTFCloudField(self.adapter.conv_adapter.width - 8,
-                    final_norm=gatr_final_norm, pose_lmax=gatr_pose_harmonics, **gatr_plain, **native_stf)
+                    final_norm=gatr_final_norm, pose_lmax=gatr_pose_harmonics, harmonic_attn_lmax=gatr_harmonic_attn_lmax, harmonic_attn_lmin=gatr_harmonic_attn_lmin,
+                    attention=gatr_attention, **gatr_plain, **native_stf)
             else:
                 self.vector_field = GATrCloudField(self.adapter.conv_adapter.width - 8, final_norm=gatr_final_norm,
                                                    pose_lmax=gatr_pose_harmonics, spherical_lmax=gatr_spherical_lmax,
                                                    spherical_attn_lmax=gatr_spherical_attn_lmax,
                                                    spherical_attn_equivariant=gatr_spherical_attn_equivariant,
-                                                   **gatr_plain)
-        elif vector_field == "gatr" and native_stf is not None:   # so2 tokens + frame_ch: v4's GATr field + STF track
-            from pose3d.models.native_stf import STFVectorField
-            self.vector_field = STFVectorField(self.n_cond_mv, pose_channels=3, **gatr_plain, **native_stf)
+                                                   harmonic_attn_lmax=gatr_harmonic_attn_lmax,
+                                                   harmonic_attn_lmin=gatr_harmonic_attn_lmin,
+                                                   attention=gatr_attention, **gatr_plain)
         elif vector_field == "gatr":
             from pose3d.models.gatr_denoiser import GATrVectorField
             stf_blocks = stf_feature_blocks(stf_lmax, stf_channels, stf_inject) if stf_track else None
@@ -612,7 +628,14 @@ class CliffordFlow(nn.Module):
         a = frame[:, 0]
         pose[:, 0, 4], pose[:, 0, 5], pose[:, 0, 6] = a[:, 2], -a[:, 1], a[:, 0]   # e12, e13, e23
         pose[:, 1, 1:4], pose[:, 2, 1:4] = frame[:, 1], frame[:, 2]
-        return self._spatial_to_body(rotor, self.vector_field(pose, t, cond, R=frame.transpose(-1, -2)))
+        seed_kw = {}
+        if self.pin_pose_encoding != "frame":
+            # Ablation (FlowConfig.pin_pose_encoding): GATr gets the quaternion (rotor) in channel 0, channels 1-2 zero.
+            if self.pin_pose_encoding == "quat_frame_seed":
+                seed_kw = {"seed_pose": pose}       # the frame channels still seed the pose token's STF tracks
+            pose = rotor.new_zeros(rotor.shape[0], 3, 8)
+            pose[:, 0] = embed_rotor(rotor, self.algebra)
+        return self._spatial_to_body(rotor, self.vector_field(pose, t, cond, **seed_kw, R=frame.transpose(-1, -2)))
 
     def _spatial_to_body(self, rotor, spatial):
         """Camera-frame velocity bivector (e12, e13, e23) -> body velocity r~ w r."""

@@ -2,6 +2,8 @@
 
 **Best score**: Clifford Flow with a GATr vector field, ResNet-101, trained on Image2Sphere's data (warp + synthetic renders) with EMA weights: **8.95°** mean of per-class median errors, **7.85°** median over all test images, on Pascal3D+ (`clifford_flow_gatr_warp_synth_ema_b64`, Kaggle kernel `syfry5suvzovvakmuj/clifford-gatr-ema-b64-rtx`) — now the default recipe in `pose3d/config.py`.
 
+**SYMSOL I champion** (10 % train / full test): optimist1938's cosine-directed attention GATr, **3.08°** median (acc@15 0.77), no STF — needs `--gatr_attention cosdir --gatr_heads 8 --lr_schedule cosine`; exact recipe and the other options (all off by default): [`USAGE.md`, GATr cloud-field attention and pose options](USAGE.md#gatr-cloud-field-attention-and-pose-options).
+
 Setup and how to run: [`USAGE.md`](USAGE.md). Results: [`reports/`](reports/). Reading material:
 [`awesome-reference/`](awesome-reference/README.md).
 
