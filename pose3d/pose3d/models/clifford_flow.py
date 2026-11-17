@@ -86,6 +86,7 @@ class ImageToMultivectors(nn.Module):
                  so2_tokens: int = 0,
                  dircloud_scalars: int = 64,
                  dircloud_nside: int = 4,
+                 dircloud_grid: int = 7,
                  dircloud_up_token: bool = False,
                  sphere: dict = None,
                  points: int = 0):
@@ -133,6 +134,11 @@ class ImageToMultivectors(nn.Module):
             return
         self.backbone = build_encoder(encoder_type, pretrained=pretrained_backbone,
                                       depth_anything_model=depth_anything_model)
+        if cond_tokens == "spherecloud" and dircloud_grid != 7:
+            from pose3d.models.encoders import dilate_last_stage
+            if dircloud_grid != 14:
+                raise ValueError("dircloud_grid must be 7 or 14")
+            dilate_last_stage(self.backbone)
         self.frozen_backbone = bool(freeze_backbone)
         if self.frozen_backbone:
             freeze_encoder(self.backbone)
@@ -166,7 +172,8 @@ class ImageToMultivectors(nn.Module):
             # P1's cloud from the image2sphere lift: the 88 hemisphere points and their lifted signal, plus the
             # e3 axis, packed (B, 89, 8 + dircloud_scalars + 1); see models/dircloud_head.py.
             from pose3d.models.dircloud_head import SphereCloudHead
-            self.conv_adapter = SphereCloudHead(backbone_channels, scalars=dircloud_scalars, nside=dircloud_nside)
+            self.conv_adapter = SphereCloudHead(backbone_channels, scalars=dircloud_scalars, nside=dircloud_nside,
+                                                grid=dircloud_grid)
             self.n_mv = self.conv_adapter.n_tokens
             return
         if cond_tokens == "spheregatr":
@@ -311,6 +318,7 @@ class CliffordFlow(nn.Module):
                  pose_tokens: str = "rotor",
                  dircloud_scalars: int = 64,
                  dircloud_nside: int = 4,
+                 dircloud_grid: int = 7,
                  dircloud_up_token: bool = False,
                  so3fourier: dict = None,
                  rotorcorr: dict = None,
@@ -410,7 +418,8 @@ class CliffordFlow(nn.Module):
                 conv_adapter=conv_adapter, bf16=backbone_bf16, cond_tokens=cond_tokens, so2_channels=so2_channels,
                 so2_up_token=so2_up_token, so2_split_norm=so2_split_norm,
                 so2_tokens=n_cond_mv if condition_head == "none" else 0,
-                dircloud_scalars=dircloud_scalars, dircloud_nside=dircloud_nside, dircloud_up_token=dircloud_up_token,
+                dircloud_scalars=dircloud_scalars, dircloud_nside=dircloud_nside, dircloud_grid=dircloud_grid,
+                dircloud_up_token=dircloud_up_token,
                 sphere=(dict({k: rc[k] for k in ("c_s", "nside") if k in rc}, lift_only=True)
                         if vector_field == "rotorcorr" else
                         dict({k: so3f[k] for k in ("c_s", "c_f", "lmax", "nside") if k in so3f},

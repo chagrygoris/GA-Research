@@ -113,15 +113,16 @@ class SphereLift(nn.Module):
     def __init__(self, c_in: int = 2048, c_s: int = 32, grid: int = 7, nside: int = 4, coverage: float = 0.9,
                  sigma: float = 0.2, taper_beta: float = math.radians(75), max_beta: float = math.radians(90)):
         super().__init__()
-        if grid % 2 == 0 or grid < 3:
-            raise ValueError("grid must be odd (>= 3) so the centre cell sits on the optical axis")
+        if grid < 3:
+            raise ValueError("grid must be >= 3")
         self.c_s, self.grid = c_s, grid
         self.proj = nn.Conv2d(c_in, c_s, 1)
         pts = hemisphere_grid(nside)                                       # (P, 3)
         self.register_buffer("points", pts, persistent=False)
         max_r = pts[:, :2].norm(dim=1).max()
         self.register_buffer("q", pts[:, :2] / max_r, persistent=False)   # point -> image position in [-1, 1]
-        off = (torch.arange(grid, dtype=torch.float64) - grid // 2) / (grid // 2)
+        # cell centres in [-1, 1]; an odd grid has a centre cell on the optical axis, an even one straddles it
+        off = (torch.arange(grid, dtype=torch.float64) - (grid - 1) / 2) / ((grid - 1) / 2)
         rows, cols = torch.meshgrid(off, off, indexing="ij")
         p = torch.stack([cols.flatten(), rows.flatten()], -1)             # (grid^2, 2): (u, v) = (col, row)
         self.register_buffer("p", p, persistent=False)

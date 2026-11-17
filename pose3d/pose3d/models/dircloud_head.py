@@ -91,12 +91,13 @@ class SphereCloudHead(nn.Module):
     its point and map x_i to G x_i, so P1's vector field (GATrCloudField) stays exactly equivariant.
     """
 
-    def __init__(self, c_in: int = 2048, scalars: int = 64, nside: int = 4):
+    def __init__(self, c_in: int = 2048, scalars: int = 64, nside: int = 4, grid: int = 7):
         super().__init__()
         from pose3d.models.so3fourier_head import SphereLift
 
         self.scalars = scalars
-        self.lift = SphereLift(c_in, c_s=scalars, nside=nside)
+        # the lift's Gaussian (0.2 for the 7x7 map, in units of half the map) follows the cell size
+        self.lift = SphereLift(c_in, c_s=scalars, nside=nside, grid=grid, sigma=0.2 * 6 / (grid - 1))
         self.n_points = self.lift.points.shape[0]
 
     @property

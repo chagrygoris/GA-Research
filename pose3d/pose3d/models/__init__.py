@@ -49,6 +49,7 @@ def _clifford_flow(cfg: Config, algebra) -> nn.Module:
         pose_tokens=fl.pose_tokens,
         dircloud_scalars=fl.dircloud_scalars,
         dircloud_nside=fl.dircloud_nside,
+        dircloud_grid=fl.dircloud_grid,
         dircloud_up_token=fl.dircloud_up_token,
         so3fourier=dict(lmax=fl.so3f_lmax, c_s=fl.so3f_s2_channels, c_f=fl.so3f_so3_channels,
                         hidden=fl.so3f_hidden, nside=fl.so3f_nside,

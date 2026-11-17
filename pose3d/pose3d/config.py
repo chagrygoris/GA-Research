@@ -366,6 +366,10 @@ class FlowConfig:
     # With cond_tokens=spherecloud: HEALPix nside of the hemisphere the tokens sit on. 4: 88 points, at most 16 per
     # ring around the optical axis (azimuthal frequencies below 8); 8: 368 points, up to 32 per ring.
     dircloud_nside: int = 4
+    # With cond_tokens=spherecloud and a ResNet: side of the feature map the tokens are lifted from. 7: the ResNet's
+    # own map at 224 px. 14: its last stage runs at stride 1 with dilation 2 (models/encoders.dilate_last_stage; the
+    # pretrained weights are kept), so the map is 14x14 and the lift's Gaussian is narrowed in proportion.
+    dircloud_grid: int = 7
     # With cond_tokens=dircloud: also feed a constant image-up token (-e2). Breaks P1's exact 90 deg turn
     # symmetry, keeps the flip, and lets the head read in-plane orientation from the ResNet's channels
     # (models/dircloud_head.py; reports/symsol_p1_stall.md).

@@ -239,6 +239,26 @@ def freeze_encoder(module):
     return module
 
 
+def dilate_last_stage(encoder):
+    """A torchvision ResNet behind image2sphere's wrapper: run its last stage at stride 1 with dilation 2, as
+    torchvision's replace_stride_with_dilation does, so a 224 px image gives a 14x14 map instead of 7x7. The
+    weights are untouched, so pretrained ones stay valid."""
+    net = getattr(encoder, "encoder", encoder)             # ImageNetNormalized wraps the ResNet
+    stage = net.layers[-1]
+    first = stage[0]
+    if not hasattr(first, "conv3"):
+        raise ValueError("dilate_last_stage expects a bottleneck ResNet (resnet50 / 101 / 152)")
+    first.conv2.stride = (1, 1)
+    first.downsample[0].stride = (1, 1)
+    for block in list(stage)[1:]:
+        block.conv2.dilation, block.conv2.padding = (2, 2), (2, 2)
+    shape = (net.output_shape[0], 14, 14)
+    net.output_shape = shape
+    if net is not encoder:
+        encoder.output_shape = shape
+    return encoder
+
+
 def build_encoder(encoder_type: str, pretrained: bool = False,
                   depth_anything_model: str = DEPTH_ANYTHING_DEFAULT):
     if encoder_type == "depth_anything":

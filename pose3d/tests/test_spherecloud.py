@@ -110,3 +110,40 @@ def test_dircloud_nside_sets_the_density_of_the_sphere_tokens():
         cond = dense.condition_head(dense.adapter.conv_adapter(fmap))
         v = dense.velocity(random_rotor(2), torch.tensor([0.3, 0.7]), cond)
     assert cond.shape[1] == 369 and v.shape == (2, 3) and torch.isfinite(v).all()
+
+
+def test_dircloud_grid_14_keeps_the_turn_and_flip_symmetry():
+    """--dircloud_grid 14: the ResNet's last stage dilated (a 14x14 map from 224 px), the lift on an even grid; the
+    velocity is still exactly equivariant to 90 degree turns and left-right flips of the map."""
+    from pose3d.models.gatr_denoiser import _ensure_xformers_stub
+
+    _ensure_xformers_stub()
+    pytest.importorskip("gatr", reason="GATr package not installed")
+    from clifford.algebra.cliffordalgebra import CliffordAlgebra
+    from pose3d.models.clifford_flow import CliffordFlow
+
+    torch.manual_seed(0)
+    model = CliffordFlow(CliffordAlgebra((1, 1, 1)), hidden_dim=[8], pretrained_backbone=False,
+                         encoder_type="resnet50", conv_adapter=False, n_time_samples=2,
+                         vector_field="gatr", cond_tokens="spherecloud", pose_tokens="frame_pin",
+                         condition_head="none", dircloud_scalars=8, dircloud_nside=8, dircloud_grid=14,
+                         gatr_zero_readout=False, gatr=dict(num_blocks=1, mv_channels=4, s_channels=8, num_heads=2))
+    with torch.no_grad():
+        assert model.adapter.backbone(torch.rand(1, 3, 224, 224)).shape == (1, 2048, 14, 14)
+    model = model.double().eval()
+    lift = model.adapter.conv_adapter.lift
+    assert lift.grid == 14 and abs(lift.log_sigma.exp().item() - 0.2 * 6 / 13) < 1e-6
+    with torch.no_grad():
+        lift.radial_gain.normal_(1, 0.3)
+        for p in model.vector_field.out.parameters():
+            p.normal_(0, 0.5)
+        torch.manual_seed(1)
+        fmap = torch.randn(2, 2048, 14, 14, dtype=torch.float64)
+        R = rotor_to_matrix(random_rotor(2).double(), model.algebra); t = torch.tensor([0.3, 0.7], dtype=torch.float64)
+        v = _velocity_from_map(model, fmap, R, t)
+        assert v.abs().max() > 1e-3
+        torch.testing.assert_close(_velocity_from_map(model, torch.rot90(fmap, 1, dims=(2, 3)), R_Z_MINUS_90 @ R, t), v,
+                                   atol=1e-8, rtol=1e-6)
+        sign = torch.tensor([-1.0, -1.0, 1.0], dtype=torch.float64)
+        torch.testing.assert_close(_velocity_from_map(model, torch.flip(fmap, dims=(3,)), FLIP @ R @ FLIP, t), sign * v,
+                                   atol=1e-8, rtol=1e-6)

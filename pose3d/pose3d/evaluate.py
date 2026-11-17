@@ -119,6 +119,7 @@ def build_model(checkpoint, device, eval_rec_level=None):
         pose_tokens=saved.get("pose_tokens", "rotor"),
         dircloud_scalars=saved.get("dircloud_scalars", 64),
         dircloud_nside=saved.get("dircloud_nside", 4),
+        dircloud_grid=saved.get("dircloud_grid", 7),
         dircloud_up_token=saved.get("dircloud_up_token", False),
         gatr_final_norm=saved.get("gatr_final_norm", False),
         so3fourier=dict(lmax=saved.get("so3f_lmax", 6), c_s=saved.get("so3f_s2_channels", 32),
