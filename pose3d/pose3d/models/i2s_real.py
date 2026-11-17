@@ -52,6 +52,8 @@ class I2SReal(nn.Module):
         normalize_input: bool = True,
         depth_anything_model: str = DEPTH_ANYTHING_DEFAULT,
         freeze_backbone: bool = False,
+        grid: int = 7,
+        proj_rec_level: int = 2,
     ):
         super().__init__()
         import image2sphere.predictor as _predictor
@@ -96,6 +98,18 @@ class I2SReal(nn.Module):
         finally:
             _predictor.ResNet = original_resnet
 
+        if grid != 7 or proj_rec_level != 2:
+            # A finer feature map and / or more sphere points for the projection; the harmonic band limit lmax is
+            # unchanged. Upstream's projector is rebuilt for the new map size, its Gaussian (0.2 for 7x7, in units
+            # of half the map) scaled with the cell size.
+            from image2sphere.predictor import SpatialS2Projector
+            from pose3d.models.encoders import dilate_last_stage
+            if grid == 14:
+                dilate_last_stage(self.net.encoder)
+            elif grid != 7:
+                raise ValueError("i2s_grid must be 7 or 14")
+            self.net.projector = SpatialS2Projector(tuple(self.net.encoder.output_shape), sphere_fdim, lmax,
+                                                    sigma=0.2 * 6 / (grid - 1), rec_level=proj_rec_level)
         self.frozen_backbone = bool(freeze_backbone)
         if self.frozen_backbone:
             if not pretrained_backbone:

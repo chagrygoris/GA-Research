@@ -125,6 +125,8 @@ def _i2s_real(cfg: Config, algebra) -> nn.Module:
     from pose3d.models.i2s_real import I2SReal
 
     return I2SReal(
+        grid=cfg.i2s.i2s_grid,
+        proj_rec_level=cfg.i2s.i2s_proj_rec_level,
         encoder_type=cfg.model.encoder,
         pretrained_backbone=cfg.features.pretrained_backbone,
         lmax=cfg.i2s.lmax,

@@ -497,6 +497,11 @@ class I2SConfig:
     i2s_eval_rec_level: int = 3
     # i2s_real: apply ImageNet normalisation to the [0, 1] inputs.
     i2s_normalize: bool = True
+    # i2s_real: side of the ResNet feature map that is projected onto the sphere. 14 runs the ResNet's last stage at
+    # stride 1 with dilation 2 (models/encoders.dilate_last_stage) and narrows the projection's Gaussian to match.
+    i2s_grid: int = 7
+    # i2s_real: HEALPix level of the hemisphere points the map is projected onto (upstream: 2 = 104 points; 3 = 400).
+    i2s_proj_rec_level: int = 2
     # wignerd: weights w_l of the frequency-domain MSE (paper eq. 4; the paper does not spell them out).
     # "unit": 1 / (2l+1)^2, so every degree's block of the target has unit squared norm (flat_wigner scales
     # degree l by sqrt(2l+1)); "uniform": all 1, which lets the high degrees dominate.
