@@ -153,6 +153,8 @@ original 7-gon run.
 | 16 | 18.7 |
 | 17 to 120 | 12.3 to 13.5 (guessed turn: 12.9); mean 12.7 over epochs 17 to 40, 12.6 over 41 to 80, 12.5 over 81 to 120 |
 
+![pentagon vs 7-gon error by epoch](figures/cosdir_bottom5_vs_bottom7_mre.png)
+
 Final evaluation (32 samples per image, 1,000 test views): median error 11.75 degrees, acc@15 0.623, log-likelihood
 7.84. The model stays on the guessed-turn plateau for 104 epochs, against 27 for the pentagon; the mean drifts down
 by about 0.1 degrees over the run. So within 120 epochs the schedule does not explain the 7-gon. This is the case
