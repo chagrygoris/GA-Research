@@ -178,18 +178,32 @@ Final evaluation (32 samples per image): median error 12.04 degrees, acc@15 0.61
 11.75 degrees, 0.623, 7.84). The log-likelihood is much higher although the turn is still guessed: it rewards how
 tightly the poses are placed on the ring of turns about the axis, which the denser grid sharpens, not the turn.
 
-The two curves coincide (figure above). So neither the number of points per ring nor the width of the attention
-windows is what keeps the 7-gon at the guessed-turn level, which is what `reports/cosdir_mechanism.md` and the
-first version of this report predicted. That prediction is wrong for the bottom view.
+The two curves coincide (figure above). So the number of points per ring and the width of the attention windows
+are not, alone, what keeps the 7-gon at the guessed-turn level.
 
-What remains untested: the 7x7 ResNet feature map, which the lift only interpolates onto the sphere (a denser
-sphere grid adds no information); and whether a model that reads the sphere through a few windows per block can
-build a 7-fold dependence on its own turn at all within 4 blocks. Two changes were made at once here, but since
-nothing moved there is nothing to attribute.
+The next section tests the remaining suspect, the 7x7 ResNet feature map, which the lift only interpolates onto
+the sphere (a denser sphere grid adds no information).
 
-A third run adds a 14x14 feature map (`--dircloud_grid 14`: the ResNet's last stage at stride 1 with dilation 2)
-to the denser grid and sharper attention: `cheesewaffler/bottom7-gatr-cosdir-grid14-nside8-s60-e120-t4x2`, launched
-2026-11-17 (`notebooks/bottom7-gatr-cosdir-grid14-nside8-runner.ipynb`).
+## 7-gon with a 14x14 feature map: the turn is learned
+
+Kaggle kernel `cheesewaffler/bottom7-gatr-cosdir-grid14-nside8-s60-e120-t4x2` (2026-11-17): the denser-grid run
+above plus `--dircloud_grid 14`, which runs the ResNet's last stage at stride 1 with dilation 2 (pretrained weights
+kept; output checked against torchvision's own dilated ResNet-50), so the sphere tokens are lifted from a 14x14 map
+instead of 7x7 (`notebooks/bottom7-gatr-cosdir-grid14-nside8-runner.ipynb`; 189 s per epoch on 2xT4).
+
+| epochs | median error, degrees |
+|---|---|
+| 1 to 14 | 72 down to 38 (first plateau) |
+| 15 | 14.2 |
+| 16 to 60 | 12.4 to 13.1 (guessed turn 12.9: 45 epochs) |
+| 61 to 66 | 12.0, 12.1, 11.7, 10.6, 7.4, 5.6 |
+| 67, 68 | 1.8, 1.6 |
+| 69 to 111 | 0.5 to 2.1, mean 0.72 over the last 20 logged epochs |
+
+(Epochs 112 to 120 and the final evaluation were still running when this was written.) The run that differs only
+in the map size stayed at 12.4 to 13.1 degrees for all 120 epochs, so the 7x7 feature map was a limit for the
+7-gon. Whether the 14x14 map is enough without the denser sphere grid and sharper attention was not run. The
+second plateau lasts 45 epochs here against 27 for the pentagon.
 
 ## Image2Sphere with L = 6 on the 7-gon: the constant rate changes nothing
 
@@ -218,10 +232,11 @@ put one broad peak on one of the seven equivalent poses.
   second plateau, at the guessed-turn level, takes hundreds to thousands of further steps at the full rate (about
   700 for the square with the encoder frozen, about 1,900 for the pentagon end to end), and the 40-epoch cosine
   schedule has lowered the rate to 60 % when that plateau starts and to 19 % by epoch 30.
-* **7-gon**: not learned. A constant rate for 120 epochs leaves it at the guessed-turn level (104 epochs on the
-  plateau; the pentagon needed 27), and so does the same run on a 4 times denser sphere grid with sharper
-  attention. The schedule, the points per ring and the window width are therefore ruled out as the single cause;
-  the 7x7 feature map and the depth of the field are the remaining suspects.
+* **7-gon**: learned once the feature map is 14x14 (about 0.7 degrees). With the 7x7 map it stays at the
+  guessed-turn level for 120 epochs at a constant rate, on the 88-point sphere grid and equally on a 4 times denser
+  one with sharper attention. So for the 7-gon the limit was the resolution of the feature map, and the schedule,
+  the points per ring and the window width were not sufficient fixes alone. Open: whether the 14x14 map suffices on
+  the 88-point grid.
 * The difference between the square and the others in how the turn is laid out on the sphere (table above) is
   real for the 40-epoch checkpoints, but it is not an obstacle to learning: it probably describes a model that has
   not started the second step, not one that cannot take it.
