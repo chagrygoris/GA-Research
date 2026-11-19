@@ -19,7 +19,7 @@ def load_model(fused=False):
     from pose3d.models import build_model
     from clifford.algebra.cliffordalgebra import CliffordAlgebra
     make_algebra = lambda: CliffordAlgebra((1, 1, 1))
-    old = sys.argv; sys.argv = ["x"] + ARGS
+    old = sys.argv; sys.argv = ["x"] + ARGS + os.environ.get("EXTRA_ARGS", "").split()   # e.g. "--dircloud_nside 8 --dircloud_grid 14"
     try: cfg = parse_args()
     finally: sys.argv = old
     cfg.device = "cpu"

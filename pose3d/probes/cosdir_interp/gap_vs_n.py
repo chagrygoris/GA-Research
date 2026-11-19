@@ -2,7 +2,7 @@
 v* (posterior mean over the n equivalent poses, independent coupling, uniform noise) and the best image-blind field
 (the same with all 360 turns equivalent): mean squared distance between them, over the flow's training distribution."""
 import sys, math, json, torch
-sys.path.insert(0, "/tmp/claude-0/-home-user-GA-Research/47fc9bb1-1306-56b6-a408-21242df5b300/scratchpad/ns8/snap/pose3d")
+import os; sys.path.insert(0, os.environ["COSDIR_SNAPSHOT"])   # pose3d/ of the patched snapshot
 from clifford.algebra.cliffordalgebra import CliffordAlgebra
 from pose3d.geometry.flow import geodesic_interpolate, relative_log
 from pose3d.geometry.rotor import matrix_to_rotor, random_rotor, rotor_to_matrix
