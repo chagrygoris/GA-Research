@@ -273,6 +273,28 @@ about 50 for the 10-gon and 83 for the 13-gon, that is start temperatures of abo
 13-gon probably also needs the next grid density (nside 16). This is a hypothesis from one seed per setting; the
 10-gon at start temperature about 110 is the direct test.
 
+## The learned s_h in all finished runs
+
+The learned inverse temperatures of all 32 heads (4 blocks x 8) at the end of every finished cosine-attention run
+(`results/s_h_final_all_runs.json`, `results/s_h_final_vs_weight_decay.json`):
+
+![learned s_h, all runs](figures/cosdir_s_h_final_all_runs.png)
+
+* **The average does not learn.** AdamW applies its default weight decay (0.01) to log s_h as to every parameter. That
+  alone predicts the median s_h of every run within about 2 % (for example 57.2 against 57.0, 57.2, 56.7, 56.3 for the
+  four runs started at 60), whether the run learned the turn or not. The gradient adds nothing systematic.
+* **The heads spread apart in runs that learned.** The spread of log s_h across heads, after removing the decay, is
+  0.053 to 0.091 in the four runs that learned (SYMSOL I, the pentagon, the 7-gon at start 60 and 100) and 0.025 to
+  0.037 in the runs that did not (0.052 for the 13-gon). Some heads sharpen (up to 35.8 from 30, 65.7 from 60), others
+  widen.
+* **Bounded speed.** With one learning rate (1.41e-4) and about 70 steps per epoch, Adam can move log s_h by at most
+  about 0.01 per epoch, so no head can change s_h by more than about 7 % during the 7 epochs of a breakthrough. A large
+  jump at the breakthrough is impossible by construction; a small coordinated change is not.
+* In the run started at 100 several heads end exactly at the cap (100).
+
+Per-epoch traces are being run (2026-11-20): the 7-gon at start 60 with s_h logged every epoch, the same with s_h
+frozen, and a run started at 30 in which log s_h moves 30 times faster with the cap at 1000.
+
 ## Image2Sphere with L = 6 on the 7-gon: the constant rate changes nothing
 
 Kaggle kernel `arynabiaroza/symsol-bottom7-i2s-l6-constlr-e120-l4` (2026-11-16): the 40-epoch run
