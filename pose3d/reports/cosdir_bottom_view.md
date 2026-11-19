@@ -240,6 +240,39 @@ Final evaluations (32 samples per image): 10-gon median error 9.11 degrees, acc@
 on the ring of turns, not knowledge of the turn (acc@15 is 1.0 for the 13-gon only because a guessed turn is never
 more than 13.8 degrees off).
 
+## Why the 10-gon and 13-gon are not learned: the attention windows are too wide
+
+CPU analysis of the four finished 14x14 checkpoints (`probes/cosdir_interp/diag2.py`, 600 test images each;
+`gap_vs_n.py`). Columns: R2 of a linear read-out of the turn (cos and sin of n times the turn) from the sphere tokens;
+the largest share of a ring's variance at azimuthal frequency n, and that component's phase coherence with the turn
+(1 = it turns exactly with the object); the turn-dependent part of the predicted velocity; the median concentration
+kappa of the pose token's attention windows (fitted as in `reports/cosdir_mechanism.md`), and the amplitude
+a_n = i_n(kappa) / i_0(kappa) with which a window of that width passes a degree-n signal.
+
+| checkpoint | learned? | R2 | n-lobed share / coherence | velocity, frequency n | median kappa | a_n (median) |
+|---|---|---|---|---|---|---|
+| 7-gon, start temperature 60 | yes | 1.00 | 0.92 / 1.00 | 2.5 | 25.7 | a_7 = 0.33 |
+| 7-gon, start temperature 30 | no | 1.00 | 0.05 / 0.29 | 0.0 | 10.8 | a_7 = 0.07 |
+| 10-gon, start temperature 60 | no | 1.00 | 0.03 / 0.18 | 0.0 | 24.2 | a_10 = 0.10 |
+| 13-gon, start temperature 60 | no | 1.00 | 0.01 / 0.05 | 0.0 | 26.7 | a_13 = 0.03 |
+
+* Every model knows the turn (R2 1.00). Success coincides with the turn being laid out on the sphere as an n-lobed
+  pattern that turns with the object, which is the form the attention windows can read; only the successful run has it.
+* The learned temperatures stay at their start values (about 29 for a start of 30, 54 to 60 for 60), and kappa is
+  about 0.37 to 0.48 times s_h. So the start value fixes the window width for the whole run.
+* At start temperature 60 the 10-gon's windows pass degree 10 at 0.10 and the 13-gon's degree 13 at 0.03: less than
+  the 0.07 at which the 7-gon with start temperature 30 failed. The plausible mechanism is the same plateau as before:
+  the n-lobed pattern gets gradient only through what the windows pass, and the windows only matter once the pattern
+  exists, so a small a_n makes the escape from the guessed-turn plateau very slow or impossible.
+* What learning the turn is worth to the loss also falls with n (distance between the exact and the best blind field:
+  0.79, 0.65, 0.46, 0.34, 0.27 for n = 4, 5, 7, 10, 13), a second, milder reason the larger pyramids are harder.
+
+Prediction: to pass degree n as well as the successful 7-gon passed degree 7 (a = 0.33), the windows need kappa of
+about 50 for the 10-gon and 83 for the 13-gon, that is start temperatures of about 110 and 185. The code caps s_h at
+100. A window of kappa 83 is 6.3 degrees wide, finer than the 7.3-degree spacing of the 368-point sphere grid, so the
+13-gon probably also needs the next grid density (nside 16). This is a hypothesis from one seed per setting; the
+10-gon at start temperature about 110 is the direct test.
+
 ## Image2Sphere with L = 6 on the 7-gon: the constant rate changes nothing
 
 Kaggle kernel `arynabiaroza/symsol-bottom7-i2s-l6-constlr-e120-l4` (2026-11-16): the 40-epoch run
