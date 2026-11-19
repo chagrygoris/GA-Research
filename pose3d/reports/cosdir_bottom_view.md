@@ -206,6 +206,37 @@ in the map size stayed at 12.4 to 13.1 degrees for all 120 epochs, so the 7x7 fe
 7-gon. Whether the 14x14 map is enough without the denser sphere grid and sharper attention was not run. The
 second plateau lasts 45 epochs here against 27 for the pentagon.
 
+## 10-gon and 13-gon with the 14x14 map, and the start temperature on the 7-gon
+
+Four more runs of the 14x14 setup (2026-11-19; 368 sphere points, constant rate, 120 epochs, about 192 s per epoch on
+2xT4; notebooks from `notebooks/make_bottom_grid14_variant.py`). "Start temperature" is the value the cosine
+attention's inverse temperature `s_h` begins at (it is learnable, and capped at 100 in the code).
+
+| kernel | pyramid | start temperature | median error, epochs 17 to 120 | last 20 epochs: mean | guessed turn |
+|---|---|---|---|---|---|
+| `cheesewaffler/bottom10-gatr-cosdir-grid14-nside8-s60-e120-t4x2` | 10-gon | 60 | 8.7 to 9.7 | 9.18 | 9.0 |
+| `saudic/bottom13-gatr-cosdir-grid14-nside8-s60-e120-t4x2` | 13-gon | 60 | 6.8 to 7.7 | 6.95 | 6.9 |
+| `pepeschneyne/bottom7-gatr-cosdir-grid14-nside8-s30-e120-t4x2` | 7-gon | 30 | 12.2 to 13.0 | 12.58 | 12.9 |
+| (the run of the section above) | 7-gon | 60 | plateau to epoch 60, then down | 0.74 | 12.9 |
+| `pepeschneyne/bottom7-gatr-cosdir-grid14-nside8-s100-e120-t4x2` | 7-gon | 100 | plateau to epoch 65, then down | 0.75 | 12.9 |
+
+![7-, 10-, 13-gon with the 14x14 map](figures/cosdir_bottom_grid14_7_10_13.png)
+
+**10-gon and 13-gon: not learned.** Both stay at their guessed-turn level for all 104 epochs after the first
+plateau, with no trend. The setup that learns the 7-gon does not reach a 10- or 13-fold pattern in 120 epochs.
+
+![start temperature on the 7-gon](figures/cosdir_bottom7_temperature_sweep.png)
+
+**Start temperature on the 7-gon.** With 60 the error first drops below 5 degrees at epoch 67, with 100 at epoch
+71; both settle at the same level (final 32-sample evaluation 0.40 and 0.46 degrees, acc@15 0.999 and 1.0). With
+30, the value of all earlier runs, the model never leaves the plateau (final evaluation 12.21 degrees, acc@15
+0.625). So with the 14x14 map the sharper attention is needed too: 30 fails, 60 and 100 succeed about equally.
+Together with the earlier runs, the 7-gon needs both changes: a 14x14 map with temperature 30 fails, and
+temperature 60 with a 7x7 map fails. One seed per setting, so "30 never learns" means "not in 120 epochs, seed 0".
+The learned values of `s_h` are not printed in the log and were not read from the checkpoints.
+
+The final evaluations of the 10- and 13-gon runs were still running when this was written.
+
 ## Image2Sphere with L = 6 on the 7-gon: the constant rate changes nothing
 
 Kaggle kernel `arynabiaroza/symsol-bottom7-i2s-l6-constlr-e120-l4` (2026-11-16): the 40-epoch run
@@ -252,11 +283,11 @@ put one broad peak on one of the seven equivalent poses.
   second plateau, at the guessed-turn level, takes hundreds to thousands of further steps at the full rate (about
   700 for the square with the encoder frozen, about 1,900 for the pentagon end to end), and the 40-epoch cosine
   schedule has lowered the rate to 60 % when that plateau starts and to 19 % by epoch 30.
-* **7-gon**: learned once the feature map is 14x14 (0.40 degrees in the final evaluation). With the 7x7 map it stays at the
-  guessed-turn level for 120 epochs at a constant rate, on the 88-point sphere grid and equally on a 4 times denser
-  one with sharper attention. So for the 7-gon the limit was the resolution of the feature map, and the schedule,
-  the points per ring and the window width were not sufficient fixes alone. Open: whether the 14x14 map suffices on
-  the 88-point grid.
+* **7-gon**: learned (0.40 degrees in the final evaluation) once the feature map is 14x14 AND the attention starts
+  sharper (start temperature 60 or 100). Either change alone leaves it at the guessed-turn level for 120 epochs at a
+  constant rate: 7x7 map with temperature 60, or 14x14 map with temperature 30. Open: whether it also needs the denser
+  sphere grid (every 14x14 run used 368 points).
+* **10-gon and 13-gon**: not learned with the setup that learns the 7-gon; both stay at the guessed-turn level.
 * **Image2Sphere with L = 6** stays at 6 to 7 degrees on the 7-gon under every change tried (constant rate, 120
   epochs, 14x14 map, denser projection): a limit of the model, as its band limit predicts.
 * The difference between the square and the others in how the turn is laid out on the sphere (table above) is
