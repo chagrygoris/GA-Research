@@ -235,7 +235,10 @@ Together with the earlier runs, the 7-gon needs both changes: a 14x14 map with t
 temperature 60 with a 7x7 map fails. One seed per setting, so "30 never learns" means "not in 120 epochs, seed 0".
 The learned values of `s_h` are not printed in the log and were not read from the checkpoints.
 
-The final evaluations of the 10- and 13-gon runs were still running when this was written.
+Final evaluations (32 samples per image): 10-gon median error 9.11 degrees, acc@15 0.825, log-likelihood 14.71;
+13-gon 6.68 degrees, acc@15 1.0, log-likelihood 13.172. The high log-likelihoods again reflect how tightly the poses sit
+on the ring of turns, not knowledge of the turn (acc@15 is 1.0 for the 13-gon only because a guessed turn is never
+more than 13.8 degrees off).
 
 ## Image2Sphere with L = 6 on the 7-gon: the constant rate changes nothing
 
