@@ -3,6 +3,8 @@
   * a patch of the snapshot: POSE3D_SYMSOL_COS_LEARN=0 freezes s_h (a buffer instead of a parameter);
     POSE3D_SYMSOL_COS_LRMULT=F stores log s_h / F as the parameter, so Adam moves log s_h F times faster;
     POSE3D_SYMSOL_COS_MAX raises the cap on s_h (100 in the code);
+    POSE3D_SYMSOL_COS_SCALE="LO,HI" starts the 8 heads of every block at log-spaced values from LO to HI (the
+    attention class supports scale=(low, high); the env variable alone took one number);
   * a watcher thread in the notebook kernel: after every epoch it reads the run's resume checkpoint and appends to
     /kaggle/working/s_h_trajectory.jsonl all 32 log s_h (4 blocks x 8 heads) and, if s_h is learnable, Adam's moments of
     those parameters; at chosen epochs it saves the model state in half precision (snap_eNNN.pt) for CPU analysis.
@@ -20,7 +22,8 @@ def apply_sh(root):
     """s_h experiments: freeze it, move it faster (parameter = log s_h / F), raise its cap. Defaults change nothing."""
     p = lambda f: os.path.join(root, "pose3d", f)
     edit(p("models/gatr_denoiser.py"), 'scale=float(os.environ.get("POSE3D_SYMSOL_COS_SCALE", "30")), fused=True)',
-         'scale=float(os.environ.get("POSE3D_SYMSOL_COS_SCALE", "30")), fused=True,\\n'
+         'scale=(lambda v: tuple(float(x) for x in v.split(",")) if "," in v else float(v))('
+         'os.environ.get("POSE3D_SYMSOL_COS_SCALE", "30")), fused=True,\\n'
          '                learn=os.environ.get("POSE3D_SYMSOL_COS_LEARN", "1") == "1",\\n'
          '                max_scale=float(os.environ.get("POSE3D_SYMSOL_COS_MAX", "100")))')
     edit(p("models/cos_attention.py"), "        self.mode, self.max_scale, self.eps, self.fused = mode, max_scale, eps, fused or mode == \\"ktab\\"\\n",
