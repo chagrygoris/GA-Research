@@ -1,4 +1,4 @@
-"""Runners for the s_h (attention temperature) trace experiments on the 7-gon bottom view, built from the 14x14 runner
+"""Runners for the s_h (attention temperature) experiments on the n-gon bottom views (n = 7, 10, 13), built from the 14x14 runner
 (make_bottom_grid14_variant.py). Adds to it:
   * a patch of the snapshot: POSE3D_SYMSOL_COS_LEARN=0 freezes s_h (a buffer instead of a parameter);
     POSE3D_SYMSOL_COS_LRMULT=F stores log s_h / F as the parameter, so Adam moves log s_h F times faster;
@@ -7,7 +7,8 @@
     /kaggle/working/s_h_trajectory.jsonl all 32 log s_h (4 blocks x 8 heads) and, if s_h is learnable, Adam's moments of
     those parameters; at chosen epochs it saves the model state in half precision (snap_eNNN.pt) for CPU analysis.
 
-usage: python make_sh_trace_variant.py S LEARN LRMULT MAX EPOCHS SNAP_EPOCHS(comma) WATCHDOG_MIN TAG OUT.ipynb
+usage: python make_sh_trace_variant.py S LEARN LRMULT MAX EPOCHS SNAP_EPOCHS(comma) WATCHDOG_MIN TAG OUT.ipynb [N [SEED]]
+  N: the pyramid (7, default; 10 or 13); SEED: the value of --seed (0, default; the training run is otherwise identical).
 """
 import json, os, sys
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
@@ -91,18 +92,21 @@ except Exception as e:
 print(open(_LOG).read()[-2000:] if os.path.exists(_LOG) else 'no s_h trajectory written')
 '''
 
-def build(s, learn, lrmult, cap, epochs, snaps, watchdog, tag):
-    nb, name = make(7, s, likelihood=False)
+def build(s, learn, lrmult, cap, epochs, snaps, watchdog, tag, n=7, seed=0, why=None):
+    nb, name = make(n, s, likelihood=False)
     cells = nb["cells"]
     def sub(i, old, new):
         t = "".join(cells[i]["source"]); assert t.count(old) == 1, (i, old); cells[i]["source"] = t.replace(old, new)
-    name2 = f"bottom7_gatr_cosdir_grid14_nside8_{tag}"
+    name2 = f"bottom{n}_gatr_cosdir_grid14_nside8_{tag}"
     sub(0, f"RUN_NAME = '{name}'", f"RUN_NAME = '{name2}'\nSNAP_EPOCHS = {snaps}")
     sub(0, "'--n_epochs', '120',", f"'--n_epochs', '{epochs}',")
     sub(0, "WATCHDOG_MINUTES = (240, 680)", f"WATCHDOG_MINUTES = (240, {watchdog})")
-    cells[0]["source"] = (f"# s_h TRACE RUN '{tag}': start s_h = {s}, learnable = {learn}, lr multiplier on log s_h = {lrmult}, "
-                          f"cap = {cap}, {epochs} epochs. Launched 2026-11-20 at a human's request (question: is the 7-gon's "
-                          f"breakthrough connected with a change of the learned s_h?).\n") + "".join(cells[0]["source"])
+    if seed != 0:
+        sub(0, "'--sync_bn', '--seed', '0']", f"'--sync_bn', '--seed', '{seed}']")
+    why = why or "is the 7-gon's breakthrough connected with a change of the learned s_h?"
+    cells[0]["source"] = (f"# s_h RUN '{tag}' ({n}-gon, seed {seed}): start s_h = {s}, learnable = {learn}, lr multiplier on "
+                          f"log s_h = {lrmult}, cap = {cap}, {epochs} epochs. Requested by a human (question: {why}).\n"
+                          + "".join(cells[0]["source"]))
     t = "".join(cells[2]["source"]); k = "apply_grid('/kaggle/working/GA-Research/pose3d')"
     assert t.count(k) == 1; cells[2]["source"] = t.replace(k, k + PATCH)
     sub(5, "os.environ['POSE3D_SYMSOL_COS_SCALE'] = ",
@@ -114,5 +118,6 @@ def build(s, learn, lrmult, cap, epochs, snaps, watchdog, tag):
 
 if __name__ == "__main__":
     a = sys.argv[1:]
-    nb, name = build(int(a[0]), a[1] == "1", a[2], a[3], int(a[4]), [int(x) for x in a[5].split(",")], int(a[6]), a[7])
+    nb, name = build(int(a[0]), a[1] == "1", a[2], a[3], int(a[4]), [int(x) for x in a[5].split(",")], int(a[6]), a[7],
+                     n=int(a[9]) if len(a) > 9 else 7, seed=int(a[10]) if len(a) > 10 else 0)
     json.dump(nb, open(a[8], "w")); print(name)
