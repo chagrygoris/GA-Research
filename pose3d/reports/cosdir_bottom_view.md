@@ -346,7 +346,7 @@ ring's token variance at azimuthal frequency 7, its phase coherence with the tur
 | trace, epoch 10 | 5.3e-6 | 0.038 | 0.39 | 0.32 |
 | trace, epoch 60 | 5.4e-5 | 0.032 | 0.15 | 0.34 |
 | trace, epoch 120 | 6.1e-4 | 0.068 | 0.35 | 0.30 |
-| fast, epochs 10 / 15 / 20 | 1.1e-6 / 3.8e-6 / 6.5e-5 | 0.03 | 0.2 | 0.13 to 0.15 |
+| fast, epochs 10 / 15 / 20 / 60 | 1.1e-6 / 3.8e-6 / 6.5e-5 / 2.0e-5 | 0.03 to 0.04 | 0.2, at 60: 0.04 | 0.13 to 0.15 |
 | run that learned, epoch 120 | 2.5 | 0.92 | 1.00 | 0.33 |
 
 ![growth on the plateau](figures/cosdir_bottom7_plateau_growth.png)
@@ -355,7 +355,8 @@ ring's token variance at azimuthal frequency 7, its phase coherence with the tur
   0.33), so window width does not separate them.
 * The 7-lobed pattern is there and grows: in the frozen run the turn-following velocity rises about 10x every 60
   epochs, and by epoch 120 a ring carries 12 % of its variance at frequency 7, turning with the object (coherence
-  0.89). It is still about 2,000x below the run that learned.
+  0.89). It is still about 2,000x below the run that learned. In the fast run, with windows half as wide in degree 7, nothing grows: at epoch
+  60 the turn-following velocity is lower than at epoch 20 and the pattern has no phase coherence (0.04).
 * Plausible picture: the plateau is a saddle, and the n-lobed direction escapes it roughly exponentially from a tiny
   starting amplitude. The epoch of the breakthrough is then set by that amplitude and the growth rate, so runs that
   differ only by noise break through at different times, some after 120 epochs. This is a reading of three
