@@ -233,6 +233,8 @@ plateau, with no trend. The setup that learns the 7-gon does not reach a 10- or 
 0.625). So with the 14x14 map the sharper attention is needed too: 30 fails, 60 and 100 succeed about equally.
 Together with the earlier runs, the 7-gon needs both changes: a 14x14 map with temperature 30 fails, and
 temperature 60 with a 7x7 map fails. One seed per setting, so "30 never learns" means "not in 120 epochs, seed 0".
+(Correction, 2026-11-20: two later start-60 runs did not break through in 120 epochs; both changes make the 7-gon
+learnable, not reliably learned. See the s_h section below.)
 The learned values of `s_h` are not printed in the log and were not read from the checkpoints.
 
 Final evaluations (32 samples per image): 10-gon median error 9.11 degrees, acc@15 0.825, log-likelihood 14.71;
@@ -273,6 +275,12 @@ about 50 for the 10-gon and 83 for the 13-gon, that is start temperatures of abo
 13-gon probably also needs the next grid density (nside 16). This is a hypothesis from one seed per setting; the
 10-gon at start temperature about 110 is the direct test.
 
+Scheduled for 2026-11-21 00:05 UTC (four 180-epoch runs, about 10.4 h each on 2xT4, cap on s_h raised to 1000): the
+10-gon at start 120 and the 13-gon at start 200, and each with the 8 heads of every block started at log-spaced
+temperatures from 30 to 250 (wide heads for the low degrees, sharp ones for degree n). nside 16 costs about 4x per
+step (CPU timing), 25 h per run, so it was not scheduled. Smoke tests (3 epochs): `pepeschneyne/bottom13-s200-smoke-e3-t4x2`
+and `pepeschneyne/bottom13-spread-smoke-e3-t4x2`, both finite, 199 to 203 s per epoch.
+
 ## The learned s_h in all finished runs
 
 The learned inverse temperatures of all 32 heads (4 blocks x 8) at the end of every finished cosine-attention run
@@ -292,8 +300,70 @@ The learned inverse temperatures of all 32 heads (4 blocks x 8) at the end of ev
   jump at the breakthrough is impossible by construction; a small coordinated change is not.
 * In the run started at 100 several heads end exactly at the cap (100).
 
-Per-epoch traces are being run (2026-11-20): the 7-gon at start 60 with s_h logged every epoch, the same with s_h
-frozen, and a run started at 30 in which log s_h moves 30 times faster with the cap at 1000.
+## s_h epoch by epoch on the 7-gon: not the cause of the breakthrough, and the breakthrough is not reliable
+
+Three runs of the 14x14 setup on the 7-gon (2026-11-19/20; 368 sphere points, constant rate; runners from
+`notebooks/make_sh_trace_variant.py`). A watcher thread in each notebook read the per-epoch resume checkpoint and
+logged all 32 values of s_h (4 blocks x 8 heads) and, where s_h is learnable, Adam's first and second moments of
+log s_h (m and v; |m| / sqrt(v) near 1 means a consistent gradient sign, near 0 noise). It also saved model
+snapshots for CPU analysis.
+
+| kernel | s_h | epochs | median error, last 20 epochs | final evaluation (32 samples) |
+|---|---|---|---|---|
+| `pepeschneyne/bottom7-shtrace-s60-learn-t4x2` ("trace") | starts at 60, learnable | 120 | 12.3 to 12.9 | 12.12, acc@15 0.609 |
+| `saudabubin/bottom7-shtrace-s60-frozen-t4x2` ("frozen") | fixed at 60 | 120 | 12.4 to 12.9 | 11.91, acc@15 0.625 |
+| `avgurpetrovich/bottom7-shtrace-s30-free30x-t4x2` ("fast") | starts at 30, log s_h moves 30x faster, cap 1000 | 60 | 12.3 to 13.1 | 11.69, acc@15 0.637 |
+
+None of the three left the guessed-turn plateau (12.9 degrees).
+
+![s_h per head and block, with the error curves](figures/cosdir_bottom7_s_h_trace.png)
+
+* **The breakthrough is stochastic.** The trace run has the same configuration and seed as the first start-60 run of
+  the 14x14 section, which broke through at epoch 61. The two error curves differ by about 1 % from epoch 1 on (GPU
+  nondeterminism) and part at the plateau: one learns, the other does not in 120 epochs. Of the four 7-gon runs with
+  the 14x14 map and start s_h of at least 60, two learned (start 60, start 100) and two did not (trace, frozen). The
+  conclusion of the 14x14 section is corrected accordingly: the 14x14 map with start s_h 60 or more makes the 7-gon
+  learnable, not reliably learned in 120 epochs.
+* **s_h moves only at the first two transitions, and they do not need it.** The largest per-epoch changes of log s_h
+  fall at epoch 2 (error 73 to 53 degrees) and epochs 14 to 16 (38 to 13 degrees, when the ring of possible poses is
+  found), in the trace run (largest single change 0.025) and in the fast run (0.45 and 0.74: one head doubles). The
+  frozen run makes the same transitions at the same epochs (15) with s_h fixed. Between them the trace run's median
+  s_h falls smoothly from 60 to 57, as weight decay predicts, and Adam's |m| / sqrt(v) is 2.0 in the first epoch and
+  0.11 to 0.16 afterwards: no consistent push.
+* **The fast run spreads its heads but does not learn.** By epoch 16 its 32 values span 16 to 97 (median 38). Its
+  windows are wider than at start 60 (median a_7 = 0.14 against 0.33), and the 60 epochs are short.
+
+**What grows on the plateau.** The diagnostics of the 14x14 section (`probes/cosdir_interp/diag2.py`, 600 test
+images) on the snapshots (`results/diag2_snap_*.json`, `results/plateau_growth.json`): the turn-following
+frequency-7 part of the predicted velocity at t = 0.9 (zero for a model that guesses the turn), the largest share of a
+ring's token variance at azimuthal frequency 7, its phase coherence with the turn, and the median window pass a_7.
+
+| snapshot | velocity, turn-following frequency 7 | ring share at 7 | coherence | a_7 |
+|---|---|---|---|---|
+| frozen, epoch 10 | 3.1e-6 | 0.028 | 0.26 | 0.33 |
+| frozen, epoch 60 | 9.1e-5 | 0.028 | 0.11 | 0.35 |
+| frozen, epoch 120 | 1.1e-3 | 0.122 | 0.89 | 0.34 |
+| trace, epoch 10 | 5.3e-6 | 0.038 | 0.39 | 0.32 |
+| trace, epoch 60 | 5.4e-5 | 0.032 | 0.15 | 0.34 |
+| trace, epoch 120 | 6.1e-4 | 0.068 | 0.35 | 0.30 |
+| fast, epochs 10 / 15 / 20 | 1.1e-6 / 3.8e-6 / 6.5e-5 | 0.03 | 0.2 | 0.13 to 0.15 |
+| run that learned, epoch 120 | 2.5 | 0.92 | 1.00 | 0.33 |
+
+![growth on the plateau](figures/cosdir_bottom7_plateau_growth.png)
+
+* The windows are as wide in the runs that stayed on the plateau as in the one that learned (a_7 0.30 to 0.35 against
+  0.33), so window width does not separate them.
+* The 7-lobed pattern is there and grows: in the frozen run the turn-following velocity rises about 10x every 60
+  epochs, and by epoch 120 a ring carries 12 % of its variance at frequency 7, turning with the object (coherence
+  0.89). It is still about 2,000x below the run that learned.
+* Plausible picture: the plateau is a saddle, and the n-lobed direction escapes it roughly exponentially from a tiny
+  starting amplitude. The epoch of the breakthrough is then set by that amplitude and the growth rate, so runs that
+  differ only by noise break through at different times, some after 120 epochs. This is a reading of three
+  snapshots per run, not a measured growth law.
+
+So the answer to "is the 7-gon's breakthrough connected with a jump in the learned s_h": no. s_h jumps at the earlier
+transitions, a frozen s_h does not prevent them, and what precedes the breakthrough is the slow growth of the n-lobed
+pattern at unchanged window width.
 
 ## Image2Sphere with L = 6 on the 7-gon: the constant rate changes nothing
 
@@ -341,10 +411,12 @@ put one broad peak on one of the seven equivalent poses.
   second plateau, at the guessed-turn level, takes hundreds to thousands of further steps at the full rate (about
   700 for the square with the encoder frozen, about 1,900 for the pentagon end to end), and the 40-epoch cosine
   schedule has lowered the rate to 60 % when that plateau starts and to 19 % by epoch 30.
-* **7-gon**: learned (0.40 degrees in the final evaluation) once the feature map is 14x14 AND the attention starts
-  sharper (start temperature 60 or 100). Either change alone leaves it at the guessed-turn level for 120 epochs at a
-  constant rate: 7x7 map with temperature 60, or 14x14 map with temperature 30. Open: whether it also needs the denser
-  sphere grid (every 14x14 run used 368 points).
+* **7-gon**: learnable (0.40 degrees in the final evaluation) once the feature map is 14x14 AND the attention starts
+  sharper (start temperature 60 or 100), but not reliably: two of four such runs broke through within 120 epochs (at
+  epochs 61 to 72), two did not, including a run identical to a successful one up to GPU nondeterminism. Either change
+  alone left it at the guessed-turn level in every run: 7x7 map with temperature 60, or 14x14 map with temperature 30.
+  The learned s_h does not jump at the breakthrough. Open: whether it also needs the denser sphere grid (every 14x14
+  run used 368 points).
 * **10-gon and 13-gon**: not learned with the setup that learns the 7-gon; both stay at the guessed-turn level.
 * **Image2Sphere with L = 6** stays at 6 to 7 degrees on the 7-gon under every change tried (constant rate, 120
   epochs, 14x14 map, denser projection): a limit of the model, as its band limit predicts.
