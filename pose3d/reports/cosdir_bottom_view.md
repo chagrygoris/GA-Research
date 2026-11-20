@@ -302,13 +302,14 @@ The learned inverse temperatures of all 32 heads (4 blocks x 8) at the end of ev
 
 ## Summary of the s_h experiments
 
-![s_h scaling: outcomes and window pass](figures/cosdir_s_h_scaling.png)
+![starting s_h vs final error](figures/cosdir_s_h_vs_mre.png)
 
-Left: every 14x14 bottom-view run by pyramid and start s_h (filled: learned the turn, with the epoch of the
-breakthrough; cross: stayed at the guessed turn; hollow: scheduled for 2026-11-21). Right: a_n, the amplitude with which
-an attention window passes degree n, for kappa = 0.37 to 0.48 s_h (band; line at 0.42), with the measured median a_n
-of the finished checkpoints. The grey band is the pass at which the 7-gon learned; the scheduled single-temperature
-runs (120 for the 10-gon, 200 for the 13-gon) put degree 10 and 13 into it.
+Final median rotation error (32-sample evaluation) of every 120-epoch bottom-view run with the 14x14 map and 368
+sphere points, by starting s_h and number of pyramid sides. Dashed lines: the guessing level 90/n degrees, the error of
+a model that knows everything but the turn. The 7-gon learned at 60 (one of three runs) and at 100; the 10- and 13-gon
+were only run at 60. Not shown: the 60-epoch run with log s_h moving 30x faster (7-gon, start 30: 11.69 degrees).
+Runs at 120 (10-gon) and 200 (13-gon), and with heads spread from 30 to 250, are scheduled for 2026-11-21.
+Why the threshold moves with n: `figures/cosdir_s_h_scaling.png` (how much of degree n an attention window passes).
 
 ## s_h epoch by epoch on the 7-gon: not the cause of the breakthrough, and the breakthrough is not reliable
 
