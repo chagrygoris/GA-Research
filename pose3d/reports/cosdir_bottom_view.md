@@ -300,6 +300,16 @@ The learned inverse temperatures of all 32 heads (4 blocks x 8) at the end of ev
   jump at the breakthrough is impossible by construction; a small coordinated change is not.
 * In the run started at 100 several heads end exactly at the cap (100).
 
+## Summary of the s_h experiments
+
+![s_h scaling: outcomes and window pass](figures/cosdir_s_h_scaling.png)
+
+Left: every 14x14 bottom-view run by pyramid and start s_h (filled: learned the turn, with the epoch of the
+breakthrough; cross: stayed at the guessed turn; hollow: scheduled for 2026-11-21). Right: a_n, the amplitude with which
+an attention window passes degree n, for kappa = 0.37 to 0.48 s_h (band; line at 0.42), with the measured median a_n
+of the finished checkpoints. The grey band is the pass at which the 7-gon learned; the scheduled single-temperature
+runs (120 for the 10-gon, 200 for the 13-gon) put degree 10 and 13 into it.
+
 ## s_h epoch by epoch on the 7-gon: not the cause of the breakthrough, and the breakthrough is not reliable
 
 Three runs of the 14x14 setup on the 7-gon (2026-11-19/20; 368 sphere points, constant rate; runners from
