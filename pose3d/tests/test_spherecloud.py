@@ -147,3 +147,29 @@ def test_dircloud_grid_14_keeps_the_turn_and_flip_symmetry():
         sign = torch.tensor([-1.0, -1.0, 1.0], dtype=torch.float64)
         torch.testing.assert_close(_velocity_from_map(model, torch.flip(fmap, dims=(3,)), FLIP @ R @ FLIP, t), sign * v,
                                    atol=1e-8, rtol=1e-6)
+
+
+def test_dilate_last_two_stages_matches_torchvision():
+    """dilate_last_stage(stages=2) (--dircloud_grid 28) gives the same 28x28 map as torchvision's own ResNet-50 with
+    replace_stride_with_dilation=[False, True, True] and the same weights."""
+    torchvision = pytest.importorskip("torchvision")
+    pytest.importorskip("image2sphere", reason="image2sphere not installed")
+    from pose3d.models.encoders import build_encoder, dilate_last_stage
+
+    torch.manual_seed(0)
+    enc = build_encoder("resnet50", pretrained=False)
+    net = getattr(enc, "encoder", enc)
+    ref = torchvision.models.resnet50(weights=None, replace_stride_with_dilation=[False, True, True])
+    trunk = torch.nn.Sequential(*list(ref.children())[:-2])
+    own = {k: v for k, v in trunk.state_dict().items()}
+    mine = net.state_dict()
+    assert len(own) == len(mine)
+    net.load_state_dict(dict(zip(mine.keys(), own.values())))
+    dilate_last_stage(enc, stages=2)
+    net.eval(); trunk.eval()
+    x = torch.rand(1, 3, 224, 224)
+    with torch.no_grad():
+        a = net(x) if not hasattr(net, "layers") or callable(net) else None
+        b = trunk(x)
+    assert b.shape == (1, 2048, 28, 28) and a.shape == b.shape
+    torch.testing.assert_close(a, b, atol=1e-5, rtol=1e-4)

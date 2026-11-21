@@ -239,20 +239,28 @@ def freeze_encoder(module):
     return module
 
 
-def dilate_last_stage(encoder):
-    """A torchvision ResNet behind image2sphere's wrapper: run its last stage at stride 1 with dilation 2, as
-    torchvision's replace_stride_with_dilation does, so a 224 px image gives a 14x14 map instead of 7x7. The
-    weights are untouched, so pretrained ones stay valid."""
+def dilate_last_stage(encoder, stages: int = 1):
+    """A torchvision ResNet behind image2sphere's wrapper: run its last `stages` stages (1 or 2) at stride 1 with
+    dilation, as torchvision's replace_stride_with_dilation does ([False, False, True] or [False, True, True]), so a
+    224 px image gives a 14x14 (stages=1) or 28x28 (stages=2) map instead of 7x7. Each dilated stage doubles the
+    dilation; inside a stage the first block keeps the previous dilation, the others use the new one. The weights are
+    untouched, so pretrained ones stay valid."""
+    if stages not in (1, 2):
+        raise ValueError("dilate_last_stage: stages must be 1 or 2")
     net = getattr(encoder, "encoder", encoder)             # ImageNetNormalized wraps the ResNet
-    stage = net.layers[-1]
-    first = stage[0]
-    if not hasattr(first, "conv3"):
+    if not hasattr(net.layers[-1][0], "conv3"):
         raise ValueError("dilate_last_stage expects a bottleneck ResNet (resnet50 / 101 / 152)")
-    first.conv2.stride = (1, 1)
-    first.downsample[0].stride = (1, 1)
-    for block in list(stage)[1:]:
-        block.conv2.dilation, block.conv2.padding = (2, 2), (2, 2)
-    shape = (net.output_shape[0], 14, 14)
+    dilation = 1
+    for stage in list(net.layers)[len(net.layers) - stages:]:
+        previous, dilation = dilation, dilation * 2
+        first = stage[0]
+        first.conv2.stride = (1, 1)
+        first.conv2.dilation, first.conv2.padding = (previous, previous), (previous, previous)
+        first.downsample[0].stride = (1, 1)
+        for block in list(stage)[1:]:
+            block.conv2.dilation, block.conv2.padding = (dilation, dilation), (dilation, dilation)
+    side = 7 * 2 ** stages
+    shape = (net.output_shape[0], side, side)
     net.output_shape = shape
     if net is not encoder:
         encoder.output_shape = shape

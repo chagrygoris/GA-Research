@@ -87,6 +87,47 @@ threading.Thread(target=_sh_loop, daemon=True).start()
 print('s_h watcher started; snapshots at epochs', sorted(_SNAP), flush=True)
 '''
 
+GRID28 = r'''
+
+def apply_grid28(root):
+    """--dircloud_grid 28: dilate the ResNet's last two stages (models/encoders.dilate_last_stage(stages=2), the
+    repository's version), a 28x28 map at 224 px."""
+    p = lambda f: os.path.join(root, "pose3d", f)
+    enc = open(p("models/encoders.py")).read()
+    a = enc.index("def dilate_last_stage(encoder):"); b = enc.index("def build_encoder(")
+    new = (
+        "def dilate_last_stage(encoder, stages=1):\n"
+        "    if stages not in (1, 2):\n"
+        "        raise ValueError('dilate_last_stage: stages must be 1 or 2')\n"
+        "    net = getattr(encoder, 'encoder', encoder)\n"
+        "    dilation = 1\n"
+        "    for stage in list(net.layers)[len(net.layers) - stages:]:\n"
+        "        previous, dilation = dilation, dilation * 2\n"
+        "        first = stage[0]\n"
+        "        first.conv2.stride = (1, 1)\n"
+        "        first.conv2.dilation, first.conv2.padding = (previous, previous), (previous, previous)\n"
+        "        first.downsample[0].stride = (1, 1)\n"
+        "        for block in list(stage)[1:]:\n"
+        "            block.conv2.dilation, block.conv2.padding = (dilation, dilation), (dilation, dilation)\n"
+        "    side = 7 * 2 ** stages\n"
+        "    shape = (net.output_shape[0], side, side)\n"
+        "    net.output_shape = shape\n"
+        "    if net is not encoder:\n"
+        "        encoder.output_shape = shape\n"
+        "    return encoder\n\n\n")
+    open(p("models/encoders.py"), "w").write(enc[:a] + new + enc[b:])
+    edit(p("models/clifford_flow.py"),
+         "            if dircloud_grid != 14:\n"
+         "                raise ValueError(\"dircloud_grid must be 7 or 14\")\n"
+         "            dilate_last_stage(self.backbone)\n",
+         "            if dircloud_grid not in (14, 28):\n"
+         "                raise ValueError(\"dircloud_grid must be 7, 14 or 28\")\n"
+         "            dilate_last_stage(self.backbone, stages=1 if dircloud_grid == 14 else 2)\n")
+
+apply_grid28('/kaggle/working/GA-Research/pose3d')
+print('patched: --dircloud_grid 28', flush=True)
+'''
+
 FINAL = '''# s_h TRACE: one last read after training (the thread may not have seen the final epoch yet).
 try:
     _sh_poll_once({})
@@ -95,12 +136,12 @@ except Exception as e:
 print(open(_LOG).read()[-2000:] if os.path.exists(_LOG) else 'no s_h trajectory written')
 '''
 
-def build(s, learn, lrmult, cap, epochs, snaps, watchdog, tag, n=7, seed=0, why=None):
+def build(s, learn, lrmult, cap, epochs, snaps, watchdog, tag, n=7, seed=0, why=None, grid=14):
     nb, name = make(n, s, likelihood=False)
     cells = nb["cells"]
     def sub(i, old, new):
         t = "".join(cells[i]["source"]); assert t.count(old) == 1, (i, old); cells[i]["source"] = t.replace(old, new)
-    name2 = f"bottom{n}_gatr_cosdir_grid14_nside8_{tag}"
+    name2 = f"bottom{n}_gatr_cosdir_grid{grid}_nside8_{tag}"
     sub(0, f"RUN_NAME = '{name}'", f"RUN_NAME = '{name2}'\nSNAP_EPOCHS = {snaps}")
     sub(0, "'--n_epochs', '120',", f"'--n_epochs', '{epochs}',")
     sub(0, "WATCHDOG_MINUTES = (240, 680)", f"WATCHDOG_MINUTES = (240, {watchdog})")
@@ -111,7 +152,9 @@ def build(s, learn, lrmult, cap, epochs, snaps, watchdog, tag, n=7, seed=0, why=
                           f"log s_h = {lrmult}, cap = {cap}, {epochs} epochs. Requested by a human (question: {why}).\n"
                           + "".join(cells[0]["source"]))
     t = "".join(cells[2]["source"]); k = "apply_grid('/kaggle/working/GA-Research/pose3d')"
-    assert t.count(k) == 1; cells[2]["source"] = t.replace(k, k + PATCH)
+    assert t.count(k) == 1; cells[2]["source"] = t.replace(k, k + PATCH + (GRID28 if grid == 28 else ""))
+    if grid == 28:
+        sub(0, "'--dircloud_grid', '14'", "'--dircloud_grid', '28'")
     sub(5, "os.environ['POSE3D_SYMSOL_COS_SCALE'] = ",
         f"os.environ['POSE3D_SYMSOL_COS_LEARN'] = '{1 if learn else 0}'\nos.environ['POSE3D_SYMSOL_COS_LRMULT'] = '{lrmult}'\n"
         f"os.environ['POSE3D_SYMSOL_COS_MAX'] = '{cap}'\nos.environ['POSE3D_SYMSOL_COS_SCALE'] = ")

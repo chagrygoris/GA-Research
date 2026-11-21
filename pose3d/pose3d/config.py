@@ -368,7 +368,9 @@ class FlowConfig:
     dircloud_nside: int = 4
     # With cond_tokens=spherecloud and a ResNet: side of the feature map the tokens are lifted from. 7: the ResNet's
     # own map at 224 px. 14: its last stage runs at stride 1 with dilation 2 (models/encoders.dilate_last_stage; the
-    # pretrained weights are kept), so the map is 14x14 and the lift's Gaussian is narrowed in proportion.
+    # pretrained weights are kept), so the map is 14x14 and the lift's Gaussian is narrowed in proportion. 28: the
+    # last two stages dilated (2 and 4), a 28x28 map (8 px per cell at 224 px), enough for the 13-gon's lobes
+    # (reports/cosdir_bottom_view.md).
     dircloud_grid: int = 7
     # With cond_tokens=dircloud: also feed a constant image-up token (-e2). Breaks P1's exact 90 deg turn
     # symmetry, keeps the flip, and lets the head read in-plane orientation from the ResNet's channels

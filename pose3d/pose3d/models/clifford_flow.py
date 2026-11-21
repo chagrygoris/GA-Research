@@ -136,9 +136,9 @@ class ImageToMultivectors(nn.Module):
                                       depth_anything_model=depth_anything_model)
         if cond_tokens == "spherecloud" and dircloud_grid != 7:
             from pose3d.models.encoders import dilate_last_stage
-            if dircloud_grid != 14:
-                raise ValueError("dircloud_grid must be 7 or 14")
-            dilate_last_stage(self.backbone)
+            if dircloud_grid not in (14, 28):
+                raise ValueError("dircloud_grid must be 7, 14 or 28")
+            dilate_last_stage(self.backbone, stages=1 if dircloud_grid == 14 else 2)
         self.frozen_backbone = bool(freeze_backbone)
         if self.frozen_backbone:
             freeze_encoder(self.backbone)
