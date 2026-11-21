@@ -52,14 +52,45 @@ class TimestepEmbedder(nn.Module):
         return self.mlp(timestep_embedding(t, self.freq_dim))
 
 
+class CosVectorAttention(nn.Module):
+    """Multi-head self-attention whose logit per head h is s_h * cos(q_v, k_v) + (q_r . k_r) / sqrt(d_r): the first
+    n_vec (3) dimensions of each head's query and key (q_v, k_v) enter through their cosine, scaled by an inverse
+    temperature s_h (learnable per head, stored as log s_h, capped at max_scale, starting at `scale`), and the other
+    d_r = head_dim - n_vec dimensions (q_r, k_r) through the usual scaled dot product. The cosine part is GATr cosdir's
+    angular term (models/cos_attention.py) on three learned coordinates. Called like nn.MultiheadAttention(h, h, h)."""
+
+    def __init__(self, dim: int, heads: int, n_vec: int = 3, scale: float = 30.0, max_scale: float = 100.0,
+                 eps: float = 1e-6):
+        super().__init__()
+        if dim % heads or dim // heads <= n_vec:
+            raise ValueError("CosVectorAttention: dim must split into heads wider than n_vec")
+        self.heads, self.head_dim, self.n_vec, self.max_scale, self.eps = heads, dim // heads, n_vec, max_scale, eps
+        self.qkv = nn.Linear(dim, 3 * dim)
+        self.proj = nn.Linear(dim, dim)
+        self.log_scale = nn.Parameter(torch.full((heads,), math.log(scale)))
+
+    def forward(self, query, key=None, value=None, need_weights=False):
+        b, n, d = query.shape
+        q, k, v = self.qkv(query).reshape(b, n, 3, self.heads, self.head_dim).permute(2, 0, 3, 1, 4)   # (b, H, n, hd)
+        qv = q[..., :self.n_vec] / q[..., :self.n_vec].norm(dim=-1, keepdim=True).clamp_min(self.eps)
+        kv = k[..., :self.n_vec] / k[..., :self.n_vec].norm(dim=-1, keepdim=True).clamp_min(self.eps)
+        s = self.log_scale.clamp(max=math.log(self.max_scale)).exp()[None, :, None, None]
+        logits = s * qv @ kv.transpose(-1, -2) + \
+            q[..., self.n_vec:] @ k[..., self.n_vec:].transpose(-1, -2) / math.sqrt(self.head_dim - self.n_vec)
+        out = (logits.softmax(-1) @ v).transpose(1, 2).reshape(b, n, d)
+        return self.proj(out), None
+
+
 class DiTBlock(nn.Module):
     """Self-attention + MLP, each gated and modulated by adaLN-Zero from the conditioning c."""
 
-    def __init__(self, dim: int, heads: int, mlp_ratio: float = 4.0):
+    def __init__(self, dim: int, heads: int, mlp_ratio: float = 4.0, cos_vector: bool = False, cos_scale: float = 30.0):
         super().__init__()
         hidden = int(dim * mlp_ratio)
         self.norm1 = nn.LayerNorm(dim, elementwise_affine=False, eps=1e-6)
-        self.attn = nn.MultiheadAttention(dim, heads, batch_first=True)
+        # cos_vector: the first 3 dimensions of every head through a scaled cosine (CosVectorAttention)
+        self.attn = (CosVectorAttention(dim, heads, scale=cos_scale) if cos_vector
+                     else nn.MultiheadAttention(dim, heads, batch_first=True))
         self.norm2 = nn.LayerNorm(dim, elementwise_affine=False, eps=1e-6)
         self.mlp = nn.Sequential(nn.Linear(dim, hidden), nn.GELU(approximate="tanh"), nn.Linear(hidden, dim))
         self.adaLN_modulation = nn.Sequential(nn.SiLU(), nn.Linear(dim, 6 * dim))
@@ -142,7 +173,8 @@ class SphereTokens(nn.Module):
 class DiTVectorField(nn.Module):
     """DiT over [x_t token] + condition tokens; returns the body-frame velocity (n, 3)."""
 
-    def __init__(self, dim: int, blocks: int, heads: int, mlp_ratio: float = 4.0, pose_lmax: int = 0):
+    def __init__(self, dim: int, blocks: int, heads: int, mlp_ratio: float = 4.0, pose_lmax: int = 0,
+                 cos_vector: bool = False, cos_scale: float = 30.0):
         super().__init__()
         # pose_lmax = 0: the flattened rotation matrix (9 numbers). pose_lmax = L > 0: the Wigner-D matrices
         # D^l(R), l = 1..L, flattened (sum (2l+1)^2 numbers; 454 for L = 6), the harmonic pose description the
@@ -159,7 +191,7 @@ class DiTVectorField(nn.Module):
         self.x_type = nn.Parameter(torch.zeros(1, 1, dim))
         self.t_embed = TimestepEmbedder(dim)
         self.c_embed = nn.Linear(dim, dim)          # pooled condition, added to the adaLN input
-        self.blocks = nn.ModuleList(DiTBlock(dim, heads, mlp_ratio) for _ in range(blocks))
+        self.blocks = nn.ModuleList(DiTBlock(dim, heads, mlp_ratio, cos_vector, cos_scale) for _ in range(blocks))
         self.norm_final = nn.LayerNorm(dim, elementwise_affine=False, eps=1e-6)
         self.final_modulation = nn.Sequential(nn.SiLU(), nn.Linear(dim, 2 * dim))
         self.out = nn.Linear(dim, 3)
@@ -189,7 +221,7 @@ class DiTFlow(nn.Module):
                  freeze_backbone: bool = False, n_time_samples: int = 8, n_cond_tokens: int = 64,
                  dim: int = 112, blocks: int = 4, heads: int = 4, mlp_ratio: float = 4.0, pose_lmax: int = 0,
                  point_input: bool = False, sphere_input: bool = False, sphere_channels: int = 32,
-                 sphere_nside: int = 4):
+                 sphere_nside: int = 4, cos_vector: bool = False, cos_scale: float = 30.0):
         super().__init__()
         self.n_time_samples = max(1, int(n_time_samples))
         if sphere_input:
@@ -211,7 +243,8 @@ class DiTFlow(nn.Module):
                                                conv_adapter=False)
             self.condition_head = DiTConditionHead(self.adapter.n_mv, 2**algebra.dim, n_cond_tokens, dim, heads,
                                                    mlp_ratio)
-        self.vector_field = DiTVectorField(dim, blocks, heads, mlp_ratio, pose_lmax=pose_lmax)
+        self.vector_field = DiTVectorField(dim, blocks, heads, mlp_ratio, pose_lmax=pose_lmax, cos_vector=cos_vector,
+                                           cos_scale=cos_scale)
 
     def condition(self, x):
         return self.condition_head(self.adapter(x))

@@ -476,6 +476,11 @@ class FlowConfig:
     # DiT reads the SO(3)-Fourier head's input: 1x1 conv (so3f_s2_channels) + lift onto the so3f_nside hemisphere
     # points, one token per point (features + direction), instead of the pooled backbone vector.
     dit_sphere_tokens: bool = False
+    # --model dit_flow: in the vector field's attention, the first 3 dimensions of every head's query and key enter
+    # through s_h * cos(q, k) (s_h learnable per head, starting at dit_cos_scale, capped at 100), the rest through the
+    # usual dot product (models/dit_flow.CosVectorAttention; GATr cosdir's angular term in a DiT).
+    dit_cos_vector: bool = False
+    dit_cos_scale: float = 30.0
     # --model mlp_flow sizes (defaults: the original MLPFlow, ~1.28M params after a ResNet-50 with its conv
     # adapter). --no-mlp_conv_adapter feeds the pooled backbone vector, as DiTFlow.
     mlp_cond_hidden: int = 210

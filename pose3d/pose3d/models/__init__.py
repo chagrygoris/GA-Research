@@ -102,6 +102,8 @@ def _dit_flow(cfg: Config, algebra) -> nn.Module:
         pose_lmax=fl.dit_pose_lmax,
         point_input=cfg.run.dataset in ("modelnet10_points", "symsol_points"),
         sphere_input=fl.dit_sphere_tokens,
+        cos_vector=fl.dit_cos_vector,
+        cos_scale=fl.dit_cos_scale,
         sphere_channels=fl.so3f_s2_channels,
         sphere_nside=fl.so3f_nside,
     )
