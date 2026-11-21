@@ -344,6 +344,25 @@ are not learned); the spread runs start the 8 heads of every block at log-spaced
 * One run per setting, and the 7-gon showed that the breakthrough epoch varies between identical runs, so "the 13-gon
   does not learn at 200" means "not in 180 epochs, in this run".
 
+Diagnostics of the 14x14 section (`probes/cosdir_interp/diag2.py`, 600 test images, patched model so that s_h above 100
+is not clipped; `results/diag2_sweep_*.json`):
+
+| checkpoint | ring share at n / coherence | turn-following velocity at n | a_n median (max) |
+|---|---|---|---|
+| 10-gon, start 120, epoch 120 (plateau) | 0.033 / 0.52 | 1.2e-4 | 0.32 (0.57) |
+| 10-gon, start 120, epoch 180 (breaking through) | 0.73 / 0.99 | 0.52 | 0.31 (0.56) |
+| 10-gon, heads 30 to 250, epoch 180 | 0.026 / 0.06 | 1.3e-5 | 0.20 (0.69) |
+| 13-gon, start 200, epoch 180 | 0.006 / 0.04 | 1.1e-6 | 0.30 (0.54) |
+| (7-gon that learned, start 60, epoch 120) | 0.92 / 1.00 | 2.5 | 0.33 (0.60) |
+
+* The prediction for the window width held: start 120 gives the 10-gon a median a_10 of 0.31, the value at which the
+  7-gon learned, and by epoch 180 the 10-lobed pattern has formed (73 % of a ring's variance at frequency 10, phase
+  coherence 0.99), while the window width did not change from epoch 120 to 180.
+* The 13-gon at start 200 also reaches a_13 = 0.30, yet no 13-lobed pattern grows at all (share 0.006, below the
+  10-gon's plateau value). So for the 13-gon the window width is not the only obstacle. Candidates: its windows (about
+  6 degrees wide) are narrower than the spacing of the 368-point grid on the outer rings (11 degrees), and what the
+  turn is worth to the loss falls with n (0.27 for n = 13 against 0.34 for n = 10). Not tested.
+
 ## s_h epoch by epoch on the 7-gon: not the cause of the breakthrough, and the breakthrough is not reliable
 
 Three runs of the 14x14 setup on the 7-gon (2026-11-19/20; 368 sphere points, constant rate; runners from
