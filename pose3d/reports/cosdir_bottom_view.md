@@ -363,6 +363,63 @@ is not clipped; `results/diag2_sweep_*.json`):
   6 degrees wide) are narrower than the spacing of the 368-point grid on the outer rings (11 degrees), and what the
   turn is worth to the loss falls with n (0.27 for n = 13 against 0.34 for n = 10). Not tested.
 
+## Why the plateau ends suddenly: a geometric picture and a toy model
+
+**Not grokking in the strict sense.** In the 10-gon run at start 120 the training loss stays at 2.32 to 2.36 from epoch
+20 to 170 and falls to 2.26 by epoch 180 together with the validation loss: there is no phase of fitting the training
+set first. It is a long plateau and a sudden escape from it, in training and validation alike.
+
+**Geometry.** Symbols: theta is the turn of the pyramid about the optical axis, psi the azimuth of a point on a ring of
+image tokens, phi the centre of a pose-token attention window, n the number of sides. Turning the pyramid by theta
+shifts its n-fold pattern along every ring, so the turn-dependent part of a token feature on the ring is
+c_n cos(n (psi - theta)) for some amplitude c_n. A window with concentration kappa centred at phi averages the ring; the
+turn survives only at frequency n, with weight a_n = i_n(kappa) / i_0(kappa), and the head reads
+a_n c_n cos(n (phi - theta)). A readout weight r turns that into velocity. So the turn reaches the output as a
+product, a_n x c_n x r, and on the plateau c_n and r are both near zero. Under gradient descent each factor's gradient
+is proportional to the others (the gradient of r carries a_n c_n, the gradient of c_n carries a_n r): both start
+growing slowly, each speeds up the other, and the product stays small for a long time and then rises within a few
+epochs. This is the plateau-and-drop of deep linear networks (Saxe, McClelland & Ganguli, "Exact solutions to the
+nonlinear dynamics of learning in deep linear neural networks", ICLR 2014), where the plateau lasts about
+ln(1 / starting size) / (strength of the input-output correlation along that mode); here that strength contains a_n.
+A related observation: in grokking on modular addition the network also forms Fourier-mode circuits late (Nanda et al.,
+"Progress measures for grokking via mechanistic interpretability", ICLR 2023); here the mode is frequency n on a ring.
+
+**Toy model** (`probes/cosdir_interp/toy_plateau.py`, `results/toy_plateau.json`): one ring of 32 tokens carrying
+cos(n (psi - theta)) plus a constant, a learnable circular convolution (encoder, 4 channels), 8 fixed von Mises-Fisher
+windows of concentration kappa at random centres (attention), a learnable linear readout to (cos n theta, sin n theta),
+encoder and readout started at scale eps, minibatches of 64 turns with target noise of standard deviation 2 (the
+flow-matching target is mostly noise around a small turn-dependent mean). n = 10, three seeds per setting.
+
+![toy model of the plateau](figures/cosdir_toy_plateau.png)
+
+* Every run shows the plateau at the turn-blind loss and then a sudden drop.
+* Gradient descent: plateau length proportional to a_10^-1.07 (from 11,000 steps at a_10 = 0.003 to 75 at 0.28), and
+  linear in ln(1 / eps) (about 500 more steps per factor of 10), as the deep-linear-network solution predicts.
+* Adam: plateau length proportional to a_10^-0.55 and independent of eps (Adam rescales each parameter's step by its
+  gradient's size), so the window width still sets the length, more weakly.
+* The seeds agree closely in the toy (within about 10 %). The large spread of the real runs (a 7-gon breakthrough at
+  epoch 61 in one run and none by 120 in an identical one) is therefore not explained by this toy; it presumably comes
+  from what the toy leaves out, such as the competition with everything else the shared weights learn. Not tested.
+
+**The real 10-gon has the same signature** (diag2 on the snapshots of the start-120 run, `results/diag2_sweep_b10s120_e*.json`):
+
+| epoch | turn-following velocity at frequency 10 | growth rate since the previous row (per epoch) | ring share at 10 | phase coherence | a_10 |
+|---|---|---|---|---|---|
+| 10 | 1.4e-6 | | 0.011 | 0.12 | 0.35 |
+| 30 | 6.7e-5 | (first transition) | 0.017 | 0.18 | 0.36 |
+| 90 | 1.0e-4 | 0.008 | 0.020 | 0.36 | 0.32 |
+| 120 | 1.2e-4 | 0.004 | 0.033 | 0.52 | 0.32 |
+| 150 | 3.0e-4 | 0.031 | 0.064 | 0.80 | 0.31 |
+| 180 | 0.52 | 0.25 | 0.73 | 0.99 | 0.31 |
+
+* The growth rate itself grows (0.004, 0.031, 0.25 per epoch): faster than exponential, which is what a product of
+  growing factors gives and what a single exponential mode would not.
+* The phase coherence rises steadily through the plateau (0.18, 0.36, 0.52, 0.80): the pattern lines up with the turn
+  long before its amplitude matters, so the plateau is not idle. The window width stays the same throughout.
+* Why the 10-gon at a_10 = 0.31 waited about 155 epochs while the 7-gon at a_7 = 0.33 waited 45 (in the run that
+  learned): in the picture above the other factors must be weaker for the 10-gon: the image's finer 10-fold detail in the
+  ResNet features (c_n at the start) and the smaller value of knowing the turn (0.34 against 0.46). Not separated here.
+
 ## s_h epoch by epoch on the 7-gon: not the cause of the breakthrough, and the breakthrough is not reliable
 
 Three runs of the 14x14 setup on the 7-gon (2026-11-19/20; 368 sphere points, constant rate; runners from
