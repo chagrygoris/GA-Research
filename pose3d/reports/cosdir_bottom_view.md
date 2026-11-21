@@ -275,7 +275,7 @@ about 50 for the 10-gon and 83 for the 13-gon, that is start temperatures of abo
 13-gon probably also needs the next grid density (nside 16). This is a hypothesis from one seed per setting; the
 10-gon at start temperature about 110 is the direct test.
 
-Scheduled for 2026-11-21 00:05 UTC (four 180-epoch runs, about 10.4 h each on 2xT4, cap on s_h raised to 1000): the
+Run on 2026-11-20/21 (results in the section on the higher start temperature below; four 180-epoch runs, about 10.4 h each on 2xT4, cap on s_h raised to 1000): the
 10-gon at start 120 and the 13-gon at start 200, and each with the 8 heads of every block started at log-spaced
 temperatures from 30 to 250 (wide heads for the low degrees, sharp ones for degree n). nside 16 costs about 4x per
 step (CPU timing), 25 h per run, so it was not scheduled. Smoke tests (3 epochs): `pepeschneyne/bottom13-s200-smoke-e3-t4x2`
@@ -310,6 +310,39 @@ a model that knows everything but the turn. The 7-gon learned at 60 (one of thre
 were only run at 60. Not shown: the 60-epoch run with log s_h moving 30x faster (7-gon, start 30: 11.69 degrees).
 Runs at 120 (10-gon) and 200 (13-gon), and with heads spread from 30 to 250, are scheduled for 2026-11-21.
 Why the threshold moves with n: `figures/cosdir_s_h_scaling.png` (how much of degree n an attention window passes).
+
+## Higher start temperature on the 10-gon and 13-gon (180 epochs)
+
+Four runs of the 14x14 setup (2026-11-20/21; 368 sphere points, constant rate, 180 epochs, cap on s_h raised to 1000,
+runners from `notebooks/make_sh_trace_variant.py`, 188 to 200 s per epoch on 2xT4). The single start values were chosen
+so that the windows pass degree n about as much as start 60 passed degree 7 (see the section on why the 10- and 13-gon
+are not learned); the spread runs start the 8 heads of every block at log-spaced values 30, 41, 55, 74, 101, 136, 185, 250.
+
+| kernel | pyramid | start s_h | median error, epochs 20 to 170 | last epochs | final evaluation (32 samples) |
+|---|---|---|---|---|---|
+| `elizavetak0zlova/bottom10-s120-cap1000-e180-seed0-t4x2` | 10-gon | 120 | 8.6 to 9.6 | 175 to 180: 8.3, 7.8, 6.9, 6.1, 4.7 | 4.89, acc@15 0.994 |
+| `elizavetak0zlova/bottom10-spread30-250-cap1000-e180-t4x2` | 10-gon | 30 to 250 | 8.7 to 9.5 | 9.0 | 8.99, acc@15 0.837 |
+| `ainursarimov/bottom13-s200-cap1000-e180-seed0-t4x2` | 13-gon | 200 | 6.7 to 7.3 | 6.9 | 6.49, acc@15 1.0 |
+| `ainursarimov/bottom13-spread30-250-cap1000-e180-t4x2` | 13-gon | 30 to 250 | 6.7 to 7.3 | 7.0 | 6.98, acc@15 1.0 |
+
+![starting s_h vs final error](figures/cosdir_s_h_vs_mre.png)
+
+![10- and 13-gon, error by epoch](figures/cosdir_bottom10_13_sweep_curves.png)
+
+* **The 10-gon at start 120 leaves the plateau at the very end.** After 155 epochs at the guessed-turn level it falls
+  from about 8.6 degrees at epoch 170 to 4.7 at epoch 180, still falling when the run stops (final evaluation 4.89
+  degrees, guessing level 9.0). This is the first 10-gon run below the guessing level; at start 60 it stayed there for
+  120 epochs. Whether it reaches the 7-gon's sub-degree level is not known from this run.
+* **The 13-gon at start 200 does not leave it in 180 epochs** (final evaluation 6.49 against 6.9).
+* **Spreading the heads from 30 to 250 does not help either pyramid** in 180 epochs; both stay at the guessed turn.
+  Only 1 to 2 heads per block are sharp enough for degree 10 or 13, which may be too few.
+* **s_h at the 10-gon's breakthrough: no jump.** The median of the 32 values is 104.6 at epoch 170 and 104.1 at 180
+  (from 120 at the start, weight decay). The largest per-epoch change of log s_h rises from 0.0025 on the plateau to
+  0.009 to 0.012 in epochs 176 to 180: a few heads move slightly while the error falls, as at the 7-gon's transitions.
+  The first transition (epochs 16 to 18, onto the plateau) again has the largest changes (0.027). In the spread runs
+  the heads keep their spread (final values 28 to 222).
+* One run per setting, and the 7-gon showed that the breakthrough epoch varies between identical runs, so "the 13-gon
+  does not learn at 200" means "not in 180 epochs, in this run".
 
 ## s_h epoch by epoch on the 7-gon: not the cause of the breakthrough, and the breakthrough is not reliable
 
