@@ -124,8 +124,22 @@ def apply_grid28(root):
          "                raise ValueError(\"dircloud_grid must be 7, 14 or 28\")\n"
          "            dilate_last_stage(self.backbone, stages=1 if dircloud_grid == 14 else 2)\n")
 
+    # The 28x28 map's larger ResNet activations leave too little memory on a T4 for GATr (first launch: CUDA out of
+    # memory in the vector field). POSE3D_GATR_CHECKPOINT=1 turns on GATr's own block checkpointing (recompute each
+    # block in the backward pass; same function, same parameters and state_dict keys; GATr has no BatchNorm).
+    edit(p("models/gatr_denoiser.py"),
+         "        from gatr import GATr\n",
+         "        from gatr import GATr\n"
+         "        import os as _os\n"
+         "        if _os.environ.get('POSE3D_GATR_CHECKPOINT', '0') == '1':\n"
+         "            _Base = GATr\n"
+         "            class GATr(_Base):\n"
+         "                def __init__(self, *a, **k):\n"
+         "                    super().__init__(*a, **k)\n"
+         "                    self._checkpoint_blocks = True\n")
+
 apply_grid28('/kaggle/working/GA-Research/pose3d')
-print('patched: --dircloud_grid 28', flush=True)
+print('patched: --dircloud_grid 28, GATr block checkpointing', flush=True)
 '''
 
 FINAL = '''# s_h TRACE: one last read after training (the thread may not have seen the final epoch yet).
@@ -155,6 +169,7 @@ def build(s, learn, lrmult, cap, epochs, snaps, watchdog, tag, n=7, seed=0, why=
     assert t.count(k) == 1; cells[2]["source"] = t.replace(k, k + PATCH + (GRID28 if grid == 28 else ""))
     if grid == 28:
         sub(0, "'--dircloud_grid', '14'", "'--dircloud_grid', '28'")
+        sub(5, "os.environ['POSE3D_SYMSOL_COS_SCALE'] = ", "os.environ['POSE3D_GATR_CHECKPOINT'] = '1'\nos.environ['POSE3D_SYMSOL_COS_SCALE'] = ")
     sub(5, "os.environ['POSE3D_SYMSOL_COS_SCALE'] = ",
         f"os.environ['POSE3D_SYMSOL_COS_LEARN'] = '{1 if learn else 0}'\nos.environ['POSE3D_SYMSOL_COS_LRMULT'] = '{lrmult}'\n"
         f"os.environ['POSE3D_SYMSOL_COS_MAX'] = '{cap}'\nos.environ['POSE3D_SYMSOL_COS_SCALE'] = ")
