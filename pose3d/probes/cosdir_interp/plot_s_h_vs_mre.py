@@ -8,7 +8,7 @@ INK, INK2, GRID = "#0b0b0b", "#52514e", "#e4e3df"
 # (sides, start s_h, final median error in degrees)
 RUNS = [(7, 30, 12.21), (7, 60, 0.40), (7, 60, 12.12), (7, 60, 11.91), (7, 100, 0.46), (10, 60, 9.11), (13, 60, 6.68)]
 # 180-epoch runs (2026-11-21): one shared start value, and heads log-spaced from 30 to 250 in every block
-LONG = [(10, 120, 4.89), (13, 200, 6.49)]
+LONG = [(10, 120, 0.40), (13, 200, 6.49)]
 SPREAD = [(10, 8.99), (13, 6.98)]
 JIT = {(7, 60, 12.12): -4, (7, 60, 11.91): 4, (10, 60, 9.11): -2, (13, 60, 6.68): 2}
 plt.rcParams.update({"font.size": 11, "axes.edgecolor": INK2, "xtick.color": INK2, "ytick.color": INK2, "axes.labelcolor": INK})
@@ -20,7 +20,7 @@ for n, s, e in RUNS:
     ax.scatter(s + JIT.get((n, s, e), 0), e, s=110, color=C[n], edgecolor="white", linewidth=2, zorder=3)
 for n, s, e in LONG:
     ax.scatter(s, e, s=130, marker="D", color=C[n], edgecolor="white", linewidth=2, zorder=3)
-ax.text(128, 4.89, "breaking through at the end\n(4.7° at epoch 180, still falling)", va="center", fontsize=8.5, color=INK2)
+ax.text(128, 0.40, "learned\n(240 epochs)", va="center", fontsize=8.5, color=INK2)
 XS = 420   # separate column for the spread runs (no single starting value)
 ax.axvline(330, color=GRID, lw=1.5)
 for n, e in SPREAD:
@@ -38,9 +38,9 @@ ax.grid(color=GRID, lw=0.8); ax.set_axisbelow(True)
 for sp in ("top", "right"): ax.spines[sp].set_visible(False)
 from matplotlib.lines import Line2D
 ax.legend(handles=[Line2D([], [], marker="o", ls="", color=C[n], ms=9, label=f"{n}-gon") for n in (7, 10, 13)]
-          + [Line2D([], [], marker="o", ls="", color=INK2, ms=8, label="120 epochs"), Line2D([], [], marker="D", ls="", color=INK2, ms=7, label="180 epochs"),
+          + [Line2D([], [], marker="o", ls="", color=INK2, ms=8, label="120 epochs"), Line2D([], [], marker="D", ls="", color=INK2, ms=7, label="180 epochs (10-gon: 240)"),
              Line2D([], [], marker="s", ls="", color=INK2, ms=7, label="180 epochs, heads spread")],
-          loc="lower right", frameon=False, fontsize=9, ncol=2)
+          loc="center right", bbox_to_anchor=(1.0, 0.45), frameon=False, fontsize=9, ncol=2)
 ax.set_title("Bottom-view pyramids: starting s_h vs final error", loc="left", color=INK, fontsize=12)
 fig.tight_layout()
 out = os.path.join(os.path.dirname(os.path.abspath(__file__)), "../../reports/figures/cosdir_s_h_vs_mre.png")

@@ -321,6 +321,7 @@ are not learned); the spread runs start the 8 heads of every block at log-spaced
 | kernel | pyramid | start s_h | median error, epochs 20 to 170 | last epochs | final evaluation (32 samples) |
 |---|---|---|---|---|---|
 | `elizavetak0zlova/bottom10-s120-cap1000-e180-seed0-t4x2` | 10-gon | 120 | 8.6 to 9.6 | 175 to 180: 8.3, 7.8, 6.9, 6.1, 4.7 | 4.89, acc@15 0.994 |
+| `elizavetak0zlova/bottom10-s120-cap1000-resume-e240-t4x2` (the same run, epochs 181 to 240) | 10-gon | 120 | | 181 to 184: 2.9, 1.65, 1.64, 1.02; last 20 epochs 0.36 to 1.21, mean 0.66 | **0.40, acc@15 1.0** |
 | `elizavetak0zlova/bottom10-spread30-250-cap1000-e180-t4x2` | 10-gon | 30 to 250 | 8.7 to 9.5 | 9.0 | 8.99, acc@15 0.837 |
 | `ainursarimov/bottom13-s200-cap1000-e180-seed0-t4x2` | 13-gon | 200 | 6.7 to 7.3 | 6.9 | 6.49, acc@15 1.0 |
 | `ainursarimov/bottom13-spread30-250-cap1000-e180-t4x2` | 13-gon | 30 to 250 | 6.7 to 7.3 | 7.0 | 6.98, acc@15 1.0 |
@@ -329,7 +330,15 @@ are not learned); the spread runs start the 8 heads of every block at log-spaced
 
 ![10- and 13-gon, error by epoch](figures/cosdir_bottom10_13_sweep_curves.png)
 
-* **The 10-gon at start 120 leaves the plateau at the very end.** After 155 epochs at the guessed-turn level it falls
+* **The 10-gon at start 120 is learned.** Continued from its epoch-180 resume checkpoint for 60 more epochs (constant
+  rate, everything else unchanged; `--n_epochs` raised to 240 by adding it to `engine/resume.py`'s options that may
+  differ on resume), the error kept falling: 2.9 degrees at epoch 181, about 1 by epoch 184, 0.4 to 0.9 from epoch 200
+  on; final evaluation 0.40 degrees, acc@15 1.0, the same level as the 7-gon runs that learned (0.40 and 0.46). The
+  first attempt to resume failed: the checkpoint is loaded with `map_location` set to the GPU, which moves the saved CPU
+  random-number state there, and `torch.set_rng_state` refuses it ("RNG state must be a torch.ByteTensor"). The runner
+  now moves that state back to the CPU before restoring it; the same fix belongs in `engine/resume.py` of the code
+  snapshot, which is not on this branch. The median s_h at epoch 240 is 99 (range 79 to 112).
+* **The 10-gon at start 120 leaves the plateau at the very end of the first 180 epochs.** After 155 epochs at the guessed-turn level it falls
   from about 8.6 degrees at epoch 170 to 4.7 at epoch 180, still falling when the run stops (final evaluation 4.89
   degrees, guessing level 9.0). This is the first 10-gon run below the guessing level; at start 60 it stayed there for
   120 epochs. Whether it reaches the 7-gon's sub-degree level is not known from this run.
