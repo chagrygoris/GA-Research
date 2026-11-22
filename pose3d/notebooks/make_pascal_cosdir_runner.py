@@ -41,8 +41,19 @@ def apply_timing(root):
          "            if batch_i == 0: globals()['_T0'] = _t.time()\\n"
          "            print(f'TIMING step={batch_i} t={_t.time() - globals()[\\"_T0\\"]:.1f}', flush=True)\\n")
 
+    # Diagnosis (2026-11-22): two timing kernels hung between data loading and the first step. Every rank prints its
+    # Python stack every 4 minutes (faulthandler), which shows where it waits (DataLoader, NCCL, forward pass).
+    edit(f, "    n_epochs = cfg.train.n_epochs\\n",
+         "    n_epochs = cfg.train.n_epochs\\n"
+         "    import faulthandler as _fh, sys as _sys\\n"
+         "    _fh.dump_traceback_later(240, repeat=True, file=_sys.stdout)\\n")
+    edit(f, "    for batch_i, data in enumerate(tqdm(loader, disable=not is_main() or cfg.run.platform == \\\"kaggle\\\")):\\n        optimizer.zero_grad(set_to_none=True)\\n",
+         "    for batch_i, data in enumerate(tqdm(loader, disable=not is_main() or cfg.run.platform == \\\"kaggle\\\")):\\n"
+         "        if batch_i < 3: print(f'BATCH {batch_i} loaded', flush=True)\\n"
+         "        optimizer.zero_grad(set_to_none=True)\\n")
+
 apply_timing('/kaggle/working/GA-Research/pose3d')
-print('patched: TIMING lines every 50 steps', flush=True)
+print('patched: TIMING lines every 50 steps, stack dumps every 4 min', flush=True)
 '''
 
 DATA_CELL = '''# Pascal3D+: the annotations / images dataset is --path_to_datasets; the synth pack and the RAM cache are found by
