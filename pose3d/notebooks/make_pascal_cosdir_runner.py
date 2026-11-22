@@ -29,6 +29,35 @@ def args(epochs, synth=True):
             *([] if synth else ['--no-use_synth']), '--num_workers', '4', '--batch_size', '64', '--optimizer', 'adamw', '--lr', '1e-4', '--lr_scaling', 'sqrt',
             '--n_epochs', str(max(epochs, 1)), '--ddp', '--num_gpus', '2', '--sync_bn', '--seed', '0']
 
+PATHS_PATCH = '''
+
+def apply_pascal_paths(root):
+    """Image2Sphere's get_pascal_paths calls os.path.exists for every image in the VOC lists (tens of thousands of
+    calls); on Kaggle's lazily mounted dataset that took over 12 minutes in every DDP rank before training (the
+    stack dumps of avgurpetrovich/pascal-cosdir-grid14-diag2-t4x2). Same result from one directory listing per
+    category."""
+    f = os.path.join(root, "pose3d", "datasets/pascal.py")
+    edit(f, "from image2sphere.pascal_dataset import Pascal3D\\n",
+         "from image2sphere.pascal_dataset import Pascal3D\\n"
+         "import image2sphere.pascal_dataset as _i2s_pd\\n\\n\\n"
+         "def _fast_pascal_paths(folder, cate, mode):\\n"
+         "    import os as _os\\n"
+         "    d = _os.path.join(folder, f'Images/{cate}_pascal')\\n"
+         "    have = set(_os.listdir(d)) if _os.path.isdir(d) else set()\\n"
+         "    img_paths, annot_paths = [], []\\n"
+         "    with open(_os.path.join(folder, f'PASCAL/VOCdevkit/VOC2012/ImageSets/Main/{cate}_{mode}.txt')) as fh:\\n"
+         "        for l in fh.readlines():\\n"
+         "            num = l.split(' ')[0]\\n"
+         "            if f'{num}.jpg' in have:\\n"
+         "                img_paths.append(_os.path.join(folder, f'Images/{cate}_pascal/{num}.jpg'))\\n"
+         "                annot_paths.append(_os.path.join(folder, f'Annotations/{cate}_pascal/{num}.mat'))\\n"
+         "    return img_paths, annot_paths\\n\\n\\n"
+         "_i2s_pd.get_pascal_paths = _fast_pascal_paths\\n")
+
+apply_pascal_paths('/kaggle/working/GA-Research/pose3d')
+print('patched: fast Pascal3D+ path listing', flush=True)
+'''
+
 TIMING_PATCH = '''
 
 def apply_timing(root):
@@ -89,7 +118,7 @@ def build(epochs, watchdog, s=60, synth=True):
             + "# Everything below the next line describes the base runner this one was built from; its ARGS were replaced.\n")
     cells[0]["source"] = head + c0
     t = "".join(cells[2]["source"]); k = "apply_grid('/kaggle/working/GA-Research/pose3d')"
-    assert t.count(k) == 1; cells[2]["source"] = t.replace(k, k + TIMING_PATCH)
+    assert t.count(k) == 1; cells[2]["source"] = t.replace(k, k + PATHS_PATCH + TIMING_PATCH)
     t = "".join(cells[5]["source"])
     a = t.index("DATA = '/kaggle/working/data'"); b = t.index("name = RUN_NAME")
     t = t[:a] + DATA_CELL + t[b:]
