@@ -51,6 +51,13 @@ def apply_timing(root):
          "    for batch_i, data in enumerate(tqdm(loader, disable=not is_main() or cfg.run.platform == \\\"kaggle\\\")):\\n"
          "        if batch_i < 3: print(f'BATCH {batch_i} loaded', flush=True)\\n"
          "        optimizer.zero_grad(set_to_none=True)\\n")
+    # The second diagnostic kernel printed no stack at all: the hang is before train() (after the val data loaded).
+    # Arm the stack dumps at the start of main() instead, every 3 minutes, in every process.
+    edit(os.path.join(root, "pose3d", "train.py"), "    cfg = parse_args(argv)\\n",
+         "    cfg = parse_args(argv)\\n"
+         "    import faulthandler as _fh0, sys as _sys0\\n"
+         "    _fh0.dump_traceback_later(180, repeat=True, file=_sys0.stdout)\\n")
+    edit(f, "    _fh.dump_traceback_later(240, repeat=True, file=_sys.stdout)\\n", "")
 
 apply_timing('/kaggle/working/GA-Research/pose3d')
 print('patched: TIMING lines every 50 steps, stack dumps every 4 min', flush=True)
