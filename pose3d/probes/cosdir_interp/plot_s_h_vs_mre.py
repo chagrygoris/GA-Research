@@ -12,8 +12,8 @@ RUNS = [(7, 30, 12.21), (7, 60, 0.40), (7, 60, 12.12), (7, 60, 11.91), (7, 100, 
 LONG = [(10, 120, 0.40), (13, 200, 6.49)]
 SPREAD = [(10, 8.99), (13, 6.98)]
 # 28x28 map, 240 epochs: (sides, start s_h, error, final?, x offset). Hollow star: no final evaluation (seed 1 stopped at epoch 145;
-# the others still running, last per-epoch median, epoch ~220 of 240)
-G28 = [(13, 200, 0.458, True, 1.10), (13, 200, 0.70, False, 1.16), (13, 200, 7.10, False, 1.13), (10, 120, 9.20, False, 1.10)]
+# seed 2 still running at the time, last per-epoch median; the 10-gon final 9.54, guessing)
+G28 = [(13, 200, 0.458, True, 1.10), (13, 200, 0.70, False, 1.16), (13, 200, 7.10, False, 1.13), (10, 120, 9.54, True, 1.10)]
 JIT = {(7, 60, 12.12): -4, (7, 60, 11.91): 4, (10, 60, 9.11): -2, (13, 60, 6.68): 2}
 plt.rcParams.update({"font.size": 11, "axes.edgecolor": INK2, "xtick.color": INK2, "ytick.color": INK2, "axes.labelcolor": INK})
 fig, ax = plt.subplots(figsize=(10, 5.6))
