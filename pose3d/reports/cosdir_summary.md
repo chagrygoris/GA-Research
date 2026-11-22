@@ -14,7 +14,7 @@ resolve the turn guesses and has median error about 90/n degrees (the "guessing 
   kappa about 0.4 s_h), and it passes an n-fold pattern with weight a_n = i_n(kappa) / i_0(kappa).
 * A model that learns the turn of an n-gon shows an n-lobed pattern on rings of image tokens that turns with the object,
   and a few pose-token heads whose narrow windows sit on that ring and slide along it as the pose hypothesis turns
-  (`figures/cosdir_vmf_windows.png`, `figures/cosdir_vmf_windows_13gon_grid28.png`). Most heads look elsewhere.
+  (`figures/cosdir_vmf_windows_3d.png`: tokens on the hemisphere, and one ring-reading head's window for four pose hypotheses). Most heads look elsewhere.
 
 ## What was learned
 
