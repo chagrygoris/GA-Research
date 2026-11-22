@@ -11,18 +11,22 @@ TIMING mode (EPOCHS = 0): a patch prints "TIMING step=<k> t=<seconds since the f
 rank 0, and the watchdog stops the kernel after WATCH minutes, so the time per step (and per epoch: about 1,149 steps
 of 64) is measured before a long run is planned.
 
-usage: python make_pascal_cosdir_runner.py EPOCHS WATCHDOG_MIN START_S_H OUT.ipynb   (EPOCHS 0 = timing run)
+NOTE (2026-11-22): the synth pack is read into RAM by every DDP rank (datasets/packed.py _read_bin, about 18 GB each),
+which does not fit the ~29 GB of a 2xT4 machine: the first timing kernel stalled before step 0. NOSYNTH=1 drops the
+synthetic renders (--no-use_synth: real images with warp augmentation, a small part of the pack).
+
+usage: python make_pascal_cosdir_runner.py EPOCHS WATCHDOG_MIN START_S_H OUT.ipynb [NOSYNTH(0|1)]   (EPOCHS 0 = timing run)
 """
 import json, os, re, sys
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from make_bottom_grid14_variant import make
 
-def args(epochs):
+def args(epochs, synth=True):
     return ['--model', 'clifford_flow', '--encoder', 'resnet101', '--dataset', 'pascal', '--vector_field', 'gatr',
             '--cond_tokens', 'spherecloud', '--pose_tokens', 'frame_pin', '--condition_head', 'none',
             '--dircloud_scalars', '64', '--dircloud_nside', '8', '--dircloud_grid', '14',
             '--gatr_mv_channels', '8', '--gatr_s_channels', '32', '--no-gatr_zero_readout', '--gatr_heads', '8',
-            '--num_workers', '4', '--batch_size', '64', '--optimizer', 'adamw', '--lr', '1e-4', '--lr_scaling', 'sqrt',
+            *([] if synth else ['--no-use_synth']), '--num_workers', '4', '--batch_size', '64', '--optimizer', 'adamw', '--lr', '1e-4', '--lr_scaling', 'sqrt',
             '--n_epochs', str(max(epochs, 1)), '--ddp', '--num_gpus', '2', '--sync_bn', '--seed', '0']
 
 TIMING_PATCH = '''
@@ -52,13 +56,13 @@ print(r.stdout[-2000:], r.stderr[-1000:], flush=True)
 assert r.returncode == 0, 'CPU preflight failed'
 '''
 
-def build(epochs, watchdog, s=60):
+def build(epochs, watchdog, s=60, synth=True):
     nb, _ = make(7, 60, likelihood=False)
     cells = nb["cells"]
-    name = f"pascal_gatr_cosdir_grid14_nside8_s{s}_" + ("timing" if epochs == 0 else f"e{epochs}")
+    name = f"pascal_gatr_cosdir_grid14_nside8_s{s}_" + ("" if synth else "nosynth_") + ("timing" if epochs == 0 else f"e{epochs}")
     c0 = "".join(cells[0]["source"])
     c0 = re.sub(r"RUN_NAME = '[^']*'", f"RUN_NAME = '{name}'", c0, count=1)
-    c0, k = re.subn(r"ARGS = \[.*?\]\n", "ARGS = " + json.dumps(args(epochs)) + "\n", c0, count=1, flags=re.S); assert k == 1
+    c0, k = re.subn(r"ARGS = \[.*?\]\n", "ARGS = " + json.dumps(args(epochs, synth)) + "\n", c0, count=1, flags=re.S); assert k == 1
     c0, k = re.subn(r"WATCHDOG_MINUTES = \([^)]*\)", f"WATCHDOG_MINUTES = ({watchdog}, {watchdog})", c0, count=1); assert k == 1
     head = ("# COSINE-ATTENTION GATr, 14x14 MAP, ON PASCAL3D+ (make_pascal_cosdir_runner.py). Requested by a human (2026-11-22). "
             + ("TIMING RUN: measures the time per step of the reference recipe (warp + synth, ResNet-101) with this head, "
@@ -78,5 +82,5 @@ def build(epochs, watchdog, s=60):
 
 if __name__ == "__main__":
     a = sys.argv[1:]
-    nb, name = build(int(a[0]), int(a[1]), int(a[2]))
+    nb, name = build(int(a[0]), int(a[1]), int(a[2]), synth=not (len(a) > 4 and a[4] == '1'))
     json.dump(nb, open(a[3], "w")); print(name)

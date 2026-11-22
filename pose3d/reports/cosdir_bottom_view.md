@@ -534,6 +534,54 @@ Note that this level is half the 12.9 degrees of a guessed turn. Why a degree-6 
 the bottom view was not investigated. One untested explanation: it cannot represent seven equal peaks, but it can
 put one broad peak on one of the seven equivalent poses.
 
+## 28x28 feature map: the 13-gon is learned (2 of 3 seeds), the 10-gon is not
+
+**Why a finer map.** The ResNet feature map samples the silhouette's rim with a fixed number of cells. The rim is a
+circle of about 57 px radius, so about 361 px around; an `n`-lobed pattern on it has 361/`n` px per lobe, and a map whose
+cells are `c` px wide has 361/(`n c`) cells per lobe. An `n`-fold pattern needs at least 2 cells per lobe (the sampling
+theorem: two samples per period). On the 14x14 map (`c` = 16 px) the 13-gon has 1.7 cells per lobe and formed no pattern
+at all, while the 7-gon (3.2) and the 10-gon (2.3) did. Dilating the last two ResNet stages (`--dircloud_grid 28`,
+stride 8, pretrained weights kept) gives `c` = 8 px: 3.5 cells per lobe for the 13-gon, 4.5 for the 10-gon.
+
+**Memory.** The 28x28 activations left too little memory on a T4: the first launch ran out of CUDA memory in the GATr.
+GATr's own block checkpointing (each block recomputed in the backward pass; same function and parameters) fixed it at
+about 280 to 300 s per epoch on 2xT4. Every run was stopped by the Kaggle watchdog after its first session (epoch 138 or
+145) and continued from its per-epoch checkpoint (the resume needed two fixes: the RNG state moved back to the CPU, and
+`--n_epochs` allowed to change).
+
+**Runs** (240 epochs, constant learning rate, 368 sphere points, s_h learnable; the breakthrough epoch is the first
+epoch whose validation median falls below half the guessing level 90/`n`):
+
+| pyramid | start s_h | seed | breakthrough epoch | final 32-sample median |
+|---|---|---|---|---|
+| 13-gon | 200 | 0 | 185 | **0.46** (acc@15 1.0) |
+| 13-gon | 200 | 1 | 84 | not resumed; 0.55 to 0.9 over epochs 135 to 145 |
+| 13-gon | 200 | 2 | none | 6.66 (guessing level 6.9) |
+| 10-gon | 120 | 0 | none | 9.54 (guessing level 9.0) |
+
+![28x28 runs](figures/cosdir_g28_curves.png)
+
+**The 10-gon control contradicts the prediction.** At 14x14 with start s_h 120 the 10-gon broke through at epoch about
+175 (2.3 cells per lobe); with 4.5 cells per lobe I predicted an earlier breakthrough. It stayed at the guessing level
+for all 240 epochs. So more cells per lobe is necessary below 2 (the 13-gon) but does not shorten the plateau above it:
+the plateau length is dominated by something else, and it varies a lot between seeds (13-gon: epochs 84, 185 and never
+in 240 with identical settings except the seed). One run per setting cannot separate the map from the seed.
+
+**What the learned 13-gon looks like** (seed 1, snapshots; ring share: the fraction of the ring-reading head's attention
+on the ring of tokens 20 to 65 degrees from the optical axis, where the 13-lobed pattern lives; coherence: how well the
+pattern's phase follows the object's turn over 300 test images, 1 = perfectly; a_13 = i_13(kappa)/i_0(kappa) at the
+head's concentration kappa about 0.4 s_h, the fraction of a 13-fold pattern its window passes):
+
+| epoch | 60 | 75 | 90 | 105 | 145 |
+|---|---|---|---|---|---|
+| ring share | 0.03 | 0.17 | 0.70 | 0.78 | 0.84 |
+| coherence | 0.21 | 0.94 | 0.99 | 1.00 | 1.00 |
+
+At epoch 145 the head's a_13 is 0.37. As in the 10-gon, coherence rises first (epoch 75, error still at guessing),
+then the head moves its window onto the ring, then the error falls. The 3D picture of the windows
+(`figures/cosdir_vmf_windows_3d.png`) shows this head's window sliding along the 13-lobed ring as the pose hypothesis
+turns, and, for the failed 14x14 13-gon, a head that looks at the rim where there is no pattern.
+
 ## Conclusion
 
 * **Square and pentagon**: a training-schedule failure. Learning proceeds in steps separated by plateaus. The

@@ -23,7 +23,7 @@ resolve the turn guesses and has median error about 90/n degrees (the "guessing 
 | square, pentagon | a constant learning rate instead of the 40-epoch cosine schedule (the plateau outlasted the schedule) | learned (pentagon about 1 degree) |
 | 7-gon | 14x14 feature map + start s_h >= 60 (windows pass a_7 about 0.33) | learned in 2 of 4 runs within 120 epochs (0.40, 0.46) |
 | 10-gon | 14x14 map + start s_h 120 (a_10 about 0.31) + 240 epochs | learned in 1 of 1 (breakthrough at epoch about 175; 0.40) |
-| 13-gon | 28x28 feature map + start s_h 200 (a_13 about 0.37) | learned in 2 of 3 so far (breakthrough at epochs 83 and 184; 0.46 for seed 0) |
+| 13-gon | 28x28 feature map + start s_h 200 (a_13 about 0.37) | learned in 2 of 3 (breakthrough at epochs 84 and 185; 0.46 for seed 0; seed 2 stayed at 6.66) |
 
 ## Why some stalled, and what fixed them
 
@@ -37,7 +37,7 @@ resolve the turn guesses and has median error about 90/n degrees (the "guessing 
    3.2 at 14x14 (learned); 13-gon 1.7 at 14x14 (no pattern formed at all), 3.5 at 28x28 (learned). The 28x28 map needed
    GATr block checkpointing to fit a T4.
 4. **Long, random plateaus** (all): even with everything right, the breakthrough comes after a plateau whose length
-   varies a lot between identical runs (7-gon: epoch 61 vs not within 120; 13-gon: epochs 83 and 184).
+   varies a lot between identical runs (7-gon: epoch 61 vs not within 120; 13-gon: epochs 84, 185 and never within 240).
 
 ## Why the plateau ends suddenly
 
@@ -59,8 +59,10 @@ resolve the turn guesses and has median error about 90/n degrees (the "guessing 
 * **Image2Sphere with L = 6** (no degree-7 component): stays at 6 to 7 degrees on the 7-gon under every change.
 * **DiT with a scaled cosine on 3 dimensions per head** (SYMSOL I): worse than the plain DiT (26.8 vs 19.4 degrees), and
   its s_h fell. The cosine window seems to need equivariant features underneath (vectors that turn with the object).
-* **10-gon at 28x28** (control, 4.5 cells per lobe): RESULT_10GON_28.
-* **13-gon at 28x28, seed 2**: RESULT_13GON_S2.
+* **10-gon at 28x28** (control, 4.5 cells per lobe): stayed at the guessing level for 240 epochs (final 9.54 degrees), although it learned at 14x14 (2.3 cells
+  per lobe): the finer map does not shorten the plateau; prediction of an earlier breakthrough refuted (`figures/cosdir_g28_curves.png`).
+* **13-gon at 28x28, seed 2**: stayed at the guessing level for 240 epochs (final 6.66 degrees), with settings identical to the two seeds
+  that learned except the seed.
 * Not explained: why identical runs break through at such different epochs (the toy model's seeds agree).
 
 ## Bugs fixed along the way

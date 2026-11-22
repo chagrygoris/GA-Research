@@ -12,8 +12,8 @@ RUNS = [(7, 30, 12.21), (7, 60, 0.40), (7, 60, 12.12), (7, 60, 11.91), (7, 100, 
 LONG = [(10, 120, 0.40), (13, 200, 6.49)]
 SPREAD = [(10, 8.99), (13, 6.98)]
 # 28x28 map, 240 epochs: (sides, start s_h, error, final?, x offset). Hollow star: no final evaluation (seed 1 stopped at epoch 145;
-# seed 2 still running at the time, last per-epoch median; the 10-gon final 9.54, guessing)
-G28 = [(13, 200, 0.458, True, 1.10), (13, 200, 0.70, False, 1.16), (13, 200, 7.10, False, 1.13), (10, 120, 9.54, True, 1.10)]
+# seed 2 final 6.66 and the 10-gon final 9.54: both guessing)
+G28 = [(13, 200, 0.458, True, 1.10), (13, 200, 0.70, False, 1.16), (13, 200, 6.66, True, 1.13), (10, 120, 9.54, True, 1.10)]
 JIT = {(7, 60, 12.12): -4, (7, 60, 11.91): 4, (10, 60, 9.11): -2, (13, 60, 6.68): 2}
 plt.rcParams.update({"font.size": 11, "axes.edgecolor": INK2, "xtick.color": INK2, "ytick.color": INK2, "axes.labelcolor": INK})
 fig, ax = plt.subplots(figsize=(10, 5.6))
@@ -47,7 +47,7 @@ from matplotlib.lines import Line2D
 ax.legend(handles=[Line2D([], [], marker="o", ls="", color=C[n], ms=9, label=f"{n}-gon") for n in (7, 10, 13)]
           + [Line2D([], [], marker="o", ls="", color=INK2, ms=8, label="120 epochs"), Line2D([], [], marker="D", ls="", color=INK2, ms=7, label="180 epochs (10-gon: 240)"),
              Line2D([], [], marker="s", ls="", color=INK2, ms=7, label="180 epochs, heads spread"),
-             Line2D([], [], marker="*", ls="", color=INK2, ms=12, label="28×28 map, 240 epochs"), Line2D([], [], marker="*", ls="", mfc="white", mec=INK2, ms=12, label="28×28, no final eval yet")],
+             Line2D([], [], marker="*", ls="", color=INK2, ms=12, label="28×28 map, 240 epochs"), Line2D([], [], marker="*", ls="", mfc="white", mec=INK2, ms=12, label="28×28, no final eval (stopped)")],
           loc="center right", bbox_to_anchor=(1.0, 0.45), frameon=False, fontsize=9, ncol=2)
 ax.set_title("Bottom-view pyramids: starting s_h vs final error", loc="left", color=INK, fontsize=12)
 fig.tight_layout()
