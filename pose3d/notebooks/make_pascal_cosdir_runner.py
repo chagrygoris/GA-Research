@@ -55,6 +55,13 @@ def apply_pascal_paths(root):
          "    return img_paths, annot_paths\\n\\n\\n"
          "_i2s_pd.get_pascal_paths = _fast_pascal_paths\\n")
 
+    # The first 50-epoch launch crashed after epoch 1 in engine/distributed.sync_buffers: dist.broadcast of a buffer
+    # that lives on the CPU ("No backend type associated with device type cpu", NCCL). CPU buffers are constants
+    # built identically on every rank, so only the CUDA ones (BatchNorm statistics) need broadcasting.
+    edit(os.path.join(root, "pose3d", "engine/distributed.py"),
+         "    for buf in model.buffers():\\n        dist.broadcast(buf, src=0)\\n",
+         "    for buf in model.buffers():\\n        if buf.is_cuda:\\n            dist.broadcast(buf, src=0)\\n")
+
 apply_pascal_paths('/kaggle/working/GA-Research/pose3d')
 print('patched: fast Pascal3D+ path listing', flush=True)
 '''
