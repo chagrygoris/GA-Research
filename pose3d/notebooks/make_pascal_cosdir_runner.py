@@ -20,6 +20,7 @@ usage: python make_pascal_cosdir_runner.py EPOCHS WATCHDOG_MIN START_S_H OUT.ipy
 import json, os, re, sys
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from make_bottom_grid14_variant import make
+from make_sh_trace_variant import GRID28   # its GATr block checkpointing (POSE3D_GATR_CHECKPOINT=1); --dircloud_grid 14 is unchanged by it
 
 def args(epochs, synth=True):
     return ['--model', 'clifford_flow', '--encoder', 'resnet101', '--dataset', 'pascal', '--vector_field', 'gatr',
@@ -118,12 +119,15 @@ def build(epochs, watchdog, s=60, synth=True):
             + "# Everything below the next line describes the base runner this one was built from; its ARGS were replaced.\n")
     cells[0]["source"] = head + c0
     t = "".join(cells[2]["source"]); k = "apply_grid('/kaggle/working/GA-Research/pose3d')"
-    assert t.count(k) == 1; cells[2]["source"] = t.replace(k, k + PATHS_PATCH + TIMING_PATCH)
+    assert t.count(k) == 1; cells[2]["source"] = t.replace(k, k + GRID28 + PATHS_PATCH + TIMING_PATCH)
     t = "".join(cells[5]["source"])
     a = t.index("DATA = '/kaggle/working/data'"); b = t.index("name = RUN_NAME")
     t = t[:a] + DATA_CELL + t[b:]
     t = t.replace("os.environ['SYMSOL_SHARED_CACHE'] = '/kaggle/temp/symsol-shared-pixels'   # one image copy for all ranks\n", "")
     t = t.replace("os.environ['POSE3D_SYMSOL_COS_SCALE'] = '60'", f"os.environ['POSE3D_SYMSOL_COS_SCALE'] = '{s}'")
+    # ResNet-101 + 14x14 map + 368 tokens ran out of CUDA memory on a T4 in the first backward pass (timing3 kernel):
+    # GATr block checkpointing, as for the 28x28 SYMSOL runs.
+    t = t.replace("os.environ['POSE3D_SYMSOL_COS_SCALE'] = ", "os.environ['POSE3D_GATR_CHECKPOINT'] = '1'\nos.environ['POSE3D_SYMSOL_COS_SCALE'] = ", 1)
     cells[5]["source"] = t
     return nb, name
 
