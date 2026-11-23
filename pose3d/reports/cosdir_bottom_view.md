@@ -582,6 +582,33 @@ then the head moves its window onto the ring, then the error falls. The 3D pictu
 (`figures/cosdir_vmf_windows_3d.png`) shows this head's window sliding along the 13-lobed ring as the pose hypothesis
 turns, and, for the failed 14x14 13-gon, a head that looks at the rim where there is no pattern.
 
+## The bottom-view recipe on the 3D SYMSOL-CHILE 7-gon: not learned
+
+Question (requested 2026-11-22): does the recipe that learned the bottom-view 7-gon (14x14 feature map, 368 sphere
+points, start s_h 100, learnable, constant learning rate, 4,500 train / 1,000 test views) also learn the 7-gonal pyramid
+when its poses are uniform on all rotations SO(3), the original SYMSOL-CHILE task? The only change is the data
+(`--symsol_set 14`: pyr7 rendered with `--view random`; runner `notebooks/make_chile3d_runner.py`). 180 epochs, seeds 0
+and 1, 2xT4, 190 s per epoch (the same as the bottom view).
+
+| run | final 32-sample median | acc@15 | breakthrough |
+|---|---|---|---|
+| 3D, seed 0 | 12.74 | 0.597 | none in 180 epochs |
+| 3D, seed 1 | 13.11 | 0.584 | none in 180 epochs |
+| bottom view, same recipe (reference) | 0.46 | | epoch about 70 |
+
+![3D 7-gon](figures/cosdir_chile3d_pyr7.png)
+
+Both runs make the usual first drop (to the guessing level 90/7 = 12.9 degrees, at epoch 25 instead of 16) and then stay
+there, matching Image2Sphere on the same shape (12.67, reports/symmetry_spectrum.md on the SYMSOL-CHILE branch).
+Not tested, but likely reasons, from the mechanism of the bottom view:
+* On the bottom view the 7-lobed pattern sits on a ring around the optical axis, where the image tokens' fixed
+  directions and the cosine windows are centred. With a tilted pyramid the ring around its axis is off-centre and
+  foreshortened into an ellipse in the image, so no fixed window rides along it as the hypothesis turns.
+* 4,500 views sample a one-parameter set of turns densely but the three-parameter SO(3) sparsely: about 1,500 times
+  fewer views per unit of pose space.
+What would separate the two: the same model on 3D views restricted to small tilts (pose = small tilt then turn about
+the axis), and on 10x more 3D views.
+
 ## Conclusion
 
 * **Square and pentagon**: a training-schedule failure. Learning proceeds in steps separated by plateaus. The

@@ -63,6 +63,10 @@ resolve the turn guesses and has median error about 90/n degrees (the "guessing 
   per lobe): the finer map does not shorten the plateau; prediction of an earlier breakthrough refuted (`figures/cosdir_g28_curves.png`).
 * **13-gon at 28x28, seed 2**: stayed at the guessing level for 240 epochs (final 6.66 degrees), with settings identical to the two seeds
   that learned except the seed.
+* **The bottom-view recipe on the 3D SYMSOL-CHILE 7-gon** (poses on all of SO(3); 14x14 map, s_h 100, 180 epochs,
+  2 seeds): both stayed at the guessing level (12.74 and 13.11 degrees), as Image2Sphere did (12.67)
+  (`figures/cosdir_chile3d_pyr7.png`). Likely: the lobed ring is off-centre and foreshortened for a tilted pyramid, and
+  4,500 views cover SO(3) sparsely; untested.
 * Not explained: why identical runs break through at such different epochs (the toy model's seeds agree).
 
 ## Bugs fixed along the way
