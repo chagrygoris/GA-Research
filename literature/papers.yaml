@@ -38,6 +38,39 @@
   found_by:
   - crossref
   added: 2026-10-25
+- id: doi:10.66221/mf08xt58
+  title: '&lt;b&gt;CIÊNCIA DE DADOS APLICADA AO PROCESSAMENTO DE LINGUAGEM NATURAL: UM ESTUDO DA APLICAÇÃO DE ÁLGEBRA
+    DE CLIFFORD EM ANÁLISE DE SENTIMENTOS&lt;/b&gt;'
+  authors:
+  - André Costa
+  - Alexandre Oliveira
+  date: '2026-11-22'
+  venue: Anais do Congresso Brasileiro de Iniciação Científica
+  venue_type: journal
+  links:
+    doi: https://doi.org/10.66221/mf08xt58
+  topics:
+  - sequence-nlp
+  status: inbox
+  relevance: null
+  summary: 'Natural Language Processing (NLP) faces recurrent challenges in Sentiment Analysis tasks, primarily
+    due to semantic ambiguities, contextual subtleties, and the occurrence of irony. Traditional computational methods
+    frequently employ linear representations or procedural approaches that simplify the geometric structure underlying
+    natural language. This work proposes an alternative approach grounded '
+  triage:
+    score: 4
+    ga_terms:
+    - clifford algebra
+    - multivector
+    ml_context: true
+    excluded_terms: []
+    title_hit: false
+  found_by:
+  - crossref:Clifford algebra transformer
+  - crossref:Clifford convolution
+  - crossref:Clifford equivariant neural
+  - crossref:Clifford neural
+  added: '2026-11-23'
 - id: doi:10.21203/rs.3.rs-10875799/v2
   title: 'Machine Learning Validation Pipelines: From Tabular Benchmarking to Conformal Calibration and Execution-Grounded
     Agentic Testing'
