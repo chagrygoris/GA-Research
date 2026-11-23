@@ -66,6 +66,8 @@ apply_pascal_paths('/kaggle/working/GA-Research/pose3d')
 print('patched: fast Pascal3D+ path listing', flush=True)
 '''
 
+RESUME_FIX = '\n\n# RESUME FIX (as in the 28x28 resume runners, 2026-11-21): the checkpoint is loaded with map_location=cuda, which moves\n# the saved CPU RNG state to the GPU; torch.set_rng_state refuses it. Move it back to the CPU. No effect on a fresh run.\n_rp = \'/kaggle/working/GA-Research/pose3d/pose3d/engine/resume.py\'\n_rt = open(_rp).read()\nfor _o, _n in ((\'torch.set_rng_state(state["torch"])\', \'torch.set_rng_state(state["torch"].cpu())\'),\n               (\'torch.cuda.set_rng_state_all(state["cuda"])\', \'torch.cuda.set_rng_state_all([s.cpu() for s in state["cuda"]])\')):\n    assert _rt.count(_o) == 1, _o; _rt = _rt.replace(_o, _n)\nopen(_rp, \'w\').write(_rt)\nprint(\'patched: RNG state moved to CPU on resume\', flush=True)\n'
+
 TIMING_PATCH = '''
 
 def apply_timing(root):
@@ -126,7 +128,7 @@ def build(epochs, watchdog, s=60, synth=True, gpus=2):
             + "# Everything below the next line describes the base runner this one was built from; its ARGS were replaced.\n")
     cells[0]["source"] = head + c0
     t = "".join(cells[2]["source"]); k = "apply_grid('/kaggle/working/GA-Research/pose3d')"
-    assert t.count(k) == 1; cells[2]["source"] = t.replace(k, k + GRID28 + PATHS_PATCH + (TIMING_PATCH if epochs == 0 else ""))   # no stack dumps in long runs
+    assert t.count(k) == 1; cells[2]["source"] = t.replace(k, k + GRID28 + PATHS_PATCH + RESUME_FIX + (TIMING_PATCH if epochs == 0 else ""))   # no stack dumps in long runs
     t = "".join(cells[5]["source"])
     a = t.index("DATA = '/kaggle/working/data'"); b = t.index("name = RUN_NAME")
     t = t[:a] + DATA_CELL + t[b:]
