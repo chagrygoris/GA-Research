@@ -15,7 +15,7 @@ NOTE (2026-11-22): the synth pack is read into RAM by every DDP rank (datasets/p
 which does not fit the ~29 GB of a 2xT4 machine: the first timing kernel stalled before step 0. NOSYNTH=1 drops the
 synthetic renders (--no-use_synth: real images with warp augmentation, a small part of the pack).
 
-usage: python make_pascal_cosdir_runner.py EPOCHS WATCHDOG_MIN START_S_H OUT.ipynb [NOSYNTH(0|1)]   (EPOCHS 0 = timing run)
+usage: python make_pascal_cosdir_runner.py EPOCHS WATCHDOG_MIN START_S_H OUT.ipynb [NOSYNTH(0|1) [GPUS]]   (EPOCHS 0 = timing run)
 """
 import json, os, re, sys
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
@@ -104,13 +104,13 @@ print(r.stdout[-2000:], r.stderr[-1000:], flush=True)
 assert r.returncode == 0, 'CPU preflight failed'
 '''
 
-def build(epochs, watchdog, s=60, synth=True):
+def build(epochs, watchdog, s=60, synth=True, gpus=2):
     nb, _ = make(7, 60, likelihood=False)
     cells = nb["cells"]
     name = f"pascal_gatr_cosdir_grid14_nside8_s{s}_" + ("" if synth else "nosynth_") + ("timing" if epochs == 0 else f"e{epochs}")
     c0 = "".join(cells[0]["source"])
     c0 = re.sub(r"RUN_NAME = '[^']*'", f"RUN_NAME = '{name}'", c0, count=1)
-    c0, k = re.subn(r"ARGS = \[.*?\]\n", "ARGS = " + json.dumps(args(epochs, synth)) + "\n", c0, count=1, flags=re.S); assert k == 1
+    c0, k = re.subn(r"ARGS = \[.*?\]\n", "ARGS = " + json.dumps(args(epochs, synth)).replace('"--num_gpus", "2"', f'"--num_gpus", "{gpus}"') + "\n", c0, count=1, flags=re.S); assert k == 1
     c0, k = re.subn(r"WATCHDOG_MINUTES = \([^)]*\)", f"WATCHDOG_MINUTES = ({watchdog}, {watchdog})", c0, count=1); assert k == 1
     head = ("# COSINE-ATTENTION GATr, 14x14 MAP, ON PASCAL3D+ (make_pascal_cosdir_runner.py). Requested by a human (2026-11-22). "
             + ("TIMING RUN: measures the time per step of the reference recipe (warp + synth, ResNet-101) with this head, "
@@ -119,7 +119,7 @@ def build(epochs, watchdog, s=60, synth=True):
             + "# Everything below the next line describes the base runner this one was built from; its ARGS were replaced.\n")
     cells[0]["source"] = head + c0
     t = "".join(cells[2]["source"]); k = "apply_grid('/kaggle/working/GA-Research/pose3d')"
-    assert t.count(k) == 1; cells[2]["source"] = t.replace(k, k + GRID28 + PATHS_PATCH + TIMING_PATCH)
+    assert t.count(k) == 1; cells[2]["source"] = t.replace(k, k + GRID28 + PATHS_PATCH + (TIMING_PATCH if epochs == 0 else ""))   # no stack dumps in long runs
     t = "".join(cells[5]["source"])
     a = t.index("DATA = '/kaggle/working/data'"); b = t.index("name = RUN_NAME")
     t = t[:a] + DATA_CELL + t[b:]
@@ -133,5 +133,5 @@ def build(epochs, watchdog, s=60, synth=True):
 
 if __name__ == "__main__":
     a = sys.argv[1:]
-    nb, name = build(int(a[0]), int(a[1]), int(a[2]), synth=not (len(a) > 4 and a[4] == '1'))
+    nb, name = build(int(a[0]), int(a[1]), int(a[2]), synth=not (len(a) > 4 and a[4] == '1'), gpus=int(a[5]) if len(a) > 5 else 2)
     json.dump(nb, open(a[3], "w")); print(name)
