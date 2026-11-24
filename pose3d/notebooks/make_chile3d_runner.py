@@ -13,11 +13,34 @@ and model snapshots) with the recipe that learned the bottom-view 7-gon: 14x14 f
     the bottom view of the same shape);
   * the data cell renders --view random instead of --view bottom.
 
-usage: python make_chile3d_runner.py SEED EPOCHS WATCHDOG_MIN OUT.ipynb   -> prints the run name
+With PASCAL=1: the encoder is a ResNet-101 started from the Pascal3D+ run's backbone (POSE3D_BACKBONE_INIT; the dataset
+<user>/pascal-resnet101-backbone must be attached).
+
+usage: python make_chile3d_runner.py SEED EPOCHS WATCHDOG_MIN OUT.ipynb [PASCAL(0|1)]   -> prints the run name
 """
 import json, os, sys
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from make_sh_trace_variant import build as build_sh
+
+BACKBONE_PATCH = '''
+
+def apply_backbone_init(root):
+    """POSE3D_BACKBONE_INIT=<glob>: after the encoder is built (ImageNet weights) and dilated, load these weights into it
+    (strict). Used to start from the ResNet-101 of the Pascal3D+ cosine-GATr run (reports/pascal_cosdir.md)."""
+    f = os.path.join(root, "pose3d", "models/clifford_flow.py")
+    edit(f, "        self.frozen_backbone = bool(freeze_backbone)\\n",
+         "        import os as _os\\n"
+         "        _bi = _os.environ.get('POSE3D_BACKBONE_INIT')\\n"
+         "        if _bi:\\n"
+         "            import glob as _g, torch as _t\\n"
+         "            _f = sorted(_g.glob(_bi, recursive=True))\\n"
+         "            assert _f, 'POSE3D_BACKBONE_INIT: no file matches ' + _bi\\n"
+         "            print('backbone init from', _f[0], self.backbone.load_state_dict(_t.load(_f[0], map_location='cpu')), flush=True)\\n"
+         "        self.frozen_backbone = bool(freeze_backbone)\\n")
+
+apply_backbone_init('/kaggle/working/GA-Research/pose3d')
+print('patched: POSE3D_BACKBONE_INIT', flush=True)
+'''
 
 PATCH3D = '''
 
@@ -33,8 +56,8 @@ apply_chile3d('/kaggle/working/GA-Research/pose3d')
 print('patched: --symsol_set 14 (3D 7-gon)', flush=True)
 '''
 
-def build(seed, epochs, watchdog, s=100):
-    tag = f"s{s}_e{epochs}" + (f"_seed{seed}" if seed else "")
+def build(seed, epochs, watchdog, s=100, pascal_init=False):
+    tag = f"s{s}_e{epochs}" + ("_pascalr101" if pascal_init else "") + (f"_seed{seed}" if seed else "")
     nb, _ = build_sh(s, True, 1, 1000, epochs, [epochs], watchdog, tag, n=7, seed=seed,
                      why="does the bottom-view recipe of the 7-gon work on the 3D SYMSOL-CHILE 7-gon?")
     cells = nb["cells"]
@@ -48,7 +71,10 @@ def build(seed, epochs, watchdog, s=100):
     sub("f'{DATA}/symsol_chile_bottom/train/rotations.npz'", "f'{DATA}/symsol_chile/train/rotations.npz'")
     sub("'--view', 'bottom', '--shapes', 'pyr7'", "'--view', 'random', '--shapes', 'pyr7'")
     t = "".join(cells[2]["source"]); k = "apply_grid('/kaggle/working/GA-Research/pose3d')"
-    assert t.count(k) == 1; cells[2]["source"] = t.replace(k, k + PATCH3D)
+    assert t.count(k) == 1; cells[2]["source"] = t.replace(k, k + PATCH3D + (BACKBONE_PATCH if pascal_init else ""))
+    if pascal_init:   # encoder ResNet-101 (the Pascal backbone's architecture), weights from the attached dataset
+        sub("'--encoder', 'resnet50'", "'--encoder', 'resnet101'")
+        sub("os.environ['POSE3D_SYMSOL_COS_SCALE'] = ", "os.environ['POSE3D_BACKBONE_INIT'] = '/kaggle/input/**/pascal_resnet101_backbone_ema.pth'\nos.environ['POSE3D_SYMSOL_COS_SCALE'] = ")
     cells[0]["source"] = (f"# 3D SYMSOL-CHILE 7-GON (make_chile3d_runner.py), seed {seed}: the bottom-view recipe (14x14 map, 368 "
                           f"sphere points, start s_h {s}, constant lr) on poses uniform on SO(3), {epochs} epochs. Requested by a "
                           "human (2026-11-22): do the recipes for the 2D SYMSOL-CHILE work on the original 3D dataset?\n"
@@ -57,5 +83,5 @@ def build(seed, epochs, watchdog, s=100):
 
 if __name__ == "__main__":
     a = sys.argv[1:]
-    nb, name = build(int(a[0]), int(a[1]), int(a[2]))
+    nb, name = build(int(a[0]), int(a[1]), int(a[2]), pascal_init=len(a) > 4 and a[4] == '1')
     json.dump(nb, open(a[3], "w")); print(name)
