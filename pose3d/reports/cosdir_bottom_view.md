@@ -609,6 +609,47 @@ Not tested, but likely reasons, from the mechanism of the bottom view:
 What would separate the two: the same model on 3D views restricted to small tilts (pose = small tilt then turn about
 the axis), and on 10x more 3D views.
 
+## Is the turn in the image, and in which backbone? (3D 7-gon, CPU read-outs)
+
+The 3D model's own encoder gives a held-out R^2 of about 0 for (cos 7 theta, sin 7 theta), where theta is the turn
+about the pyramid's own axis from the swing-twist split of the pose, while the axis direction reads out at 0.999
+(`probes/cosdir_interp/turn_readout.py`, 1,879 images). Here the same read-out is applied to other features
+(`probes/cosdir_interp/turn_readout_backbones.py`). The features are raw pixels (56 x 56, grey), an ImageNet ResNet-50
+(the start of every SYMSOL run) and the ResNet-101 of the Pascal3D+ run (`reports/pascal_cosdir.md`, trained with
+synthetic renders to report pose). The CNN features are taken from the last stage, average-pooled globally ("global")
+or to a 4 x 4 grid ("4x4"). Each is scored on the standard renders and on the same poses re-rendered with all 14
+edges drawn black (`probes/cosdir_interp/render_chile_edges.py`; the 7-fold symmetry is kept). There are two
+read-outs: ridge regression ("linear") and 10 nearest neighbours ("kNN", non-linear).
+
+![standard (top) and black-edge (bottom) renders](figures/chile3d_edges_demo.png)
+
+| features | standard: turn, linear | standard: turn, kNN | edges: turn, linear | edges: turn, kNN | axis, linear (std / edges) |
+|---|---|---|---|---|---|
+| raw pixels | -0.01 | -0.03 | **0.17** | **0.23** | 0.84 / 0.80 |
+| ImageNet ResNet-50, global | 0.02 | 0.12 | 0.03 | 0.09 | 0.96 / 0.97 |
+| ImageNet ResNet-50, 4x4 | (unstable) | 0.15 | (not finished) | | 0.84 |
+| Pascal ResNet-101, global | **0.10** | 0.11 | 0.08 | 0.11 | 0.97 / 0.98 |
+| Pascal ResNet-101, 4x4 | 0.03 | 0.15 | (unstable) | 0.12 | 0.94 / 0.96 |
+| the 3D model's own encoder (trained 180 epochs) | ~0 | | | | 0.999 |
+
+Linear R^2 of the turn by tilt, the angle between the pyramid's axis and the optical axis: the Pascal backbone reaches
+0.38 (global) and 0.43 (4x4) for tilts under 30 degrees and 0.25 / 0.28 for 30 to 60, where ImageNet stays near 0. With
+black edges the pixels reach 0.25 / 0.35 for tilts of 60 to 120 degrees (side views), where the edges show the faces
+most clearly.
+
+**Reading.**
+1. **The turn is in the images, but not in an easy form.** Even raw pixels give R^2 about 0 on the standard renders,
+   though the faces visibly differ in shading. With 1,879 views spread over all rotations these read-outs lack power,
+   so R^2 about 0 means "not readable linearly or locally", not "absent".
+2. **Black edges make the turn more readable in pixels** (0 to 0.17 / 0.23), mostly for side views. The CNN features
+   pool that gain away: neither backbone improves on the edge images.
+3. **The Pascal backbone carries some of the turn for near-bottom views** (R^2 about 0.4 under 30 degrees of tilt), and
+   ImageNet's does not. That fits the idea that training with synthetic renders to report pose removes some
+   invariance. But overall it is far from the R^2 of 1.00 that the bottom-view models reach.
+4. Every number here is far below 1, so neither change alone looks like a full fix. The direct route is to supervise
+   the turn: an auxiliary loss on (cos 7 theta, sin 7 theta) from the encoder's features, which are the same for all 7
+   equivalent poses. It can be combined with the Pascal initialisation.
+
 ## Conclusion
 
 * **Square and pentagon**: a training-schedule failure. Learning proceeds in steps separated by plateaus. The

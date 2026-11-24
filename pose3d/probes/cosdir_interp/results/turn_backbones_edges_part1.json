@@ -1,0 +1,32 @@
+{
+ "imgdir": "/tmp/claude-0/-home-user-GA-Research/47fc9bb1-1306-56b6-a408-21242df5b300/scratchpad/chile_edges",
+ "n_images": 1879,
+ "results": {
+  "pixels": {
+   "turn_r2_linear": 0.16974319645291924,
+   "turn_r2_knn": 0.22935620158844583,
+   "axis_r2_linear": 0.7960229966523569,
+   "turn_r2_linear_by_tilt": {
+    "0-30": -0.053,
+    "30-60": -0.033,
+    "60-90": 0.254,
+    "90-120": 0.353,
+    "120-180": 0.091
+   },
+   "dims": 3136
+  },
+  "imagenet50_global": {
+   "turn_r2_linear": 0.033335225119210166,
+   "turn_r2_knn": 0.08634199094603734,
+   "axis_r2_linear": 0.9719190755971051,
+   "turn_r2_linear_by_tilt": {
+    "0-30": 0.348,
+    "30-60": 0.062,
+    "60-90": -0.024,
+    "90-120": 0.029,
+    "120-180": -0.018
+   },
+   "dims": 2048
+  }
+ }
+}
