@@ -38,6 +38,44 @@
   found_by:
   - crossref
   added: 2026-10-25
+- id: arxiv:2611.31011
+  title: Lorentz symmetry in self-supervised representation learning
+  authors:
+  - Andreas Hermansen
+  - Tobias Golling
+  - Slava Voloshynovskiy
+  date: '2026-11-23'
+  venue: arXiv
+  venue_type: arxiv
+  links:
+    arxiv: https://arxiv.org/abs/2611.31011
+  topics:
+  - hep
+  - robotics
+  status: inbox
+  relevance: null
+  summary: Self-supervised learning (SSL) and explicit physical inductive biases have driven major advances in jet
+    tagging, yet they are typically pursued along separate tracks. In this work, we unify both paradigms by integrating
+    the Lorentz-equivariant Geometric Algebra Transformer slim (L-GATr-slim) architecture with the LeJEPA framework
+    for representation learning. Pre-training on 100 million jets from t
+  triage:
+    score: 4
+    ga_terms:
+    - geometric algebra
+    - l-gatr
+    ml_context: true
+    excluded_terms: []
+    title_hit: false
+  found_by:
+  - arxiv:abs:"geometric algebra"
+  - arxiv:all:"Lorentz" AND all:"geometric algebra"
+  - arxiv:all:"geometric algebra"
+  - arxiv:all:"geometric algebra" AND all:"machine learning"
+  - arxiv:all:"geometric algebra" AND all:equivariant
+  - arxiv:all:"geometric algebra" AND all:learning
+  - arxiv:all:"geometric algebra" AND all:transformer
+  - arxiv:all:GATr
+  added: '2026-11-24'
 - id: doi:10.66221/mf08xt58
   title: '&lt;b&gt;CIÊNCIA DE DADOS APLICADA AO PROCESSAMENTO DE LINGUAGEM NATURAL: UM ESTUDO DA APLICAÇÃO DE ÁLGEBRA
     DE CLIFFORD EM ANÁLISE DE SENTIMENTOS&lt;/b&gt;'
