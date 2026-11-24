@@ -52,6 +52,12 @@ resolve the turn guesses and has median error about 90/n degrees (the "guessing 
 * **s_h is not the cause** of a breakthrough: it jumps only at the early, image-independent transitions, a frozen s_h
   makes the same transitions, and it stays flat through every breakthrough.
 
+## Pascal3D+
+
+* The cosine GATr with the 14x14 map, ResNet-101, warp + synthetic renders, 50 epochs on 4xL4: class-mean median
+  8.97 degrees, median 8.00, level with the 100-epoch reference recipe (8.95 / 7.85) and better than the dircloud GATr
+  P1 (9.35) and Image2Sphere (9.8); one seed (`reports/pascal_cosdir.md`, `figures/pascal_cosdir_e50.png`).
+
 ## What stalled or did not help
 
 * **Spreading the heads' s_h** from 30 to 250: neither the 10-gon nor the 13-gon learned in 180 epochs.
