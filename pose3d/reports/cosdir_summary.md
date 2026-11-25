@@ -73,6 +73,8 @@ resolve the turn guesses and has median error about 90/n degrees (the "guessing 
   2 seeds): both stayed at the guessing level (12.74 and 13.11 degrees), as Image2Sphere did (12.67)
   (`figures/cosdir_chile3d_pyr7.png`). Likely: the lobed ring is off-centre and foreshortened for a tilted pyramid, and
   4,500 views cover SO(3) sparsely; untested.
+* **The 3D 7-gon with the Pascal3D+ ResNet-101 as the starting encoder** (the backbone that carries some of the turn
+  for near-bottom views in CPU read-outs): also at the guessing level, 13.31 degrees.
 * Not explained: why identical runs break through at such different epochs (the toy model's seeds agree).
 
 ## Bugs fixed along the way

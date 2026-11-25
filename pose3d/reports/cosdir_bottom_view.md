@@ -646,6 +646,13 @@ most clearly.
 3. **The Pascal backbone carries some of the turn for near-bottom views** (R^2 about 0.4 under 30 degrees of tilt), and
    ImageNet's does not. That fits the idea that training with synthetic renders to report pose removes some
    invariance. But overall it is far from the R^2 of 1.00 that the bottom-view models reach.
+**Follow-up GPU run (2026-11-24/25, human-approved option (a)): the Pascal backbone as the starting encoder.**
+The same 3D recipe, but with a ResNet-101 encoder started from the Pascal3D+ run's backbone (EMA weights, loaded
+strictly; runner `notebooks/make_chile3d_runner.py` with PASCAL=1), 180 epochs on 4xL4 (69 s per epoch). It made the
+usual first drop and then stayed at the guessing level, like the two ImageNet-started runs: final 32-sample median
+**13.31 degrees**, acc@15 0.569 (curve in `figures/cosdir_chile3d_pyr7.png`). The Pascal initialisation alone does not
+fix the 3D 7-gon.
+
 4. Every number here is far below 1, so neither change alone looks like a full fix. The direct route is to supervise
    the turn: an auxiliary loss on (cos 7 theta, sin 7 theta) from the encoder's features, which are the same for all 7
    equivalent poses. It can be combined with the Pascal initialisation.

@@ -1,5 +1,6 @@
 """Validation median error by epoch: the bottom-view recipe of the cosine-attention GATr (14x14 map, 368 sphere points,
-start s_h 100, constant learning rate) on the 3D SYMSOL-CHILE 7-gon (poses uniform on SO(3); 2 seeds, 180 epochs) and,
+start s_h 100, constant learning rate) on the 3D SYMSOL-CHILE 7-gon (poses uniform on SO(3); 2 seeds, 180 epochs; plus one run whose
+encoder is the ResNet-101 of the Pascal3D+ run) and,
 for reference, on the bottom view of the same pyramid (120 epochs). Dashed: the guessing level 90/7 = 12.9 deg.
 Input results/chile3d_pyr7_mre_by_epoch.json; writes ../../reports/figures/cosdir_chile3d_pyr7.png."""
 import json, os, matplotlib
@@ -9,6 +10,7 @@ R = json.load(open(os.path.join(HERE, "results", "chile3d_pyr7_mre_by_epoch.json
 fig, ax = plt.subplots(figsize=(9, 4.6))
 ax.axhline(90 / 7, color="#52514e", ls="--", lw=1); ax.text(122, 90 / 7 * 1.06, "guessing level 12.9°", fontsize=8.5, color="#52514e")
 for k, c, lab in (("chile3d_seed0", "#2a78d6", "3D views, seed 0 (final 12.74°)"), ("chile3d_seed1", "#6250d6", "3D views, seed 1 (final 13.11°)"),
+                  ("chile3d_pascalr101_seed0", "#1baf7a", "3D views, Pascal ResNet-101 init (final 13.31°)"),
                   ("bottom7_s100_reference", "#eda100", "bottom view, same recipe (final 0.46°)")):
     v = R[k]["mre"]; ax.plot(range(1, len(v) + 1), v, color=c, lw=1.4, label=lab)
 ax.set_yscale("log"); ax.set_ylim(0.3, 90); ax.set_yticks([0.5, 1, 3, 10, 30])
