@@ -679,6 +679,28 @@ the runs leaves the guessing level afterwards. Ten times more distinct views cha
 too little data is not the explanation, at least up to 45k views and 1.3M images seen. What is left untested: much
 longer training (the strongest SYMSOL models see about 100M images) and more than 45k views.
 
+## More training views (3x and 10x): still the guessing level
+
+Question (requested 2026-11-25): is the 3D 7-gon failure a data problem? SYMSOL methods train on 45k-100k views per
+shape, and our 4,500 is below the smallest setting any of those papers reports (`reports/chile3d_literature.md`). Same
+recipe (ImageNet ResNet-50, 14x14 map, s_h 100, constant learning rate, seed 0), with 13,500 and 45,000 training
+views and about 20,000 optimizer steps each (1.6x the steps of the 4,500-view runs), on 4xL4
+(`notebooks/make_chile3d_datascale.py`).
+
+| training views | steps | images seen | final 32-sample median | acc@15 |
+|---|---|---|---|---|
+| 4,500 (2 seeds) | 12,650 | 0.81M | 12.74 / 13.11 | 0.60 / 0.58 |
+| 13,500 | 20,040 | 1.28M | 13.37 | 0.566 |
+| 45,000 | 20,390 | 1.31M | 13.16 | 0.579 |
+
+![data scaling](figures/cosdir_chile3d_datascale.png)
+
+Against the number of training images seen, the four curves lie on top of each other. The first drop (from about 38
+degrees to the guessing level, i.e. the axis learned) comes after about 100k images whatever the dataset size, and
+none of the runs leaves the guessing level afterwards. Ten times more distinct views changes nothing within this
+budget, so too little data is not the explanation, at least up to 45k views and 1.3M images seen. Two things remain
+untested: much longer training (the strongest SYMSOL models see about 100M images) and more than 45k views.
+
 ## Conclusion
 
 * **Square and pentagon**: a training-schedule failure. Learning proceeds in steps separated by plateaus. The

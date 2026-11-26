@@ -77,6 +77,8 @@ resolve the turn guesses and has median error about 90/n degrees (the "guessing 
   for near-bottom views in CPU read-outs): also at the guessing level, 13.31 degrees.
 * **More training views for the 3D 7-gon** (13,500 and 45,000 instead of 4,500; ~20k steps each): guessing level
   (13.37 and 13.16 degrees); against images seen the curves coincide (`figures/cosdir_chile3d_datascale.png`).
+* **More training views for the 3D 7-gon** (13,500 and 45,000 instead of 4,500; ~20k steps each): guessing level
+  (13.37 and 13.16 degrees); against images seen the curves coincide (`figures/cosdir_chile3d_datascale.png`).
 * Not explained: why identical runs break through at such different epochs (the toy model's seeds agree).
 
 ## Bugs fixed along the way
