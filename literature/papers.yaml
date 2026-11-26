@@ -38,6 +38,38 @@
   found_by:
   - crossref
   added: 2026-10-25
+- id: doi:10.21203/rs.3.rs-11790710/v1
+  title: An ideal-theoretic characterization of uni- versal approximation for hypercomplex- valued neural networks
+  authors:
+  - Muhammad Saad
+  date: '2026-11-26'
+  venue: ''
+  venue_type: preprint-server
+  links:
+    doi: https://doi.org/10.21203/rs.3.rs-11790710/v1
+  topics:
+  - hypercomplex
+  - theory
+  status: inbox
+  relevance: null
+  summary: "Abstract\n                Hypercomplex-valued neural networks take weights in a finite-dimensional real\
+    \ algebra, such as the quaternions, and applya real activation function coordinatewise. Whether such networks\
+    \ are universal approximators depends on the basis in which theactivation acts: for the dual numbers, one basis\
+    \ yields universal single-hidden-layer networks, whereas in another universality "
+  triage:
+    score: 4
+    ga_terms:
+    - clifford algebra
+    - hypercomplex
+    ml_context: true
+    excluded_terms: []
+    title_hit: true
+  found_by:
+  - crossref:Clifford equivariant neural
+  - crossref:Clifford neural
+  - crossref:Clifford-valued neural networks
+  - crossref:hypercomplex neural network
+  added: '2026-11-26'
 - id: doi:10.1002/cta.70719
   title: Mathematical Modeling and Circuit‐Level Validation of Clifford‐Based Multichannel Analog Vision Networks
   authors:
