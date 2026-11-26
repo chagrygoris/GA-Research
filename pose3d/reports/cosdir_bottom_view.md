@@ -701,6 +701,44 @@ none of the runs leaves the guessing level afterwards. Ten times more distinct v
 budget, so too little data is not the explanation, at least up to 45k views and 1.3M images seen. Two things remain
 untested: much longer training (the strongest SYMSOL models see about 100M images) and more than 45k views.
 
+## Easy-to-hard curriculum, from the bottom view to all tilts: still the guessing level
+
+Question (requested 2026-11-25): the same model learns the turn of the bottom-view 7-gon, so does starting from bottom
+views and widening the tilt carry that over to 3D? Runner `notebooks/make_chile3d_curriculum.py`, same recipe
+(ImageNet ResNet-50, 14x14 map, s_h 100, constant learning rate), 4xL4:
+* **Training pool:** 20,000 views R = Rz(phi) Ry(tilt) Rz(theta), where the tilt is the angle between the pyramid's
+  axis and the bottom-view direction, uniform on [0, 180] degrees.
+* **Schedule:** in epoch e only views with tilt <= T(e) are drawn, with T rising linearly from 15 degrees to 180 by
+  epoch 33 of 64. After that the draws are weighted by sin(tilt), so the training distribution equals the uniform test
+  distribution.
+* **Budget:** about 20,000 steps, as in the data-scaling runs. The test set is the usual 1,000 views uniform on all
+  rotations.
+
+| run | final 32-sample median | acc@15 |
+|---|---|---|
+| curriculum | 14.13 | 0.536 |
+| uniform pool, 4,500 views (2 seeds) | 12.74 / 13.11 | 0.60 / 0.58 |
+
+![curriculum](figures/cosdir_chile3d_curriculum.png)
+
+The uniform-test error falls as the tilt limit widens and reaches the guessing level when the limit nears 180 degrees
+(epoch 28-30). After that it stays there, noisier than the uniform runs.
+
+**The turn read-out of the final encoder** (`probes/cosdir_interp/turn_readout.py`, 1,879 images; held-out R^2 of
+(cos 7 theta, sin 7 theta)) is about 0 at every tilt, including tilts under 30 degrees:
+
+| features | all tilts | 0-30 | 30-60 | 60-90 | 90-120 | 120-180 | axis |
+|---|---|---|---|---|---|---|---|
+| tokens (368 x 64) | -0.09 | -0.05 | -0.28 | 0.01 | -0.12 | -0.07 | 0.999 |
+| ResNet map, pooled | -0.005 | 0.02 | -0.01 | -0.01 | -0.01 | -0.02 | 0.995 |
+
+So the curriculum did not leave the turn in the encoder, not even for near-bottom views. The likely reason is that the
+easy stage was too short to be learned at all. The bottom-view runs needed about 300k images (epoch about 70 of 4,500
+views) to break through their plateau. Here the tilt limit stayed under 30 degrees for only 4 epochs (about 80k
+images), and under 60 degrees for 9. A curriculum that waits for the easy stage would hold the bottom view
+(tilt <= 5-10 degrees) until the turn is learned there, as measured on bottom-view validation images, and only then
+widen. That has not been run.
+
 ## Conclusion
 
 * **Square and pentagon**: a training-schedule failure. Learning proceeds in steps separated by plateaus. The
