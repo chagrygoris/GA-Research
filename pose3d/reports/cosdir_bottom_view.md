@@ -739,6 +739,37 @@ images), and under 60 degrees for 9. A curriculum that waits for the easy stage 
 (tilt <= 5-10 degrees) until the turn is learned there, as measured on bottom-view validation images, and only then
 widen. That has not been run.
 
+## Gated curriculum: even views within 10 degrees of the bottom are not learned
+
+Question (requested 2026-11-26): the widening curriculum moved on before its easy stage was learned. What if the tilt
+limit only widens once the current range is learned? Runner `notebooks/make_chile3d_gated.py`, 2xT4:
+* **Pools:** 10,000 training and 1,500 validation views, both with tilt uniform on [0, 180] degrees.
+* **Stage 1:** tilt <= 10 degrees, for training and for the per-epoch validation.
+* **Gate:** the limit widens by 15 degrees when the validation median on the current range falls below 6.4 degrees
+  (half the guessing level).
+* **Budget:** 75 epochs, 750k images, recipe otherwise unchanged.
+
+| run | images | tilt limit reached | final 32-sample median (on tilt <= 10) | acc@15 |
+|---|---|---|---|---|
+| gated curriculum | 750k | 10 degrees (never widened) | 12.69 | 0.584 |
+| exact bottom view, same model (s_h 100), reference | 540k | (tilt 0) | 0.46 | |
+
+![gated curriculum](figures/cosdir_chile3d_gated.png)
+
+Against training images seen, the two curves are nearly identical up to about 300k images: the same first drop, at
+the same place, to the guessing level. Then the exact bottom view breaks through and the near-bottom run (tilt <= 10)
+stays at the guessing level for another 450k images.
+
+**Reading.** Allowing small tilts (two extra pose dimensions, each within 10 degrees) seems to be enough to block the
+breakthrough that exact bottom views allow. That fits the picture of the bottom-view mechanism:
+* On exact bottom views the 7-lobed ring is centred on the optical axis and fixed attention windows ride along it.
+* A small tilt moves and squashes the ring, so a fixed window no longer follows it.
+
+The comparison is one run against one run. The exact bottom view does not always break through either: 2 of 4 runs
+learned within 120 epochs. So this is suggestive, not conclusive. A stage 1 of exact bottom views (tilt 0) would test
+whether learning the turn there carries over to small tilts. That is the version of the curriculum that has not been
+run yet.
+
 ## Conclusion
 
 * **Square and pentagon**: a training-schedule failure. Learning proceeds in steps separated by plateaus. The

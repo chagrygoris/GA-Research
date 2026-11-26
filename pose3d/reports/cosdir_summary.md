@@ -82,6 +82,9 @@ resolve the turn guesses and has median error about 90/n degrees (the "guessing 
 * **A tilt curriculum for the 3D 7-gon** (bottom views first, widening to all tilts by mid-training): 14.13 degrees,
   guessing level; the encoder carries no turn even at small tilts. The easy stage (about 80k images under 30 degrees)
   was much shorter than the about 300k images the bottom view needed to break through.
+* **A gated tilt curriculum for the 3D 7-gon** (widen only when the current range is learned): never left the first
+  stage, tilt <= 10 degrees, in 750k images (12.69); exact bottom views with the same model broke through at about
+  300k (`figures/cosdir_chile3d_gated.png`).
 * Not explained: why identical runs break through at such different epochs (the toy model's seeds agree).
 
 ## Bugs fixed along the way
