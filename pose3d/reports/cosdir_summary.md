@@ -77,14 +77,15 @@ resolve the turn guesses and has median error about 90/n degrees (the "guessing 
   for near-bottom views in CPU read-outs): also at the guessing level, 13.31 degrees.
 * **More training views for the 3D 7-gon** (13,500 and 45,000 instead of 4,500; ~20k steps each): guessing level
   (13.37 and 13.16 degrees); against images seen the curves coincide (`figures/cosdir_chile3d_datascale.png`).
-* **More training views for the 3D 7-gon** (13,500 and 45,000 instead of 4,500; ~20k steps each): guessing level
-  (13.37 and 13.16 degrees); against images seen the curves coincide (`figures/cosdir_chile3d_datascale.png`).
 * **A tilt curriculum for the 3D 7-gon** (bottom views first, widening to all tilts by mid-training): 14.13 degrees,
   guessing level; the encoder carries no turn even at small tilts. The easy stage (about 80k images under 30 degrees)
   was much shorter than the about 300k images the bottom view needed to break through.
 * **A gated tilt curriculum for the 3D 7-gon** (widen only when the current range is learned): never left the first
   stage, tilt <= 10 degrees, in 750k images (12.69); exact bottom views with the same model broke through at about
   300k (`figures/cosdir_chile3d_gated.png`).
+* **A 7-gonal prism instead of the pyramid** (3D poses, D7, same recipe, 1 seed): guessing level, 13.47 degrees;
+  the axis is learned later (epoch 41 against 24-25), the turn not at all, although it is visible from most
+  directions (`figures/cosdir_chile3d_prism7.png`).
 * Not explained: why identical runs break through at such different epochs (the toy model's seeds agree).
 
 ## Bugs fixed along the way

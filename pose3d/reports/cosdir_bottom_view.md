@@ -673,28 +673,6 @@ views and about 20,000 optimizer steps each (1.6x the steps of the 4,500-view ru
 
 ![data scaling](figures/cosdir_chile3d_datascale.png)
 
-Against the number of training images seen, the four curves lie on top of each other: the first drop (from about 38
-degrees to the guessing level, the axis learned) comes after about 100k images whatever the dataset size, and none of
-the runs leaves the guessing level afterwards. Ten times more distinct views changes nothing within this budget, so
-too little data is not the explanation, at least up to 45k views and 1.3M images seen. What is left untested: much
-longer training (the strongest SYMSOL models see about 100M images) and more than 45k views.
-
-## More training views (3x and 10x): still the guessing level
-
-Question (requested 2026-11-25): is the 3D 7-gon failure a data problem? SYMSOL methods train on 45k-100k views per
-shape, and our 4,500 is below the smallest setting any of those papers reports (`reports/chile3d_literature.md`). Same
-recipe (ImageNet ResNet-50, 14x14 map, s_h 100, constant learning rate, seed 0), with 13,500 and 45,000 training
-views and about 20,000 optimizer steps each (1.6x the steps of the 4,500-view runs), on 4xL4
-(`notebooks/make_chile3d_datascale.py`).
-
-| training views | steps | images seen | final 32-sample median | acc@15 |
-|---|---|---|---|---|
-| 4,500 (2 seeds) | 12,650 | 0.81M | 12.74 / 13.11 | 0.60 / 0.58 |
-| 13,500 | 20,040 | 1.28M | 13.37 | 0.566 |
-| 45,000 | 20,390 | 1.31M | 13.16 | 0.579 |
-
-![data scaling](figures/cosdir_chile3d_datascale.png)
-
 Against the number of training images seen, the four curves lie on top of each other. The first drop (from about 38
 degrees to the guessing level, i.e. the axis learned) comes after about 100k images whatever the dataset size, and
 none of the runs leaves the guessing level afterwards. Ten times more distinct views changes nothing within this
@@ -769,6 +747,40 @@ The comparison is one run against one run. The exact bottom view does not always
 learned within 120 epochs. So this is suggestive, not conclusive. A stage 1 of exact bottom views (tilt 0) would test
 whether learning the turn there carries over to small tilts. That is the version of the curriculum that has not been
 run yet.
+
+## A 7-gonal prism instead of the pyramid: still the guessing level
+
+Question (requested 2026-11-27): is the failure specific to the pyramid, whose turn is visible mainly near the bottom
+view? A 7-gonal prism shows its 7 rectangular sides and 7-gon ends from most directions. Same recipe as the 3D pyramid
+runs (ImageNet ResNet-50, 14x14 map, 368 sphere points, start s_h 100, constant learning rate, 4,500 training and
+1,000 test views uniform on SO(3), 180 epochs, 2xT4, seed 0); only the shape changes
+(`notebooks/make_chile3d_prism.py`, renderer `probes/cosdir_interp/prism_pool.py`):
+* **Shape:** a regular 7-gon cross-section with circumradius 1/sqrt 2, extruded to half-height 1/sqrt 2, rendered by the
+  SYMSOL-CHILE renderer.
+* **Symmetry:** the dihedral group D7, 14 equivalent poses (7 turns about the axis, each also combined with the
+  half-turn that swaps the two ends). A model that knows the axis line but guesses the turn has the same median error
+  as for the pyramid, 90/7 = 12.9 degrees.
+
+![prism demo](figures/chile3d_prism7_demo.png)
+
+| shape | symmetry | first drop (axis learned), epoch | final 32-sample median | acc@15 | acc@30 |
+|---|---|---|---|---|---|
+| pyramid, seeds 0 / 1 | C7 | 25 / 24 | 12.74 / 13.11 | 0.60 / 0.58 | |
+| prism, seed 0 | D7 | 41 | 13.47 | 0.576 | 0.971 |
+
+![prism vs pyramid](figures/cosdir_chile3d_prism7.png)
+
+The prism follows the same two steps as the pyramid but slower: a plateau at about 35 degrees, then the first drop at
+epoch 41 (pyramid: 24 to 25) to just above the guessing level, where it stays for the remaining 140 epochs (mean of the
+last 20 epochs 13.5 degrees, against 12.8 to 12.9 for the pyramid). The extra plateau is plausibly the end-swap: the
+model must also learn that the two ends are equivalent, which the pyramid does not ask for. acc@30 of 0.97 says
+nearly every pose is within 30 degrees of a correct one, i.e. the axis is right almost everywhere.
+
+**Reading.** Making the turn visible from most directions did not help. So the failure is not about where the turn
+can be seen: even when 7 edges cross the image in nearly every view, the encoder does not turn them into the 7-fold
+signal the attention needs. This points back at the encoder and the training signal rather than at the pyramid's
+geometry, and makes the auxiliary (cos 7 theta, sin 7 theta) loss and the exact-bottom-view stage 1 the remaining
+direct tests. One seed only.
 
 ## Conclusion
 
